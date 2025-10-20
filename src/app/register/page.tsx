@@ -2,10 +2,6 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card } from '@/components/ui/card';
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -80,8 +76,17 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="min-h-screen relative overflow-hidden bg-gradient-to-br from-purple-900 via-purple-800 to-indigo-900">
-      <div className="absolute inset-0 overflow-hidden">
+    <div className="min-h-screen py-8 px-4 sm:px-6 lg:px-8 relative overflow-hidden" style={{ backgroundColor: '#140655' }}>
+      {/* Starlight background pattern */}
+      <div className="absolute inset-0 opacity-15">
+        <div className="absolute top-0 left-0 w-96 h-96 bg-blue-600 rounded-full blur-3xl"></div>
+        <div className="absolute bottom-0 right-0 w-96 h-96 bg-purple-600 rounded-full blur-3xl"></div>
+        <div className="absolute top-1/2 left-1/2 w-96 h-96 bg-blue-500 rounded-full blur-3xl"></div>
+        <div className="absolute top-1/4 right-1/4 w-72 h-72 bg-orange-600 rounded-full blur-3xl opacity-80"></div>
+      </div>
+
+      {/* Animated stars */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
         {[...Array(50)].map((_, i) => (
           <div
             key={i}
@@ -91,130 +96,312 @@ export default function RegisterPage() {
               left: `${(i * 11.7) % 100}%`,
               animationDelay: `${(i * 0.1) % 3}s`,
               animationDuration: `${2 + (i * 0.05) % 3}s`,
+              opacity: 0.6,
             }}
           ></div>
         ))}
       </div>
 
-      <div className="absolute inset-0 pointer-events-none">
-        {[...Array(6)].map((_, i) => (
-          <div
-            key={i}
-            className="absolute text-6xl animate-bounce opacity-40"
-            style={{
-              top: `${10 + i * 15}%`,
-              left: i % 2 === 0 ? '5%' : '90%',
-              animationDelay: `${i * 0.5}s`,
-              animationDuration: `${3 + i * 0.5}s`,
-            }}
-          >
-            🏮
-          </div>
-        ))}
-      </div>
-
-      <div className="relative z-10 flex min-h-screen items-center justify-center p-4">
+      {/* Main content */}
+      <div className="relative z-10 flex min-h-screen items-center justify-center py-12">
         <div className="w-full max-w-md">
-          <div className="text-center mb-8 space-y-2">
-            <div className="text-7xl mb-4 animate-bounce">🌙</div>
-            <h1 className="text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 via-yellow-400 to-yellow-500 drop-shadow-lg">
+          {/* Header */}
+          <div className="text-center mb-8 sm:mb-12">
+            <div className="flex items-center justify-center gap-3 mb-4">
+              <span className="text-5xl sm:text-6xl filter brightness-0 invert animate-bounce">🌙</span>
+            </div>
+            <h1 className="text-4xl sm:text-5xl font-bold text-white mb-3" style={{ fontFamily: "'Protest Guerrilla', sans-serif" }}>
               PECFEST 2025
             </h1>
-            <p className="text-2xl text-purple-200 font-light tracking-wide">
-              PECFEST 2025
+            <p className="text-slate-300 text-base sm:text-lg mb-2">
+              ✧ Register to Enter ✧
             </p>
-            <p className="text-sm text-purple-300 mt-4">✨ Register to Enter ✨</p>
+            <p className="text-slate-400 text-sm">
+              Join the mystical journey
+            </p>
           </div>
 
-          <Card className="backdrop-blur-xl bg-white/10 border-2 border-purple-400/30 shadow-2xl p-8">
+          {/* Register Card */}
+          <div 
+            className="rounded-2xl p-6 sm:p-8 border-2 hover:border-purple-400/50 transition-all duration-300 hover:shadow-lg hover:shadow-purple-500/40"
+            style={{
+              backgroundColor: '#0f0444',
+              borderColor: '#4321a9',
+            }}
+          >
             {step === 'email' ? (
               <div className="space-y-6">
                 <form onSubmit={handleSendOtp} className="space-y-6">
                   <div className="space-y-2">
-                    <Label htmlFor="email" className="text-white text-lg">Email Address</Label>
-                    <Input
+                    <label htmlFor="email" className="block text-white text-base sm:text-lg font-medium">
+                      Email Address
+                    </label>
+                    <input
                       id="email"
                       type="email"
                       placeholder="your@email.com"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       required
-                      className="bg-white/20 border-purple-300/50 text-white placeholder:text-purple-200/50 focus:border-yellow-400 focus:ring-yellow-400/50 h-12 text-lg"
+                      className="w-full border-2 text-white placeholder:text-slate-500 focus:border-blue-400 focus:ring-2 focus:ring-blue-400/50 h-12 text-base sm:text-lg rounded-xl px-4 outline-none transition-all"
+                      style={{
+                        backgroundColor: '#1a0a4e',
+                        borderColor: '#4321a9',
+                      }}
                       disabled={loading}
                     />
                   </div>
+
                   {error && (
-                    <div className="bg-red-500/20 border border-red-400 text-red-100 px-4 py-3 rounded-lg text-sm">{error}</div>
+                    <div className="bg-red-900/30 border-2 border-red-500/50 text-red-200 px-4 py-3 rounded-xl text-sm">
+                      ⚠ {error}
+                    </div>
                   )}
+
                   {success && (
-                    <div className="bg-green-500/20 border border-green-400 text-green-100 px-4 py-3 rounded-lg text-sm">{success}</div>
+                    <div className="bg-emerald-900/30 border-2 border-emerald-500/50 text-emerald-200 px-4 py-3 rounded-xl text-sm">
+                      ✓ {success}
+                    </div>
                   )}
-                  <Button type="submit" disabled={loading} className="w-full bg-gradient-to-r from-yellow-400 to-yellow-600 hover:from-yellow-500 hover:to-yellow-700 text-purple-900 font-bold text-lg h-12 shadow-lg hover:shadow-xl transition-all duration-300">
+
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white font-bold text-base sm:text-lg h-12 rounded-xl shadow-lg hover:shadow-xl hover:shadow-purple-500/50 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
                     {loading ? (
-                      <span className="flex items-center gap-2"><span className="animate-spin">⏳</span>Sending...</span>
+                      <span className="flex items-center justify-center gap-2">
+                        <span className="animate-spin">⏳</span>
+                        Sending...
+                      </span>
                     ) : (
-                      '🔮 Send Code'
+                      '✨ Send Magic Code'
                     )}
-                  </Button>
+                  </button>
                 </form>
+
+                <div className="mt-6 text-center">
+                  <p className="text-slate-400 text-sm">
+                    🔮 A secure code will be sent to your email
+                  </p>
+                </div>
               </div>
             ) : (
-              <form onSubmit={handleRegister} className="space-y-6">
+              <form onSubmit={handleRegister} className="space-y-5">
                 <div className="grid grid-cols-1 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="name" className="text-white">Full Name</Label>
-                    <Input id="name" value={name} onChange={(e) => setName(e.target.value)} required className="bg-white/20 border-purple-300/50 text-white" />
+                    <label htmlFor="name" className="block text-white text-sm font-medium">
+                      Full Name
+                    </label>
+                    <input
+                      id="name"
+                      type="text"
+                      placeholder="John Doe"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      required
+                      className="w-full border-2 text-white placeholder:text-slate-500 focus:border-blue-400 focus:ring-2 focus:ring-blue-400/50 h-11 text-base rounded-xl px-4 outline-none transition-all"
+                      style={{
+                        backgroundColor: '#1a0a4e',
+                        borderColor: '#4321a9',
+                      }}
+                      disabled={loading}
+                    />
                   </div>
+
                   <div className="space-y-2">
-                    <Label htmlFor="college" className="text-white">College</Label>
-                    <Input id="college" value={college} onChange={(e) => setCollege(e.target.value)} required className="bg-white/20 border-purple-300/50 text-white" />
+                    <label htmlFor="college" className="block text-white text-sm font-medium">
+                      College
+                    </label>
+                    <input
+                      id="college"
+                      type="text"
+                      placeholder="Your College Name"
+                      value={college}
+                      onChange={(e) => setCollege(e.target.value)}
+                      required
+                      className="w-full border-2 text-white placeholder:text-slate-500 focus:border-blue-400 focus:ring-2 focus:ring-blue-400/50 h-11 text-base rounded-xl px-4 outline-none transition-all"
+                      style={{
+                        backgroundColor: '#1a0a4e',
+                        borderColor: '#4321a9',
+                      }}
+                      disabled={loading}
+                    />
                   </div>
+
                   <div className="space-y-2">
-                    <Label htmlFor="studentId" className="text-white">Student ID</Label>
-                    <Input id="studentId" value={studentId} onChange={(e) => setStudentId(e.target.value)} required className="bg-white/20 border-purple-300/50 text-white" />
+                    <label htmlFor="studentId" className="block text-white text-sm font-medium">
+                      Student ID
+                    </label>
+                    <input
+                      id="studentId"
+                      type="text"
+                      placeholder="12345678"
+                      value={studentId}
+                      onChange={(e) => setStudentId(e.target.value)}
+                      required
+                      className="w-full border-2 text-white placeholder:text-slate-500 focus:border-blue-400 focus:ring-2 focus:ring-blue-400/50 h-11 text-base rounded-xl px-4 outline-none transition-all"
+                      style={{
+                        backgroundColor: '#1a0a4e',
+                        borderColor: '#4321a9',
+                      }}
+                      disabled={loading}
+                    />
                   </div>
+
                   <div className="space-y-2">
-                    <Label htmlFor="branch" className="text-white">Branch</Label>
-                    <Input id="branch" value={branch} onChange={(e) => setBranch(e.target.value)} required className="bg-white/20 border-purple-300/50 text-white" />
+                    <label htmlFor="branch" className="block text-white text-sm font-medium">
+                      Branch
+                    </label>
+                    <input
+                      id="branch"
+                      type="text"
+                      placeholder="Computer Science"
+                      value={branch}
+                      onChange={(e) => setBranch(e.target.value)}
+                      required
+                      className="w-full border-2 text-white placeholder:text-slate-500 focus:border-blue-400 focus:ring-2 focus:ring-blue-400/50 h-11 text-base rounded-xl px-4 outline-none transition-all"
+                      style={{
+                        backgroundColor: '#1a0a4e',
+                        borderColor: '#4321a9',
+                      }}
+                      disabled={loading}
+                    />
                   </div>
+
                   <div className="space-y-2">
-                    <Label htmlFor="phoneNumber" className="text-white">Phone Number</Label>
-                    <Input id="phoneNumber" value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} required className="bg-white/20 border-purple-300/50 text-white" />
+                    <label htmlFor="phoneNumber" className="block text-white text-sm font-medium">
+                      Phone Number
+                    </label>
+                    <input
+                      id="phoneNumber"
+                      type="tel"
+                      placeholder="+91 98765 43210"
+                      value={phoneNumber}
+                      onChange={(e) => setPhoneNumber(e.target.value)}
+                      required
+                      className="w-full border-2 text-white placeholder:text-slate-500 focus:border-blue-400 focus:ring-2 focus:ring-blue-400/50 h-11 text-base rounded-xl px-4 outline-none transition-all"
+                      style={{
+                        backgroundColor: '#1a0a4e',
+                        borderColor: '#4321a9',
+                      }}
+                      disabled={loading}
+                    />
                   </div>
+
                   <div className="space-y-2">
-                    <Label htmlFor="referralCode" className="text-white">Referral Code (optional)</Label>
-                    <Input id="referralCode" value={referralCode} onChange={(e) => setReferralCode(e.target.value)} className="bg-white/20 border-purple-300/50 text-white" />
+                    <label htmlFor="referralCode" className="block text-white text-sm font-medium">
+                      Referral Code <span className="text-slate-400">(optional)</span>
+                    </label>
+                    <input
+                      id="referralCode"
+                      type="text"
+                      placeholder="FEST2025"
+                      value={referralCode}
+                      onChange={(e) => setReferralCode(e.target.value)}
+                      className="w-full border-2 text-white placeholder:text-slate-500 focus:border-blue-400 focus:ring-2 focus:ring-blue-400/50 h-11 text-base rounded-xl px-4 outline-none transition-all"
+                      style={{
+                        backgroundColor: '#1a0a4e',
+                        borderColor: '#4321a9',
+                      }}
+                      disabled={loading}
+                    />
                   </div>
+
                   <div className="space-y-2">
-                    <Label htmlFor="otp" className="text-white">Enter Code</Label>
-                    <Input id="otp" value={otp} onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))} required maxLength={6} placeholder="000000" className="bg-white/20 border-purple-300/50 text-white text-center tracking-widest" />
-                    <p className="text-sm text-purple-300">Code sent to {email}</p>
+                    <label htmlFor="otp" className="block text-white text-sm font-medium">
+                      Enter Magic Code
+                    </label>
+                    <input
+                      id="otp"
+                      type="text"
+                      placeholder="000000"
+                      value={otp}
+                      onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                      required
+                      maxLength={6}
+                      className="w-full border-2 text-white placeholder:text-slate-500 focus:border-blue-400 focus:ring-2 focus:ring-blue-400/50 h-11 text-center text-xl tracking-widest font-bold rounded-xl outline-none transition-all"
+                      style={{
+                        backgroundColor: '#1a0a4e',
+                        borderColor: '#4321a9',
+                      }}
+                      disabled={loading}
+                    />
+                    <p className="text-xs text-slate-400 text-center">
+                      Code sent to <span className="text-white font-medium">{email}</span>
+                    </p>
                   </div>
                 </div>
 
-                {error && (<div className="bg-red-500/20 border border-red-400 text-red-100 px-4 py-3 rounded-lg text-sm">{error}</div>)}
-                {success && (<div className="bg-green-500/20 border border-green-400 text-green-100 px-4 py-3 rounded-lg text-sm">{success}</div>)}
+                {error && (
+                  <div className="bg-red-900/30 border-2 border-red-500/50 text-red-200 px-4 py-3 rounded-xl text-sm">
+                    ⚠ {error}
+                  </div>
+                )}
 
-                <div className="space-y-3">
-                  <Button type="submit" disabled={loading || otp.length !== 6} className="w-full bg-gradient-to-r from-yellow-400 to-yellow-600 hover:from-yellow-500 hover:to-yellow-700 text-purple-900 font-bold text-lg h-12 shadow-lg hover:shadow-xl transition-all duration-300">
-                    {loading ? (<span className="flex items-center gap-2"><span className="animate-spin">⏳</span>Registering...</span>) : ('✨ Register Now')}
-                  </Button>
-                  <Button type="button" variant="ghost" onClick={() => { setStep('email'); setOtp(''); setError(''); setSuccess(''); }} className="w-full text-purple-200 hover:text-white hover:bg-white/10">← Use Different Email</Button>
+                {success && (
+                  <div className="bg-emerald-900/30 border-2 border-emerald-500/50 text-emerald-200 px-4 py-3 rounded-xl text-sm">
+                    ✓ {success}
+                  </div>
+                )}
+
+                <div className="space-y-3 pt-2">
+                  <button
+                    type="submit"
+                    disabled={loading || otp.length !== 6}
+                    className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white font-bold text-base sm:text-lg h-12 rounded-xl shadow-lg hover:shadow-xl hover:shadow-purple-500/50 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {loading ? (
+                      <span className="flex items-center justify-center gap-2">
+                        <span className="animate-spin">⏳</span>
+                        Registering...
+                      </span>
+                    ) : (
+                      '🌙 Register Now'
+                    )}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setStep('email');
+                      setOtp('');
+                      setError('');
+                      setSuccess('');
+                    }}
+                    className="w-full text-slate-300 hover:text-white hover:bg-purple-600/20 py-2 rounded-xl transition-all border-2 border-transparent hover:border-purple-400/30"
+                  >
+                    ← Use Different Email
+                  </button>
                 </div>
               </form>
             )}
-          </Card>
+          </div>
 
-          <div className="mt-8 text-center space-y-2">
-            <p className="text-purple-300 text-sm">Already registered?</p>
-            <Button variant="ghost" onClick={() => router.push('/login')} className="text-yellow-300">Go to Login →</Button>
+          {/* Footer */}
+          <div className="mt-8 text-center space-y-3">
+            <p className="text-slate-400 text-sm">Already registered?</p>
+            <button
+              onClick={() => router.push('/login')}
+              className="text-blue-300 hover:text-blue-200 font-medium transition-colors inline-flex items-center gap-1"
+            >
+              Go to Login <span>→</span>
+            </button>
+          </div>
+
+          {/* Bottom decoration */}
+          <div className="mt-6 text-center">
+            <p className="text-slate-500 text-xs flex items-center justify-center gap-2">
+              <span className="filter brightness-0 invert">🏮</span>
+              Join the celebration
+              <span className="filter brightness-0 invert">🏮</span>
+            </p>
           </div>
         </div>
       </div>
 
-      <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-purple-950 to-transparent pointer-events-none" />
+      {/* Bottom gradient */}
+      <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-black/20 to-transparent pointer-events-none" />
     </div>
   );
 }
-
-

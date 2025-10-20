@@ -136,13 +136,18 @@ export function canPerformAdminActions(accessLevel: number): boolean {
  * Get the locked society name for level 1 admins
  */
 export function getLockedSocietyName(adminUser: AdminUser | null): string | null {
-  if (!adminUser) return null;
+  if (!adminUser) {
+    console.log('getLockedSocietyName: adminUser is null');
+    return null;
+  }
 
   // Level 1 admins (Club/Soc Admin) have their events locked to their society
   if (adminUser.accesslevel === 1) {
+    console.log('getLockedSocietyName: Locked to', adminUser.clubsoc, 'accesslevel:', adminUser.accesslevel);
     return adminUser.clubsoc;
   }
 
+  console.log('getLockedSocietyName: Not locked, accesslevel:', adminUser.accesslevel);
   return null;
 }
 

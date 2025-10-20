@@ -3,7 +3,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { ChevronUp, ChevronDown, Check, X, Loader, Plus, Shield, Trash2, Edit } from 'lucide-react';
-import { getAdminUser } from '@/lib/accessControl';
+import { getAdminUser, getLockedSocietyName } from '@/lib/accessControl';
 
 interface IAdmin {
   _id: string;
@@ -167,15 +167,25 @@ export default function ClearanceClient({ admins }: ClearanceClientProps) {
   };
 
   const isUserIdLocked = (): boolean => {
-    // Lock userId only when:
-    // 1. Adding a new admin (!editingAdmin)
-    // 2. AND the access level being set is the same as current admin's level
+    // Lock userId when:
+    // 1. Adding a new admin AND the access level being set is the same as current admin's level
+    // 2. OR editing an existing admin (always locked)
     if (!currentAdmin) return false;
+    if (editingAdmin) {
+      // When editing, always lock the userId field
+      return true;
+    }
     if (!editingAdmin) {
       // Adding new admin - lock if setting same access level
       return formData.accesslevel === currentAdmin.accesslevel;
     }
-    return false; // Don't lock when editing existing admins
+    return false;
+  };
+
+  const isClubsocLocked = (): boolean => {
+    // Use getLockedSocietyName to check if club is locked
+    const lockedSociety = getLockedSocietyName(currentAdmin);
+    return lockedSociety !== null && !editingAdmin;
   };
 
   const getAvailableAccessLevels = (): typeof ACCESS_LEVELS => {
@@ -191,6 +201,13 @@ export default function ClearanceClient({ admins }: ClearanceClientProps) {
     }
     return [];
   };
+
+  // Compute locked society name
+  const lockedSociety = useMemo(() => {
+    if (!currentAdmin) return null;
+    // Cast currentAdmin to AdminUser type for the function
+    return getLockedSocietyName(currentAdmin as any);
+  }, [currentAdmin]);
 
   const filteredAndSortedAdmins = useMemo(() => {
     let filtered = [...(localAdmins || [])];
@@ -233,6 +250,10 @@ export default function ClearanceClient({ admins }: ClearanceClientProps) {
   const handleAccessLevelChange = (newLevel: number) => {
     setFormData(prev => {
       const updatedData = { ...prev, accesslevel: newLevel };
+      // If adding new admin and current admin is a Club/Soc admin, set clubsoc to their club
+      if (!editingAdmin && currentAdmin?.accesslevel === 1) {
+        updatedData.clubsoc = currentAdmin.clubsoc;
+      }
       // If changing to same level as current admin and adding new admin, set userId to current admin's userId
       if (!editingAdmin && newLevel === currentAdmin?.accesslevel && currentAdmin) {
         updatedData.userId = currentAdmin.userId;
@@ -249,13 +270,14 @@ export default function ClearanceClient({ admins }: ClearanceClientProps) {
   const openModal = (admin?: IAdmin) => {
     if (admin) {
       setEditingAdmin(admin);
-      // When editing, keep the admin's original userId (don't override it)
+      // When editing, keep the admin's original data
       setFormData({ name: admin.name, email: admin.email, userId: admin.userId, accesslevel: admin.accesslevel, clubsoc: admin.clubsoc, verified: admin.verified });
     } else {
       setEditingAdmin(null);
-      // When adding new admin, use current admin's userId
+      // When adding new admin, use current admin's userId and clubsoc (for Club/Soc admins)
       const userIdValue = currentAdmin ? currentAdmin.userId : '';
-      setFormData({ name: '', email: '', userId: userIdValue, accesslevel: 0, clubsoc: '', verified: false });
+      const clubsocValue = currentAdmin?.accesslevel === 1 ? currentAdmin.clubsoc : '';
+      setFormData({ name: '', email: '', userId: userIdValue, accesslevel: 0, clubsoc: clubsocValue, verified: false });
     }
     setIsModalOpen(true);
   };
@@ -266,21 +288,26 @@ export default function ClearanceClient({ admins }: ClearanceClientProps) {
     e.preventDefault();
     
     try {
-      // Validation checks only for adding new admin
+      // Query full database for validation
+      const dbRes = await fetch('/api/admins?limit=1000');
+      if (!dbRes.ok) throw new Error('Failed to fetch database');
+      const response = await dbRes.json();
+      const allAdmins = response.admins || response;
+
+      // Check email validation for both adding AND editing
+      // For editing, exclude the current admin being edited from the check
+      const emailCheckAdmins = editingAdmin 
+        ? allAdmins.filter((admin: any) => admin._id !== editingAdmin._id)
+        : allAdmins;
+      
+      const emailExists = emailCheckAdmins.some((admin: any) => admin.email.toLowerCase() === formData.email.toLowerCase());
+      if (emailExists) {
+        alert('❌ This email is already registered in the database');
+        return;
+      }
+
+      // Additional validation only for adding new admin
       if (!editingAdmin) {
-        // Query full database for validation
-        const dbRes = await fetch('/api/admins?limit=1000');
-        if (!dbRes.ok) throw new Error('Failed to fetch database');
-        const response = await dbRes.json();
-        const allAdmins = response.admins || response;
-
-        // 1) Check if email already exists in full database
-        const emailExists = allAdmins.some((admin: any) => admin.email.toLowerCase() === formData.email.toLowerCase());
-        if (emailExists) {
-          alert('❌ This email is already registered in the database');
-          return;
-        }
-
         // 2) Check userId rules: same userId can only be used with same access level (not across different levels)
         const adminWithSameUserId = allAdmins.find((admin: any) => admin.userId === formData.userId);
         if (adminWithSameUserId && adminWithSameUserId.accesslevel !== formData.accesslevel) {
@@ -371,8 +398,8 @@ export default function ClearanceClient({ admins }: ClearanceClientProps) {
           </select>
           <select value={filterVerified} onChange={e => setFilterVerified(e.target.value as any)} className="px-4 py-3 bg-blue-900/40 border-2 border-purple-500/50 rounded-xl text-white focus:outline-none focus:border-purple-500">
             <option value="all">📋 All Status</option>
-            <option value="verified">✓ Verified</option>
-            <option value="unverified">⏳ Unverified</option>
+            <option value="verified">✓ Blessed</option>
+            <option value="unverified">⏳Cursed</option>
           </select>
         </div>
         <div className="flex items-center justify-between px-4 py-2 bg-slate-800/50 rounded-lg border border-purple-500/20">
@@ -400,7 +427,7 @@ export default function ClearanceClient({ admins }: ClearanceClientProps) {
                 <td className="px-4 py-4"><p className="font-semibold text-purple-300 text-sm">{admin.clubsoc}</p></td>
                 <td className="px-4 py-4 text-center">{getAccessBadge(admin.accesslevel)}</td>
                 <td className="px-4 py-4 text-center">
-                  {admin.verified ? <div className="inline-flex items-center gap-1 bg-emerald-900/50 px-3 py-1 rounded-lg border border-emerald-400/50"><Check size={16} className="text-emerald-400" /><span className="font-bold text-emerald-300 text-sm">Verified</span></div> : <div className="inline-flex items-center gap-1 bg-orange-900/50 px-3 py-1 rounded-lg border border-orange-400/50"><X size={16} className="text-orange-400" /><span className="font-bold text-orange-300 text-sm">Pending</span></div>}
+                  {admin.verified ? <div className="inline-flex items-center gap-1 bg-emerald-900/50 px-3 py-1 rounded-lg border border-emerald-400/50"><Check size={16} className="text-emerald-400" /><span className="font-bold text-emerald-300 text-sm">Blessed</span></div> : <div className="inline-flex items-center gap-1 bg-orange-900/50 px-3 py-1 rounded-lg border border-orange-400/50"><X size={16} className="text-orange-400" /><span className="font-bold text-orange-300 text-sm">Pending</span></div>}
                 </td>
                 <td className="px-4 py-4"><p className="font-semibold text-white text-sm">{new Date(admin.dateTime).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}</p></td>
                 <td className="px-4 py-4"><div className="flex items-center justify-center gap-2">
@@ -429,9 +456,9 @@ export default function ClearanceClient({ admins }: ClearanceClientProps) {
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                   <div><label className="block text-sm font-semibold text-slate-300 mb-2 uppercase">Access Level</label><select value={formData.accesslevel} onChange={e => handleAccessLevelChange(Number(e.target.value))} className="w-full px-4 py-3 bg-blue-900/30 border-2 border-purple-500/30 rounded-xl text-white focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20" required>{getAvailableAccessLevels().map(l => <option key={l.value} value={l.value} className="bg-white text-slate-900">{l.icon} {l.label}</option>)}</select></div>
-                  <div><label className="block text-sm font-semibold text-slate-300 mb-2 uppercase">Club/Society</label><select value={formData.clubsoc} onChange={e => setFormData({ ...formData, clubsoc: e.target.value })} className="w-full px-4 py-3 bg-blue-900/30 border-2 border-purple-500/30 rounded-xl text-white focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20" required><option value="" className="bg-white text-slate-900">Select Club/Society</option>{CLUBS_SOCS.map(c => <option key={c} value={c} className="bg-white text-slate-900">{c}</option>)}</select></div>
+                  <div><label className="block text-sm font-semibold text-slate-300 mb-2 uppercase">Club/Society {lockedSociety && !editingAdmin && <span className="text-xs text-slate-400">(Locked)</span>}</label>{lockedSociety && !editingAdmin ? <input type="text" value={formData.clubsoc} readOnly disabled className="w-full px-4 py-3 bg-slate-700/50 border-2 border-slate-600 rounded-xl text-slate-300 cursor-not-allowed opacity-60 focus:outline-none" /> : <select value={formData.clubsoc} onChange={e => setFormData({ ...formData, clubsoc: e.target.value })} className="w-full px-4 py-3 bg-blue-900/30 border-2 border-purple-500/30 rounded-xl text-white focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20" required><option value="" className="bg-white text-slate-900">Select Club/Society</option>{CLUBS_SOCS.map(c => <option key={c} value={c} className="bg-white text-slate-900">{c}</option>)}</select>}</div>
                 </div>
-                <div className="flex items-center gap-3 p-4 bg-blue-900/20 rounded-xl border-2 border-purple-500/30 hover:border-purple-500/50 cursor-pointer"><input type="checkbox" id="verified" checked={formData.verified} onChange={e => setFormData({ ...formData, verified: e.target.checked })} className="w-5 h-5 cursor-pointer accent-purple-500" /><label htmlFor="verified" className="text-white font-semibold cursor-pointer">✓ Mark as Verified</label></div>
+                <div className="flex items-center gap-3 p-4 bg-blue-900/20 rounded-xl border-2 border-purple-500/30 hover:border-purple-500/50 cursor-pointer"><input type="checkbox" id="verified" checked={formData.verified} onChange={e => setFormData({ ...formData, verified: e.target.checked })} className="w-5 h-5 cursor-pointer accent-purple-500" /><label htmlFor="verified" className="text-white font-semibold cursor-pointer">✓ Mark as Blessed</label></div>
                 <div className="flex gap-4 mt-8 pt-4 border-t border-purple-500/20">
                   <button type="submit" className="flex-1 bg-gradient-to-r from-purple-600 to-magenta-600 hover:from-purple-700 hover:to-magenta-700 text-white font-bold py-4 px-6 rounded-xl shadow-lg hover:shadow-purple-500/50 text-lg">{editingAdmin ? '💾 Update' : '➕ Add'}</button>
                   <button type="button" onClick={closeModal} className="flex-1 bg-gradient-to-r from-slate-600 to-slate-700 hover:from-slate-700 hover:to-slate-800 text-white font-bold py-4 px-6 rounded-xl text-lg">Cancel</button>

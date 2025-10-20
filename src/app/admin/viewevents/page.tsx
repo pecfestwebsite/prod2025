@@ -234,20 +234,6 @@ export default function ViewEventsPage() {
                 </div>
               </div>
             </div>
-
-            <div className="bg-gradient-to-br from-purple-900 to-violet-900 px-6 sm:px-8 py-3 sm:py-4 rounded-2xl shadow-2xl border-2 border-purple-500/50 backdrop-blur-sm transform hover:scale-105 transition-all duration-300 hover:shadow-purple-500/30">
-              <div className="flex items-center gap-3">
-                <span className="text-2xl sm:text-3xl ">👑</span>
-                <div>
-                  <div className="text-xs sm:text-sm text-slate-300 font-semibold uppercase tracking-wider">
-                    Convenor
-                  </div>
-                  <div className="text-2xl sm:text-3xl font-bold text-white mt-1">
-                    {events.filter(e => e.category === 'convenor').length}
-                  </div>
-                </div>
-              </div>
-            </div>
           </div>
         </div>
 
@@ -274,7 +260,6 @@ export default function ViewEventsPage() {
                   <option value="all" className="text-slate-900">📊 All Categories</option>
                   <option value="technical" className="text-slate-900">⚙️ Technical</option>
                   <option value="cultural" className="text-slate-900">🎨 Cultural</option>
-                  <option value="convenor" className="text-slate-900">👑 Convenor</option>
                 </select>
               </div>
             </div>
@@ -336,13 +321,10 @@ export default function ViewEventsPage() {
                           <span className={`inline-block px-2 py-1 rounded text-xs font-semibold ${
                             event.category === 'technical'
                               ? 'bg-blue-600/30 text-blue-100'
-                              : event.category === 'cultural'
-                              ? 'bg-pink-600/30 text-pink-100'
-                              : 'bg-purple-600/30 text-purple-100'
+                              : 'bg-pink-600/30 text-pink-100'
                           }`}>
                             {event.category === 'technical' && '⚙️ Tech'}
                             {event.category === 'cultural' && '🎨 Cultural'}
-                            {event.category === 'convenor' && '👑 Convenor'}
                           </span>
                         </div>
                       </td>
@@ -350,13 +332,10 @@ export default function ViewEventsPage() {
                         <span className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap ${
                           event.category === 'technical'
                             ? 'bg-blue-600/30 text-blue-100'
-                            : event.category === 'cultural'
-                            ? 'bg-pink-600/30 text-pink-100'
-                            : 'bg-purple-600/30 text-purple-100'
+                            : 'bg-pink-600/30 text-pink-100'
                         }`}>
                           {event.category === 'technical' && '⚙️ Tech'}
                           {event.category === 'cultural' && '🎨 Cultural'}
-                          {event.category === 'convenor' && '👑 Convenor'}
                         </span>
                       </td>
                       <td className="px-4 sm:px-6 py-4 hidden md:table-cell text-white truncate">

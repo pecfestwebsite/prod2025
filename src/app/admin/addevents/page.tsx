@@ -49,9 +49,31 @@ const CLUBS_SOCS = [
   'SESI', 'SAE', 'SME', "ES"
 ];
 
+// List of clubs (before SOCS section in the array)
+const CLUBS = [
+  'Dramatics', 'SAASC', 'APC', 'ELC', 'Music',
+  'HEB', 'PDC', 'PEB', 'Rotaract', 'SCC',
+  'CIM', 'EIC', 'WEC', 'EEB', "NCC", "NSS", "Sports"
+];
+
+// List of societies (after SOCS section in the array)
+const SOCS = [
+  'Robotics', 'ACM', 'ATS', 'ASME', 'ASCE',
+  'ASPS', 'IEEE', 'IGS', 'IIM',
+  'SESI', 'SAE', 'SME', "ES"
+];
+
+// Helper function to determine category based on club/society selection
+const getCategoryFromClubSoc = (clubsoc: string): 'technical' | 'cultural' | 'convenor' => {
+  if (!clubsoc || clubsoc === 'None') return 'convenor';
+  if (CLUBS.includes(clubsoc)) return 'cultural';
+  if (SOCS.includes(clubsoc)) return 'technical';
+  return 'convenor';
+};
+
 const steps = [
-  { id: 1, title: 'Basic Info', description: 'Category & Contact' },
-  { id: 2, title: 'Event Details', description: 'Name, Society & Date' },
+  { id: 1, title: 'Basic Info', description: 'Club/Society & Category' },
+  { id: 2, title: 'Event Details', description: 'Name & Date' },
   { id: 3, title: 'Registration', description: 'Fees & Team Settings' },
   { id: 4, title: 'Location', description: 'Address & Coordinates' },
   { id: 5, title: 'Media', description: 'Image & PDF' },
@@ -92,10 +114,22 @@ export default function AddEventsPage() {
     if (lockedSociety) {
       setFormData(prev => ({
         ...prev,
-        societyName: lockedSociety
+        societyName: lockedSociety,
+        category: getCategoryFromClubSoc(lockedSociety)
       }));
     }
   }, []);
+
+  // Auto-update category when societyName changes
+  useEffect(() => {
+    if (formData.societyName) {
+      const newCategory = getCategoryFromClubSoc(formData.societyName);
+      setFormData(prev => ({
+        ...prev,
+        category: newCategory
+      }));
+    }
+  }, [formData.societyName]);
 
   const validateStep = (step: number): boolean => {
     const newErrors: FormErrors = {};
@@ -379,23 +413,82 @@ export default function AddEventsPage() {
             <div className="space-y-6">
               <div>
                 <h2 className="text-xl sm:text-2xl font-bold text-white mb-6 flex items-center gap-2" style={{ fontFamily: "'Protest Guerrilla', sans-serif" }}>
-                  <span className="text-2xl">🎭</span> Category & Contact
+                  <span className="text-2xl">🎭</span> Club/Society & Category
                 </h2>
               </div>
 
               <div>
                 <label className="block text-sm font-semibold text-white mb-2">
+                  Club/Society <span className="text-red-400">*</span>
+                  {adminUser?.accesslevel === 1 && (
+                    <span className="text-xs text-slate-400 ml-2">(Auto-filled for your club)</span>
+                  )}
+                </label>
+                {adminUser?.accesslevel === 2 || adminUser?.accesslevel === 3 ? (
+                  <select
+                    name="societyName"
+                    value={formData.societyName}
+                    onChange={handleInputChange}
+                    className={`w-full px-4 py-3 border-2 rounded-xl focus:outline-none transition-all font-medium bg-purple-900/50 ${
+                      errors.societyName
+                        ? 'border-red-500 bg-red-900/30'
+                        : 'border-purple-500/50 focus:border-slate-300 hover:border-slate-300'
+                    } text-slate-100`}
+                  >
+                    <option value="">Select a club/society</option>
+                    {CLUBS_SOCS.map((club) => (
+                      <option key={club} value={club} className="bg-slate-900">
+                        {club}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <input
+                    type="text"
+                    name="societyName"
+                    value={formData.societyName}
+                    onChange={handleInputChange}
+                    readOnly={adminUser?.accesslevel === 1}
+                    disabled={adminUser?.accesslevel === 1}
+                    placeholder="Enter society name"
+                    className={`w-full px-4 py-3 border-2 rounded-xl focus:outline-none transition-all font-medium ${
+                      adminUser?.accesslevel === 1
+                        ? 'bg-slate-700/50 border-slate-600 text-slate-300 cursor-not-allowed opacity-75'
+                        : `bg-purple-900/50 ${
+                            errors.societyName
+                              ? 'border-red-500 bg-red-900/30'
+                              : 'border-purple-500/50 focus:border-slate-300 hover:border-slate-300'
+                          } text-slate-100 placeholder-purple-300`
+                    }`}
+                  />
+                )}
+                {errors.societyName && (
+                  <p className="text-red-400 text-sm mt-1 flex items-center gap-1 font-medium">
+                    <AlertCircle size={16} /> {errors.societyName}
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-white mb-2">
                   Category <span className="text-red-400">*</span>
+                  {formData.societyName && formData.societyName !== 'None' && (
+                    <span className="text-xs text-slate-400 ml-2">(Auto-set based on club/society)</span>
+                  )}
                 </label>
                 <select
                   name="category"
                   value={formData.category}
                   onChange={handleInputChange}
-                  className="w-full px-4 py-3 border-2 border-purple-500/50 rounded-xl focus:outline-none focus:border-slate-300 hover:border-slate-300 transition-all bg-blue-900/40 font-medium text-slate-100"
+                  disabled={!!(formData.societyName && formData.societyName !== 'None')}
+                  className={`w-full px-4 py-3 border-2 rounded-xl focus:outline-none transition-all font-medium ${
+                    formData.societyName && formData.societyName !== 'None'
+                      ? 'bg-slate-700/50 border-slate-600 text-slate-400 cursor-not-allowed opacity-75'
+                      : 'border-purple-500/50 bg-blue-900/40 text-slate-100 focus:border-slate-300 hover:border-slate-300'
+                  }`}
                 >
                   <option value="technical">⚙️ Technical</option>
                   <option value="cultural">🎨 Cultural</option>
-                  <option value="convenor">👑 Convenor</option>
                 </select>
               </div>
 
@@ -452,58 +545,6 @@ export default function AddEventsPage() {
                 {errors.eventName && (
                   <p className="text-red-400 text-sm mt-1 flex items-center gap-1 font-medium">
                     <AlertCircle size={16} /> {errors.eventName}
-                  </p>
-                )}
-              </div>
-
-              <div>
-                <label className="block text-sm font-semibold text-white mb-2">
-                  Society Name <span className="text-red-400">*</span>
-                  {adminUser?.accesslevel === 1 && (
-                    <span className="text-xs text-slate-400 ml-2">(Auto-filled for your club)</span>
-                  )}
-                </label>
-                {adminUser?.accesslevel === 2 || adminUser?.accesslevel === 3 ? (
-                  <select
-                    name="societyName"
-                    value={formData.societyName}
-                    onChange={handleInputChange}
-                    className={`w-full px-4 py-3 border-2 rounded-xl focus:outline-none transition-all font-medium bg-purple-900/50 ${
-                      errors.societyName
-                        ? 'border-red-500 bg-red-900/30'
-                        : 'border-amber-400/50 focus:border-amber-400 hover:border-amber-400'
-                    } text-amber-100`}
-                  >
-                    <option value="">Select a club/society</option>
-                    {CLUBS_SOCS.map((club) => (
-                      <option key={club} value={club} className="bg-slate-900">
-                        {club}
-                      </option>
-                    ))}
-                  </select>
-                ) : (
-                  <input
-                    type="text"
-                    name="societyName"
-                    value={formData.societyName}
-                    onChange={handleInputChange}
-                    readOnly={adminUser?.accesslevel === 1}
-                    disabled={adminUser?.accesslevel === 1}
-                    placeholder="Enter society name"
-                    className={`w-full px-4 py-3 border-2 rounded-xl focus:outline-none transition-all font-medium ${
-                      adminUser?.accesslevel === 1
-                        ? 'bg-slate-700/50 border-slate-600 text-slate-300 cursor-not-allowed opacity-75'
-                        : `bg-purple-900/50 ${
-                            errors.societyName
-                              ? 'border-red-500 bg-red-900/30'
-                              : 'border-amber-400/50 focus:border-amber-400 hover:border-amber-400'
-                          } text-amber-100 placeholder-purple-300`
-                    }`}
-                  />
-                )}
-                {errors.societyName && (
-                  <p className="text-red-400 text-sm mt-1 flex items-center gap-1 font-medium">
-                    <AlertCircle size={16} /> {errors.societyName}
                   </p>
                 )}
               </div>
