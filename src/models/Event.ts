@@ -5,44 +5,34 @@ export interface IEvent {
   eventId: string;
   category: 'technical' | 'cultural' | 'convenor';
   societyName: string;
+  additionalClub?: string;
   eventName: string;
   regFees: number;
   dateTime: Date;
   location: string;
   briefDescription: string;
-  pdfLink: string;
-  image: string; // base64url
+  pdfLink?: string;
+  image: string; // Firebase Storage URL
   mapCoordinates?: {
     latitude: number;
     longitude: number;
   };
   contactInfo: string;
-  team: number;
-  teamLimit: number;
+  isTeamEvent: boolean;
+  minTeamMembers: number;
+  maxTeamMembers: number;
+  team?: number;
+  teamLimit?: number;
 }
-
-// Counter schema for auto-incrementing eventId
-const CounterSchema = new Schema({
-  _id: {
-    type: String,
-    required: true,
-  },
-  sequence_value: {
-    type: Number,
-    default: 0,
-  },
-});
-
-const Counter = models.Counter || model('Counter', CounterSchema);
 
 const EventSchema = new Schema<IEvent>(
   {
     eventId: {
       type: String,
+      required: true,
       unique: true,
-      sparse: true,
       trim: true,
-      default: undefined,
+      index: true,
     },
     category: {
       type: String,
@@ -55,6 +45,11 @@ const EventSchema = new Schema<IEvent>(
     societyName: {
       type: String,
       required: [true, 'Society name is required'],
+      trim: true,
+    },
+    additionalClub: {
+      type: String,
+      default: 'None',
       trim: true,
     },
     eventName: {
@@ -83,13 +78,13 @@ const EventSchema = new Schema<IEvent>(
     },
     pdfLink: {
       type: String,
-      required: [true, 'PDF link is required'],
+      default: '',
       trim: true,
     },
     image: {
       type: String,
       required: [true, 'Image is required'],
-      // This will store base64url encoded image
+      // This will store Firebase Storage URL
     },
     mapCoordinates: {
       type: {
@@ -114,16 +109,29 @@ const EventSchema = new Schema<IEvent>(
       required: [true, 'Contact info is required'],
       trim: true,
     },
+    isTeamEvent: {
+      type: Boolean,
+      required: [true, 'Team/Individual setting is required'],
+      default: false,
+    },
+    minTeamMembers: {
+      type: Number,
+      required: [true, 'Minimum team members is required'],
+      min: [1, 'Minimum team members must be at least 1'],
+    },
+    maxTeamMembers: {
+      type: Number,
+      required: [true, 'Maximum team members is required'],
+      min: [1, 'Maximum team members must be at least 1'],
+    },
+    // Legacy fields - kept for backwards compatibility but not required
     team: {
       type: Number,
-      required: true,
-      default: 0,
-      min: [0, 'Team count cannot be negative'],
+      default: undefined,
     },
     teamLimit: {
       type: Number,
-      required: [true, 'Team limit is required'],
-      min: [0, 'Team limit cannot be negative'],
+      default: undefined,
     },
   },
   {
@@ -136,52 +144,48 @@ EventSchema.index({ eventId: 1 });
 EventSchema.index({ category: 1 });
 EventSchema.index({ dateTime: 1 });
 
-// Generate eventId before any middleware runs (most critical)
-EventSchema.pre('save', async function (next) {
-  if (this.isNew && !this.eventId) {
-    try {
-      // Get and increment the counter
-      const counter = await Counter.findByIdAndUpdate(
-        { _id: 'eventId' },
-        { $inc: { sequence_value: 1 } },
-        { new: true, upsert: true }
-      );
-      
-      // Generate eventId from counter
-      if (counter && counter.sequence_value) {
-        this.eventId = `EVT${String(counter.sequence_value).padStart(5, '0')}`;
-      } else {
-        throw new Error('Failed to generate counter');
-      }
-    } catch (error) {
-      console.error('Error generating eventId in save hook:', error);
-      // Use timestamp-based fallback
-      this.eventId = `EVT${Date.now().toString().slice(-5)}`;
-    }
+// Helper function to generate eventId
+function generateEventId(eventName: string, societyName: string, additionalClub?: string): string {
+  console.log('🔧 generateEventId called with:', { eventName, societyName, additionalClub });
+  
+  try {
+    const eventNameSlug = eventName
+      .toLowerCase()
+      .replace(/\s+/g, '_')
+      .replace(/[^a-z0-9_]/g, '');
+    
+    const societyNameSlug = societyName
+      .toLowerCase()
+      .replace(/\s+/g, '_')
+      .replace(/[^a-z0-9_]/g, '');
+    
+    const additionalClubSlug = additionalClub && additionalClub !== 'None'
+      ? additionalClub
+          .toLowerCase()
+          .replace(/\s+/g, '_')
+          .replace(/[^a-z0-9_]/g, '')
+      : null;
+    
+    // Build eventId: eventname_society or eventname_society_additionalclub
+    const result = additionalClubSlug
+      ? `${eventNameSlug}_${societyNameSlug}_${additionalClubSlug}`
+      : `${eventNameSlug}_${societyNameSlug}`;
+    
+    console.log('🔧 generateEventId result:', result);
+    return result;
+  } catch (error) {
+    console.error('❌ Error generating eventId:', error);
+    return `EVT${Date.now().toString().slice(-5)}`;
   }
-  next();
-});
+}
 
-// Auto-generate eventId before validation (backup)
-EventSchema.pre('validate', async function (next) {
+// IMPORTANT: Only the validate hook should generate eventId, not save
+EventSchema.pre('validate', function (this: mongoose.Document & IEvent, next) {
+  console.log('🔍 validate hook - isNew:', this.isNew, 'eventId:', this.eventId);
+  
   if (this.isNew && !this.eventId) {
-    try {
-      const counter = await Counter.findByIdAndUpdate(
-        { _id: 'eventId' },
-        { $inc: { sequence_value: 1 } },
-        { new: true, upsert: true }
-      );
-      
-      if (counter && counter.sequence_value) {
-        this.eventId = `EVT${String(counter.sequence_value).padStart(5, '0')}`;
-      } else {
-        throw new Error('Failed to get counter value');
-      }
-    } catch (error) {
-      console.error('Error generating eventId in validate hook:', error);
-      // Fallback: use timestamp-based ID
-      this.eventId = `EVT${Date.now().toString().slice(-5)}`;
-    }
+    this.eventId = generateEventId(this.eventName, this.societyName, this.additionalClub);
+    console.log('✅ validate hook - Generated eventId:', this.eventId);
   }
   next();
 });

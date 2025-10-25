@@ -24,20 +24,37 @@ export default function AdminDashboardPage() {
   useEffect(() => {
     // Check if user is authenticated
     const token = localStorage.getItem('adminToken');
+    
     if (!token) {
       router.push('/admin/login');
       return;
     }
 
-    // Fetch dashboard statistics
+    // Token exists, fetch stats
     fetchStats();
   }, [router]);
 
   const fetchStats = async () => {
     try {
+      const token = localStorage.getItem('adminToken');
+      
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+      
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
       const [eventsRes, registrationsRes] = await Promise.all([
-        fetch('/api/events?limit=1000'),
-        fetch('/api/registrations?limit=1000'),
+        fetch('/api/events?limit=1000', { 
+          headers,
+          credentials: 'include', // Include cookies
+        }),
+        fetch('/api/registrations?limit=1000', { 
+          headers,
+          credentials: 'include', // Include cookies
+        }),
       ]);
 
       let totalEvents = 0;
@@ -55,6 +72,9 @@ export default function AdminDashboardPage() {
         verifiedRegistrations = registrationsData.registrations?.filter(
           (r: any) => r.verified
         ).length || 0;
+      } else {
+        const errorData = await registrationsRes.json();
+        console.error('Error fetching registrations:', registrationsRes.status, errorData);
       }
 
       setStats({

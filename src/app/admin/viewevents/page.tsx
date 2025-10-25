@@ -4,22 +4,25 @@ import React, { useState, useEffect } from 'react';
 import { Edit2, Trash2, ChevronUp, ChevronDown } from 'lucide-react';
 import EditEventModal from '@/components/EditEventModal';
 import DeleteEventModal from '@/components/DeleteEventModal';
-import { getAdminUser, filterEventsByAccessLevel, canDeleteEvent, canEditEvent } from '@/lib/accessControl';
+import { getAdminUser, filterEventsByAccessLevel, canDeleteEvent, canEditEvent, canDeleteEventByAdmin, canEditEventByAdmin } from '@/lib/accessControl';
 
 interface Event {
   _id: string;
   eventId: string;
   category: 'technical' | 'cultural' | 'convenor';
   societyName: string;
+  additionalClub?: string;
   eventName: string;
   regFees: number;
   dateTime: string;
   location: string;
   briefDescription: string;
   contactInfo: string;
-  teamLimit: number;
+  isTeamEvent: boolean;
+  minTeamMembers: number;
+  maxTeamMembers: number;
   pdfLink: string;
-  team: number;
+  image: string;
 }
 
 interface AdminUser {
@@ -32,7 +35,7 @@ interface AdminUser {
   verified: boolean;
 }
 
-type SortField = 'eventName' | 'category' | 'societyName' | 'regFees' | 'dateTime' | 'teamLimit';
+type SortField = 'eventName' | 'category' | 'societyName' | 'regFees' | 'dateTime' | 'isTeamEvent';
 type SortOrder = 'asc' | 'desc';
 
 export default function ViewEventsPage() {
@@ -239,23 +242,23 @@ export default function ViewEventsPage() {
 
         {/* Main Content Card */}
         <div className="bg-slate-900/50 rounded-3xl shadow-2xl backdrop-blur-md border-2 border-slate-400/25 overflow-hidden">
-          {/* Search and Filter Bar */}
-          <div className="p-6 space-y-4 border-b border-slate-400/15">
-            <div className="flex flex-col sm:flex-row gap-4">
+          {/* Floating Search and Filter Bar */}
+          <div className="sticky top-0 z-50 bg-gradient-to-b from-slate-900/95 via-slate-900/90 to-slate-900/70 backdrop-blur-md border-b-2 border-purple-500/30 rounded-b-lg md:rounded-b-2xl px-4 md:px-6 py-4 md:py-5 space-y-4 shadow-lg">
+            <div className="flex flex-col sm:flex-row gap-3 md:gap-4">
               <div className="flex-1">
                 <input
                   type="text"
                   placeholder="🔍 Search by event name, society, or ID..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full px-4 py-3 bg-blue-900/40 border-2 border-purple-500/50 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/30 font-medium transition-all"
+                  className="w-full px-3 md:px-4 py-2.5 md:py-3 bg-slate-800/50 hover:bg-slate-800/70 border-2 border-purple-500/40 rounded-lg md:rounded-xl text-white placeholder-slate-400 focus:outline-none focus:border-purple-500/80 focus:bg-slate-800/80 focus:ring-2 focus:ring-purple-500/30 font-medium transition-all text-sm md:text-base shadow-md"
                 />
               </div>
               <div className="w-full sm:w-48">
                 <select
                   value={selectedCategory}
                   onChange={(e) => setSelectedCategory(e.target.value)}
-                  className="w-full px-4 py-3 bg-blue-900/40 border-2 border-purple-500/50 rounded-xl text-white focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/30 font-medium transition-all"
+                  className="w-full px-3 md:px-4 py-2.5 md:py-3 bg-slate-800/50 hover:bg-slate-800/70 border-2 border-purple-500/40 rounded-lg md:rounded-xl text-white focus:outline-none focus:border-purple-500/80 focus:bg-slate-800/80 focus:ring-2 focus:ring-purple-500/30 font-medium transition-all text-sm md:text-base shadow-md"
                 >
                   <option value="all" className="text-slate-900">📊 All Categories</option>
                   <option value="technical" className="text-slate-900">⚙️ Technical</option>
@@ -301,6 +304,9 @@ export default function ViewEventsPage() {
                     <th className="px-4 sm:px-6 py-4 text-left hidden md:table-cell">
                       <SortableHeader field="regFees" label="Fees" />
                     </th>
+                    <th className="px-4 sm:px-6 py-4 text-left hidden lg:table-cell">
+                      <SortableHeader field="isTeamEvent" label="Type" />
+                    </th>
                     <th className="px-4 sm:px-6 py-4 text-center font-semibold text-white">Actions</th>
                   </tr>
                 </thead>
@@ -339,7 +345,12 @@ export default function ViewEventsPage() {
                         </span>
                       </td>
                       <td className="px-4 sm:px-6 py-4 hidden md:table-cell text-white truncate">
-                        {event.societyName}
+                        <div>
+                          <div>{event.societyName}</div>
+                          {event.additionalClub && event.additionalClub !== 'None' && (
+                            <div className="text-xs text-purple-300 mt-1">+ {event.additionalClub}</div>
+                          )}
+                        </div>
                       </td>
                       <td className="px-4 sm:px-6 py-4 hidden lg:table-cell text-slate-300 text-xs">
                         {new Date(event.dateTime).toLocaleDateString('en-IN', {
@@ -352,21 +363,33 @@ export default function ViewEventsPage() {
                       <td className="px-4 sm:px-6 py-4 hidden md:table-cell text-white font-semibold">
                         ₹{event.regFees}
                       </td>
+                      <td className="px-4 sm:px-6 py-4 hidden lg:table-cell text-slate-300 text-xs">
+                        <span className={`px-2 py-1 rounded text-xs font-semibold ${
+                          event.isTeamEvent
+                            ? 'bg-purple-600/30 text-purple-100'
+                            : 'bg-amber-600/30 text-amber-100'
+                        }`}>
+                          {event.isTeamEvent ? '👥 Team' : '👤 Individual'}
+                        </span>
+                        <div className="text-xs mt-1 text-slate-400">
+                          {event.minTeamMembers}-{event.maxTeamMembers} members
+                        </div>
+                      </td>
                       <td className="px-4 sm:px-6 py-4">
                         <div className="flex justify-center gap-2">
-                          {canEditEvent(adminUser?.accesslevel || 3) && (
+                          {(canEditEvent(adminUser?.accesslevel || 3) && canEditEventByAdmin(event, adminUser)) && (
                             <button
                               onClick={() => handleEdit(event)}
-                              className="p-2 rounded-lg bg-blue-600/30 text-blue-100 hover:bg-blue-600/50 hover:text-blue-100 transition-all duration-300 hover:scale-110"
+                              className="p-2 rounded-lg bg-gradient-to-r from-blue-600 to-blue-500 text-white transition-all duration-300 hover:shadow-lg hover:shadow-blue-500/50 hover:scale-105 active:scale-95 border border-blue-400/30"
                               title="Edit Event"
                             >
                               <Edit2 size={16} />
                             </button>
                           )}
-                          {canDeleteEvent(adminUser?.accesslevel || 3) && (
+                          {(canDeleteEvent(adminUser?.accesslevel || 3) && canDeleteEventByAdmin(event, adminUser)) && (
                             <button
                               onClick={() => handleDelete(event)}
-                              className="p-2 rounded-lg bg-red-600/30 text-red-100 hover:bg-red-600/50 hover:text-red-100 transition-all duration-300 hover:scale-110"
+                              className="p-2 rounded-lg bg-gradient-to-r from-red-600 to-red-500 text-white transition-all duration-300 hover:shadow-lg hover:shadow-red-500/50 hover:scale-105 active:scale-95 border border-red-400/30"
                               title="Delete Event"
                             >
                               <Trash2 size={16} />

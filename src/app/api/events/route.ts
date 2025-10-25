@@ -19,14 +19,23 @@ export async function POST(request: NextRequest) {
       'dateTime',
       'location',
       'briefDescription',
-      'pdfLink',
       'image',
       'contactInfo',
-      'teamLimit',
+      'isTeamEvent',
+      'minTeamMembers',
+      'maxTeamMembers',
     ];
 
     for (const field of requiredFields) {
-      if (!body[field] && body[field] !== 0) {
+      if (field === 'isTeamEvent') {
+        // isTeamEvent is a boolean, so we need to check if it's explicitly undefined
+        if (body[field] === undefined) {
+          return NextResponse.json(
+            { error: `Missing required field: ${field}` },
+            { status: 400 }
+          );
+        }
+      } else if (!body[field] && body[field] !== 0) {
         return NextResponse.json(
           { error: `Missing required field: ${field}` },
           { status: 400 }
@@ -42,20 +51,57 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Prepare the event data (eventId will be auto-generated in the pre-save hook)
+    // Helper function to generate eventId
+    const generateEventId = (eventName: string, societyName: string, additionalClub?: string): string => {
+      try {
+        const eventNameSlug = eventName
+          .toLowerCase()
+          .replace(/\s+/g, '_')
+          .replace(/[^a-z0-9_]/g, '');
+        
+        const societyNameSlug = societyName
+          .toLowerCase()
+          .replace(/\s+/g, '_')
+          .replace(/[^a-z0-9_]/g, '');
+        
+        const additionalClubSlug = additionalClub && additionalClub !== 'None'
+          ? additionalClub
+              .toLowerCase()
+              .replace(/\s+/g, '_')
+              .replace(/[^a-z0-9_]/g, '')
+          : null;
+        
+        return additionalClubSlug
+          ? `${eventNameSlug}_${societyNameSlug}_${additionalClubSlug}`
+          : `${eventNameSlug}_${societyNameSlug}`;
+      } catch (error) {
+        console.error('Error generating eventId:', error);
+        return `EVT${Date.now().toString().slice(-5)}`;
+      }
+    };
+
+    // Prepare the event data with generated eventId
+    const additionalClub = body.additionalClub || 'None';
+    const generatedEventId = generateEventId(body.eventName.trim(), body.societyName.trim(), additionalClub);
+    
+    console.log('🔧 API: Generated eventId:', generatedEventId);
+    
     const eventData = {
+      eventId: generatedEventId, // Set eventId explicitly BEFORE creating event
       category: body.category,
       societyName: body.societyName.trim(),
+      additionalClub: additionalClub,
       eventName: body.eventName.trim(),
       regFees: Number(body.regFees),
       dateTime: new Date(body.dateTime),
       location: body.location.trim(),
       briefDescription: body.briefDescription.trim(),
-      pdfLink: body.pdfLink.trim(),
-      image: body.image, // base64url encoded
+      pdfLink: body.pdfLink ? body.pdfLink.trim() : '',
+      image: body.image,
       contactInfo: body.contactInfo.trim(),
-      team: Number(body.team) || 0,
-      teamLimit: Number(body.teamLimit),
+      isTeamEvent: Boolean(body.isTeamEvent),
+      minTeamMembers: Number(body.minTeamMembers),
+      maxTeamMembers: Number(body.maxTeamMembers),
       mapCoordinates: body.mapCoordinates?.latitude && body.mapCoordinates?.longitude
         ? {
             latitude: Number(body.mapCoordinates.latitude),
@@ -64,11 +110,21 @@ export async function POST(request: NextRequest) {
         : undefined,
     };
 
-    // Create and save the event
-    // Note: We use new Event() followed by save() instead of Event.create()
-    // to ensure pre-save hooks run before validation
+    console.log('📋 API: eventData to be saved:', { eventId: eventData.eventId, eventName: eventData.eventName });
+
+    // Create event with the explicitly generated eventId
     const newEvent = new Event(eventData);
-    await newEvent.save();
+    
+    // Log the state before save
+    console.log('📝 API: Before save - newEvent.eventId:', newEvent.eventId);
+    console.log('📝 API: Before save - newEvent.isNew:', newEvent.isNew);
+    
+    // Save the event
+    const savedEvent = await newEvent.save();
+    
+    // Log the state after save
+    console.log('✅ API: After save - savedEvent.eventId:', savedEvent.eventId);
+    console.log('✅ API: After save - Full event:', JSON.stringify({ eventId: savedEvent.eventId, eventName: savedEvent.eventName }, null, 2));
 
     return NextResponse.json(
       {

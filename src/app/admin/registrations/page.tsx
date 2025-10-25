@@ -10,7 +10,7 @@ interface RegistrationWithEvent {
   eventName: string;
   societyName: string;
   userId: string;
-  teamUserIds: string[];
+  teamId: string;
   verified: boolean;
   feesPaid: string;
   dateTime: string;
@@ -44,7 +44,7 @@ async function getRegistrations(): Promise<RegistrationWithEvent[]> {
         eventName: eventData.eventName,
         societyName: eventData.societyName,
         userId: reg.userId,
-        teamUserIds: reg.teamUserIds,
+        teamId: reg.teamId || '',
         verified: reg.verified,
         feesPaid: reg.feesPaid,
         dateTime: reg.dateTime.toISOString(),

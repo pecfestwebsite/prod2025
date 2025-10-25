@@ -3,9 +3,9 @@ import mongoose, { Schema, model, models } from 'mongoose';
 export interface IRegistration {
   eventId: string;
   userId: string;
-  teamUserIds: string[];
+  teamId: string;
   verified: boolean;
-  feesPaid: string; // base64url
+  feesPaid?: string; // Firebase Storage URL (empty for free events)
   dateTime: Date;
 }
 
@@ -21,10 +21,11 @@ const RegistrationSchema = new Schema<IRegistration>(
       required: [true, 'User ID is required'],
       trim: true,
     },
-    teamUserIds: {
-      type: [String],
-      required: [true, 'Team user IDs array is required'],
-      default: [],
+    teamId: {
+      type: String,
+      required: false,
+      trim: true,
+      default: '',
     },
     verified: {
       type: Boolean,
@@ -33,8 +34,8 @@ const RegistrationSchema = new Schema<IRegistration>(
     },
     feesPaid: {
       type: String,
-      required: [true, 'Fees paid receipt is required'],
-      // This will store base64url encoded image/document
+      default: '',
+      // This will store Firebase Storage URL of payment receipt
     },
     dateTime: {
       type: Date,
@@ -50,10 +51,16 @@ const RegistrationSchema = new Schema<IRegistration>(
 // Add indexes for better query performance
 RegistrationSchema.index({ eventId: 1 });
 RegistrationSchema.index({ userId: 1 });
+RegistrationSchema.index({ teamId: 1 });
 RegistrationSchema.index({ eventId: 1, userId: 1 }); // Composite index for unique registrations per event per user
 RegistrationSchema.index({ verified: 1 });
 
 // Prevent model recompilation in development (Next.js hot reload)
-const Registration = models.Registration || model<IRegistration>('Registration', RegistrationSchema);
+// Force delete existing model to ensure schema updates are applied
+if (mongoose.models.Registration) {
+  delete mongoose.models.Registration;
+}
+
+const Registration = model<IRegistration>('Registration', RegistrationSchema);
 
 export default Registration;

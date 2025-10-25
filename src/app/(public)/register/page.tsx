@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import styles from './register.module.css'; // Import CSS module
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -13,16 +14,50 @@ export default function RegisterPage() {
   const [phoneNumber, setPhoneNumber] = useState('');
   const [referralCode, setReferralCode] = useState('');
   const [branch, setBranch] = useState('');
-  const [step, setStep] = useState<'email' | 'details'>('email');
+  const [step, setStep] = useState<'email' | 'otp' | 'details'>('email');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [userExists, setUserExists] = useState(false);
+  const [resendTimer, setResendTimer] = useState(0);
+
+  // Timer effect for countdown
+  useEffect(() => {
+    if (resendTimer <= 0) return;
+    
+    const interval = setInterval(() => {
+      setResendTimer(current => {
+        if (current <= 1) {
+          clearInterval(interval);
+          return 0;
+        }
+        return current - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [resendTimer]);
+
+  // Format time as MM:SS
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
 
   const handleSendOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError('');
     setSuccess('');
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      setError('Please enter a valid email address');
+      setLoading(false);
+      return;
+    }
 
     try {
       const response = await fetch('/api/auth/send-otp', {
@@ -32,12 +67,33 @@ export default function RegisterPage() {
       });
 
       const data = await response.json();
+      
+      if (response.status === 429) {
+        // Parse lockout time from error message if available
+        const timeMatch = data.error.match(/(\d+)/);
+        if (timeMatch) {
+          const minutes = parseInt(timeMatch[1]);
+          if (data.error.includes('hours')) {
+            setResendTimer(minutes * 60 * 60);
+          } else if (data.error.includes('minutes')) {
+            setResendTimer(minutes * 60);
+          } else {
+            setResendTimer(minutes);
+          }
+        } else {
+          setResendTimer(60); // Default to 60 seconds if no time specified
+        }
+        setError(data.error);
+        return;
+      }
+
       if (!response.ok) {
         throw new Error(data.error || 'Failed to send OTP');
       }
 
       setSuccess('Code sent to your email! ✨');
-      setStep('details');
+      setStep('otp');
+      setResendTimer(60); // Set 60 second cooldown
     } catch (err: any) {
       setError(err.message || 'Failed to send OTP');
     } finally {
@@ -45,29 +101,142 @@ export default function RegisterPage() {
     }
   };
 
+  const handleVerifyOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+    setSuccess('');
+
+    try {
+      // First, verify the OTP
+      const verifyResponse = await fetch('/api/auth/verify-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, otp }),
+      });
+
+      const verifyData = await verifyResponse.json();
+      
+      if (verifyResponse.status === 429) {
+        // Rate limit or lockout response
+        setError(verifyData.error);
+        setIsResendBlocked(true);
+        return;
+      }
+      
+      if (!verifyResponse.ok) {
+        // Handle remaining attempts message
+        setError(verifyData.error || 'Invalid OTP');
+        return;
+      }
+
+      // Store JWT token in localStorage
+      if (verifyData.token) {
+        localStorage.setItem('token', verifyData.token);
+      }
+
+      // OTP is valid - check if this is an existing user or new registration
+      // The verify-otp endpoint creates/updates the user, so check the response
+      const userData = verifyData.user;
+      
+      // If user has complete profile data, they're an existing user
+      if (userData.name && userData.college && userData.studentId && userData.phoneNumber && userData.branch) {
+        setUserExists(true);
+        setSuccess('Login successful! Redirecting...');
+        setTimeout(() => router.push('/'), 1500);
+      } else {
+        // New user - need to complete registration
+        setUserExists(false);
+        setSuccess('Email verified! Please complete your registration.');
+        setStep('details');
+      }
+    } catch (err: any) {
+      setError(err.message || 'Failed to verify OTP');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const validatePhoneNumber = (phone: string) => {
+    // Indian phone number validation (10 digits, optionally with +91 prefix)
+    const phoneRegex = /^(\+91[\s-]?)?[0]?[6789]\d{9}$/;
+    return phoneRegex.test(phone.replace(/\s+/g, ''));
+  };
+
+  const validateStudentId = (id: string) => {
+    // At least 5 characters, alphanumeric
+    return id.length >= 5 && /^[a-zA-Z0-9]+$/.test(id);
+  };
+
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError('');
 
+    // Validate fields
+    if (!validatePhoneNumber(phoneNumber)) {
+      setError('Please enter a valid Indian phone number');
+      setLoading(false);
+      return;
+    }
+
+    if (!validateStudentId(studentId)) {
+      setError('Student ID must be at least 5 characters long and contain only letters and numbers');
+      setLoading(false);
+      return;
+    }
+
+    if (name.length < 3) {
+      setError('Name must be at least 3 characters long');
+      setLoading(false);
+      return;
+    }
+
+    if (college.length < 3) {
+      setError('Please enter a valid college name');
+      setLoading(false);
+      return;
+    }
+
+    if (branch.length < 2) {
+      setError('Please enter a valid branch name');
+      setLoading(false);
+      return;
+    }
+
     try {
-      const response = await fetch('/api/auth/register', {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        setError('Session expired. Please login again.');
+        setLoading(false);
+        return;
+      }
+
+      // Update user profile with the missing fields
+      const response = await fetch('/api/auth/update-profile', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, otp, name, college, studentId, phoneNumber, referralCode, branch }),
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ 
+          email, 
+          name, 
+          college, 
+          studentId, 
+          phoneNumber, 
+          referralCode, 
+          branch 
+        }),
       });
 
       const data = await response.json();
       if (!response.ok) {
-        if (response.status === 409) {
-          setError('Email already registered. Please login instead.');
-          return;
-        }
         throw new Error(data.error || 'Registration failed');
       }
 
       setSuccess('Registration successful! Redirecting...');
-      setTimeout(() => router.push('/'), 1200);
+      setTimeout(() => router.push('/'), 1500);
     } catch (err: any) {
       setError(err.message || 'Registration failed');
     } finally {
@@ -143,11 +312,7 @@ export default function RegisterPage() {
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       required
-                      className="w-full border-2 text-white placeholder:text-slate-500 focus:border-blue-400 focus:ring-2 focus:ring-blue-400/50 h-12 text-base sm:text-lg rounded-xl px-4 outline-none transition-all"
-                      style={{
-                        backgroundColor: '#1a0a4e',
-                        borderColor: '#4321a9',
-                      }}
+                      className={`${styles.inputField} w-full border-2 text-white placeholder:text-slate-500 focus:border-blue-400 focus:ring-2 focus:ring-blue-400/50 h-12 text-base sm:text-lg rounded-xl px-4 outline-none transition-all`}
                       disabled={loading}
                     />
                   </div>
@@ -184,6 +349,96 @@ export default function RegisterPage() {
                   <p className="text-slate-400 text-sm">
                     🔮 A secure code will be sent to your email
                   </p>
+                </div>
+              </div>
+            ) : step === 'otp' ? (
+              <div className="space-y-6">
+                <form onSubmit={handleVerifyOtp} className="space-y-6">
+                  <div className="space-y-2">
+                    <label htmlFor="otp" className="block text-white text-base sm:text-lg font-medium">
+                      Enter Magic Code
+                    </label>
+                    <input
+                      id="otp"
+                      type="text"
+                      placeholder="000000"
+                      value={otp}
+                      onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                      required
+                      maxLength={6}
+                      autoFocus
+                      className="w-full border-2 text-white placeholder:text-slate-500 focus:border-blue-400 focus:ring-2 focus:ring-blue-400/50 h-14 text-center text-2xl tracking-widest font-bold rounded-xl outline-none transition-all"
+                      style={{
+                        backgroundColor: '#1a0a4e',
+                        borderColor: '#4321a9',
+                      }}
+                      disabled={loading}
+                    />
+                    <p className="text-xs text-slate-400 text-center">
+                      Code sent to <span className="text-white font-medium">{email}</span>
+                    </p>
+                  </div>
+
+                  {error && (
+                    <div className="bg-red-900/30 border-2 border-red-500/50 text-red-200 px-4 py-3 rounded-xl text-sm">
+                      ⚠ {error}
+                    </div>
+                  )}
+
+                  {success && (
+                    <div className="bg-emerald-900/30 border-2 border-emerald-500/50 text-emerald-200 px-4 py-3 rounded-xl text-sm">
+                      ✓ {success}
+                    </div>
+                  )}
+
+                  <div className="space-y-3">
+                    <button
+                      type="submit"
+                      disabled={loading || otp.length !== 6}
+                      className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white font-bold text-base sm:text-lg h-12 rounded-xl shadow-lg hover:shadow-xl hover:shadow-purple-500/50 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {loading ? (
+                        <span className="flex items-center justify-center gap-2">
+                          <span className="animate-spin">⏳</span>
+                          Verifying...
+                        </span>
+                      ) : (
+                        '🔓 Verify Code'
+                      )}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setStep('email');
+                        setOtp('');
+                        setError('');
+                        setSuccess('');
+                      }}
+                      className="w-full text-slate-300 hover:text-white hover:bg-purple-600/20 py-2 rounded-xl transition-all border-2 border-transparent hover:border-purple-400/30"
+                    >
+                      ← Use Different Email
+                    </button>
+                  </div>
+                </form>
+
+                <div className="mt-6 text-center">
+                  <button
+                    onClick={handleSendOtp}
+                    disabled={loading || resendTimer > 0}
+                    className={`text-sm transition-colors ${
+                      resendTimer > 0 ? 'text-slate-500 cursor-not-allowed' : 'text-blue-300 hover:text-blue-200'
+                    }`}
+                  >
+                    {resendTimer > 0 ? (
+                      <span className="flex items-center justify-center gap-2">
+                        <span className="inline-block w-5 text-center">⏳</span>
+                        Resend in {formatTime(resendTimer)}
+                      </span>
+                    ) : (
+                      "Didn't receive code? Resend"
+                    )}
+                  </button>
                 </div>
               </div>
             ) : (
@@ -307,30 +562,6 @@ export default function RegisterPage() {
                       disabled={loading}
                     />
                   </div>
-
-                  <div className="space-y-2">
-                    <label htmlFor="otp" className="block text-white text-sm font-medium">
-                      Enter Magic Code
-                    </label>
-                    <input
-                      id="otp"
-                      type="text"
-                      placeholder="000000"
-                      value={otp}
-                      onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                      required
-                      maxLength={6}
-                      className="w-full border-2 text-white placeholder:text-slate-500 focus:border-blue-400 focus:ring-2 focus:ring-blue-400/50 h-11 text-center text-xl tracking-widest font-bold rounded-xl outline-none transition-all"
-                      style={{
-                        backgroundColor: '#1a0a4e',
-                        borderColor: '#4321a9',
-                      }}
-                      disabled={loading}
-                    />
-                    <p className="text-xs text-slate-400 text-center">
-                      Code sent to <span className="text-white font-medium">{email}</span>
-                    </p>
-                  </div>
                 </div>
 
                 {error && (
@@ -348,16 +579,16 @@ export default function RegisterPage() {
                 <div className="space-y-3 pt-2">
                   <button
                     type="submit"
-                    disabled={loading || otp.length !== 6}
+                    disabled={loading}
                     className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white font-bold text-base sm:text-lg h-12 rounded-xl shadow-lg hover:shadow-xl hover:shadow-purple-500/50 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {loading ? (
                       <span className="flex items-center justify-center gap-2">
                         <span className="animate-spin">⏳</span>
-                        Registering...
+                        Completing Registration...
                       </span>
                     ) : (
-                      '🌙 Register Now'
+                      '🌙 Complete Registration'
                     )}
                   </button>
 
@@ -366,12 +597,18 @@ export default function RegisterPage() {
                     onClick={() => {
                       setStep('email');
                       setOtp('');
+                      setName('');
+                      setCollege('');
+                      setStudentId('');
+                      setPhoneNumber('');
+                      setReferralCode('');
+                      setBranch('');
                       setError('');
                       setSuccess('');
                     }}
                     className="w-full text-slate-300 hover:text-white hover:bg-purple-600/20 py-2 rounded-xl transition-all border-2 border-transparent hover:border-purple-400/30"
                   >
-                    ← Use Different Email
+                    ← Start Over
                   </button>
                 </div>
               </form>
@@ -382,7 +619,7 @@ export default function RegisterPage() {
           <div className="mt-8 text-center space-y-3">
             <p className="text-slate-400 text-sm">Already registered?</p>
             <button
-              onClick={() => router.push('/login')}
+              onClick={() => router.push('/register')}
               className="text-blue-300 hover:text-blue-200 font-medium transition-colors inline-flex items-center gap-1"
             >
               Go to Login <span>→</span>
@@ -404,4 +641,8 @@ export default function RegisterPage() {
       <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-black/20 to-transparent pointer-events-none" />
     </div>
   );
+}
+
+function setIsResendBlocked(arg0: boolean) {
+  throw new Error('Function not implemented.');
 }

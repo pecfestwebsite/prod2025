@@ -3,6 +3,8 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence, useMotionValue, useTransform, useScroll, useMotionValueEvent } from 'framer-motion';
 import { Instagram, MapPin } from 'lucide-react';
 import Link from 'next/link';
+import { useAuth } from '@/lib/hooks/useAuth';
+import Navbar from '@/components/Navbar';
 
 // Palette :
 // #010101 - Black
@@ -200,17 +202,7 @@ const Countdown = () => {
 };
 
 export default function LandingPage() {
-    const { scrollY } = useScroll();
-    const [hidden, setHidden] = useState(false);
-
-    useMotionValueEvent(scrollY, "change", (latest) => {
-        const previous = scrollY.getPrevious() ?? 0;
-        if (latest > previous && latest > 100) {
-            setHidden(true);
-        } else {
-            setHidden(false);
-        }
-    });
+    const { user, loading } = useAuth();
 
     return (
         <>
@@ -229,18 +221,18 @@ export default function LandingPage() {
                 <ParallaxDesert />
                 
                 {/* Crescent Moon Icon */}
-                <motion.div
-                    className="absolute top-12 left-48 z-40"
-                    animate={{ rotate: [0, -10, 0], scale: [1, 1.05, 1] }}
-                    transition={{ duration: 8, repeat: Infinity, repeatType: 'mirror', ease: 'easeInOut' }}
-                >
-                    <svg width="60" height="60" viewBox="0 0 36 36" xmlns="http://www.w3.org/2000/svg"
+                {/* <motion.div */}
+                    {/* // className="absolute top-12 left-48 z-40" */}
+                    {/* // animate={{ rotate: [0, -10, 0], scale: [1, 1.05, 1] }} */}
+                    {/* // transition={{ duration: 8, repeat: Infinity, repeatType: 'mirror', ease: 'easeInOut' }} */}
+                {/* > */}
+                    {/* <svg width="60" height="60" viewBox="0 0 36 36" xmlns="http://www.w3.org/2000/svg"
                         className="text-[#ffd4b9] drop-shadow-[0_0_10px_#ffd4b9]">
                         <path fill="currentColor" d="M30.312.776C32 19 20 32 .776 30.312c8.199 7.717 21.091 7.588 29.107-.429C37.9 21.867 38.03 8.975 30.312.776z"></path>
                         {/* The second path for craters can be added here if desired, but it might not be visible with a single color */}
                         {/* <path d="M30.705 15.915a1.163 1.163 0 1 0 1.643 1.641a1.163 1.163 0 0 0-1.643-1.641zm-16.022 14.38a1.74 1.74 0 0 0 0 2.465a1.742 1.742 0 1 0 0-2.465zm13.968-2.147a2.904 2.904 0 0 1-4.108 0a2.902 2.902 0 0 1 0-4.107a2.902 2.902 0 0 1 4.108 0a2.902 2.902 0 0 1 0 4.107z" fill="#FFCC4D"></path> */}
-                    </svg>
-                </motion.div>
+                    {/* </svg>  */}
+                {/* </motion.div> */}
                 
                 <FloatingLantern duration={12} size={50} x="10%" y="20%" delay={0} />
                 <FloatingLantern duration={15} size={30} x="85%" y="30%" delay={2} />
@@ -249,25 +241,9 @@ export default function LandingPage() {
                 <FloatingLantern duration={16} size={45} x="20%" y="10%" delay={5} />
                 <FloatingLantern duration={11} size={30} x="70%" y="80%" delay={0.5} />
 
+                {/* <Navbar /> */}
+
                 <div className="relative z-20">
-                    <motion.nav 
-                        variants={{ visible: { y: 0, opacity: 1 }, hidden: { y: "-100%", opacity: 0 } }}
-                        animate={hidden ? "hidden" : "visible"}
-                        transition={{ duration: 0.35, ease: "easeInOut" }}
-                        className="w-full flex justify-center py-4 fixed top-0 left-0 z-50"
-                    >
-                        <div className="flex flex-wrap justify-center gap-x-2 sm:gap-x-6 bg-[#010101]/40 backdrop-blur-sm rounded-full px-4 sm:px-8 py-3 border border-[#b53da1]/40 shadow-lg">
-                            {['About', 'Events', 'Sponsors', 'Team', 'Contact Us'].map((item) => (
-                                <a
-                                    key={item}
-                                    href={item === 'Events' ? '/events' : `#${item.toLowerCase().replace(' ', '-')}`}
-                                    className="text-[#fea6cc] hover:text-[#ffd4b9] transition-colors duration-300 font-bold text-sm sm:text-base font-sans px-2 py-1"
-                                >
-                                    <motion.span whileHover={{ scale: 1.1, textShadow: '0 0 8px #ed6ab8' }} whileTap={{ scale: 0.95 }}>{item}</motion.span>
-                                </a>
-                            ))}
-                        </div>
-                    </motion.nav>
 
                     <section id="about" className="min-h-screen flex flex-col items-center justify-center text-center p-4">
                         <header className="flex flex-col items-center pt-20">
@@ -289,12 +265,18 @@ export default function LandingPage() {
                             className="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-6"
                             initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.5, delay: 0.8, type: 'spring' }}
                         >
-                            <Link href="/register" className="bg-gradient-to-r from-[#b53da1] to-[#ed6ab8] text-white font-bold py-3 px-8 rounded-full shadow-lg hover:scale-105 transition-transform duration-300">
-                                Register Now
-                            </Link>
-                            <Link href="/login" className="border-2 border-[#ed6ab8] text-white font-bold py-3 px-8 rounded-full shadow-lg hover:bg-[#ed6ab8]/20 hover:scale-105 transition-all duration-300">
-                                Login
-                            </Link>
+                            {!loading && (
+                                <Link 
+                                    href={user ? "/events" : "/register"} 
+                                    className={`${
+                                        user 
+                                            ? "border-2 border-[#ed6ab8] hover:bg-[#ed6ab8]/20" 
+                                            : "bg-gradient-to-r from-[#b53da1] to-[#ed6ab8]"
+                                    } text-white font-bold py-3 px-8 rounded-full shadow-lg hover:scale-105 transition-all duration-300`}
+                                >
+                                    {user ? "Register Events" : "Login"}
+                                </Link>
+                            )}
                         </motion.div>
                     </section>
 

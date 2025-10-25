@@ -168,15 +168,21 @@ export default function ClearanceClient({ admins }: ClearanceClientProps) {
 
   const isUserIdLocked = (): boolean => {
     // Lock userId when:
-    // 1. Adding a new admin AND the access level being set is the same as current admin's level
+    // 1. Adding a new admin AND the access level being set is the same as current admin's level (but NOT for Webmaster)
     // 2. OR editing an existing admin (always locked)
     if (!currentAdmin) return false;
+    
+    // Webmaster (access level 3) can always edit userId
+    if (currentAdmin.accesslevel === 3) {
+      return false;
+    }
+    
     if (editingAdmin) {
       // When editing, always lock the userId field
       return true;
     }
     if (!editingAdmin) {
-      // Adding new admin - lock if setting same access level
+      // Adding new admin - lock if setting same access level (but not for Webmaster)
       return formData.accesslevel === currentAdmin.accesslevel;
     }
     return false;
@@ -389,22 +395,23 @@ export default function ClearanceClient({ admins }: ClearanceClientProps) {
         </div>
       ) : (
         <>
-      <div className="space-y-4">
-        <div className="flex flex-col sm:flex-row gap-4">
-          <input type="text" placeholder="🔍 Search..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="flex-1 px-4 py-3 bg-blue-900/40 border-2 border-purple-500/50 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/30" />
-          <select value={filterLevel} onChange={e => setFilterLevel(e.target.value === 'all' ? 'all' : Number(e.target.value))} className="px-4 py-3 bg-blue-900/40 border-2 border-purple-500/50 rounded-xl text-white focus:outline-none focus:border-purple-500">
+      {/* Floating Search and Filter Bar */}
+      <div className="sticky top-0 z-50 bg-gradient-to-b from-slate-900/95 via-slate-900/90 to-slate-900/70 backdrop-blur-md border-b-2 border-purple-500/30 rounded-b-lg md:rounded-b-2xl px-4 md:px-6 py-4 md:py-5 space-y-4 shadow-lg">
+        <div className="flex flex-col sm:flex-row gap-3 md:gap-4">
+          <input type="text" placeholder="🔍 Search..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="flex-1 px-3 md:px-4 py-2.5 md:py-3 bg-slate-800/50 hover:bg-slate-800/70 border-2 border-purple-500/40 rounded-lg md:rounded-xl text-white placeholder-slate-400 focus:outline-none focus:border-purple-500/80 focus:bg-slate-800/80 focus:ring-2 focus:ring-purple-500/30 text-sm md:text-base shadow-md transition-all" />
+          <select value={filterLevel} onChange={e => setFilterLevel(e.target.value === 'all' ? 'all' : Number(e.target.value))} className="px-3 md:px-4 py-2.5 md:py-3 bg-slate-800/50 hover:bg-slate-800/70 border-2 border-purple-500/40 rounded-lg md:rounded-xl text-white focus:outline-none focus:border-purple-500/80 focus:bg-slate-800/80 focus:ring-2 focus:ring-purple-500/30 text-sm md:text-base shadow-md transition-all">
             <option value="all">🔓 All Levels</option>
             {ACCESS_LEVELS.map(l => <option key={l.value} value={l.value}>{l.icon} {l.label}</option>)}
           </select>
-          <select value={filterVerified} onChange={e => setFilterVerified(e.target.value as any)} className="px-4 py-3 bg-blue-900/40 border-2 border-purple-500/50 rounded-xl text-white focus:outline-none focus:border-purple-500">
+          <select value={filterVerified} onChange={e => setFilterVerified(e.target.value as any)} className="px-3 md:px-4 py-2.5 md:py-3 bg-slate-800/50 hover:bg-slate-800/70 border-2 border-purple-500/40 rounded-lg md:rounded-xl text-white focus:outline-none focus:border-purple-500/80 focus:bg-slate-800/80 focus:ring-2 focus:ring-purple-500/30 text-sm md:text-base shadow-md transition-all">
             <option value="all">📋 All Status</option>
             <option value="verified">✓ Blessed</option>
             <option value="unverified">⏳Cursed</option>
           </select>
         </div>
-        <div className="flex items-center justify-between px-4 py-2 bg-slate-800/50 rounded-lg border border-purple-500/20">
-          <p className="text-sm text-slate-300">📊 Showing <span className="font-bold text-white">{filteredAndSortedAdmins.length}</span> of <span className="font-bold text-white">{localAdmins.length}</span></p>
-          <button onClick={() => openModal()} className="inline-flex items-center gap-2 bg-gradient-to-r from-purple-600 to-magenta-600 hover:from-purple-700 hover:to-magenta-700 px-4 py-2 rounded-lg font-bold text-white"><Plus size={18} /><span className="hidden sm:inline">Add</span></button>
+        <div className="flex items-center justify-between px-3 md:px-4 py-2 bg-slate-800/40 border border-purple-500/20 rounded-lg flex-wrap gap-2">
+          <p className="text-xs md:text-sm text-slate-300">📊 Showing <span className="font-bold text-white">{filteredAndSortedAdmins.length}</span> of <span className="font-bold text-white">{localAdmins.length}</span></p>
+          <button onClick={() => openModal()} className="inline-flex items-center gap-2 bg-gradient-to-r from-purple-600 to-magenta-600 hover:from-purple-700 hover:to-magenta-700 px-3 md:px-4 py-2 rounded-lg font-bold text-white text-sm"><Plus size={16} /><span className="hidden sm:inline">Add</span></button>
         </div>
       </div>
 

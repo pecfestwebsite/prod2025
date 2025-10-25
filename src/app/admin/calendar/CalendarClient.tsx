@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
+import { ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { getAdminUser, filterEventsByAccessLevel } from '@/lib/accessControl';
 
 interface IEvent {
@@ -8,6 +9,7 @@ interface IEvent {
   eventId: string;
   category: 'technical' | 'cultural' | 'convenor';
   societyName: string;
+  additionalClub?: string;
   eventName: string;
   regFees: number;
   dateTime: string;
@@ -16,8 +18,9 @@ interface IEvent {
   pdfLink: string;
   image: string;
   contactInfo: string;
-  team: number;
-  teamLimit: number;
+  isTeamEvent: boolean;
+  minTeamMembers: number;
+  maxTeamMembers: number;
 }
 
 interface AdminUser {
@@ -29,15 +32,17 @@ interface AdminUser {
   verified: boolean;
 }
 
-type ViewMode = 'week' | 'day';
-
 export default function CalendarClient({ events }: { events: IEvent[] }) {
-  const [viewMode, setViewMode] = useState<ViewMode>('week');
-  const [selectedDate, setSelectedDate] = useState(new Date());
-  const [selectedEvent, setSelectedEvent] = useState<IEvent | null>(null);
-  const [selectedTime, setSelectedTime] = useState<string>('');
   const [adminUser, setAdminUser] = useState<AdminUser | null>(null);
   const [filteredEvents, setFilteredEvents] = useState<IEvent[]>(events);
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [selectedEvent, setSelectedEvent] = useState<IEvent | null>(null);
+  const [sortVenues, setSortVenues] = useState(true); // Default to sorted
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart] = useState(0);
+  const [scrollLeft, setScrollLeft] = useState(0);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchType, setSearchType] = useState<'all' | 'venue' | 'event'>('all');
 
   useEffect(() => {
     const admin = getAdminUser();
@@ -46,73 +51,76 @@ export default function CalendarClient({ events }: { events: IEvent[] }) {
     setFilteredEvents(filtered);
   }, [events]);
 
-  // Helper function to get local date key (YYYY-MM-DD)
-  const getLocalDateKey = (dateTime: string) => {
-    const date = new Date(dateTime);
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-  };
+  // Close any open dropdowns when modal opens
+  useEffect(() => {
+    if (selectedEvent) {
+      // Dispatch event to close navbar dropdown
+      window.dispatchEvent(new Event('closeDropdown'));
+    }
+  }, [selectedEvent]);
 
-  // Group events by date
-  const eventsByDate = useMemo(() => {
-    const grouped: { [key: string]: IEvent[] } = {};
-    
-    filteredEvents.forEach(event => {
-      const dateKey = getLocalDateKey(event.dateTime);
-      
-      if (!grouped[dateKey]) {
-        grouped[dateKey] = [];
-      }
-      grouped[dateKey].push(event);
-    });
-
-    // Sort events within each day by time
-    Object.keys(grouped).forEach(date => {
-      grouped[date].sort((a, b) => 
-        new Date(a.dateTime).getTime() - new Date(b.dateTime).getTime()
-      );
-    });
-
-    return grouped;
-  }, [filteredEvents]);
-
-  // Get events for selected date
-  const selectedDateEvents = useMemo(() => {
-    const year = selectedDate.getFullYear();
-    const month = String(selectedDate.getMonth() + 1).padStart(2, '0');
-    const day = String(selectedDate.getDate()).padStart(2, '0');
-    const dateKey = `${year}-${month}-${day}`;
-    return eventsByDate[dateKey] || [];
-  }, [selectedDate, eventsByDate]);
-
-  // Get week days
+  // Get week days (Monday to Sunday)
   const getWeekDays = useMemo(() => {
     const start = new Date(selectedDate);
-    start.setDate(start.getDate() - start.getDay()); // Start from Sunday
-    
+    const day = start.getDay();
+    const diff = start.getDate() - day + (day === 0 ? -6 : 1); // Adjust to Monday
+    start.setDate(diff);
+
     const days = [];
     for (let i = 0; i < 7; i++) {
-      const day = new Date(start);
-      day.setDate(start.getDate() + i);
-      days.push(day);
+      const d = new Date(start);
+      d.setDate(start.getDate() + i);
+      days.push(d);
     }
     return days;
   }, [selectedDate]);
 
-  // Get category icon and color
-  const getCategoryStyle = (category: string) => {
-    switch (category) {
-      case 'technical':
-        return { icon: '⚙', bg: 'from-blue-900/80 to-cyan-900/80', border: 'border-blue-400/50', text: 'text-blue-300' };
-      case 'cultural':
-        return { icon: '🎭', bg: 'from-pink-900/80 to-rose-900/80', border: 'border-pink-400/50', text: 'text-pink-300' };
-      case 'convenor':
-        return { icon: '👑', bg: 'from-purple-900/80 to-indigo-900/80', border: 'border-purple-400/50', text: 'text-purple-300' };
-      default:
-        return { icon: '✨', bg: 'from-gray-900/80 to-slate-900/80', border: 'border-gray-400/50', text: 'text-gray-300' };
-    }
+  // Filter events based on search query
+  const getSearchFilteredEvents = useMemo(() => {
+    if (!searchQuery.trim()) return filteredEvents;
+    
+    const query = searchQuery.toLowerCase();
+    return filteredEvents.filter(event => {
+      if (searchType === 'venue') {
+        return event.location.toLowerCase().includes(query);
+      } else if (searchType === 'event') {
+        return event.eventName.toLowerCase().includes(query);
+      } else {
+        // Search both
+        return event.location.toLowerCase().includes(query) || 
+               event.eventName.toLowerCase().includes(query);
+      }
+    });
+  }, [filteredEvents, searchQuery, searchType]);
+
+  // Get all unique venues from search-filtered events
+  const getAllVenues = useMemo(() => {
+    const venues = new Set<string>();
+    getSearchFilteredEvents.forEach(event => venues.add(event.location));
+    const venuesArray = Array.from(venues);
+    return sortVenues ? venuesArray.sort() : venuesArray;
+  }, [getSearchFilteredEvents, sortVenues]);
+
+  // Get hour slots (0-23)
+  const hours = Array.from({ length: 24 }, (_, i) => i);
+
+  // Get events for a specific day, venue, and hour
+  const getEventsForSlot = (dayDate: Date, venue: string, hour: number): IEvent[] => {
+    const year = dayDate.getFullYear();
+    const month = String(dayDate.getMonth() + 1).padStart(2, '0');
+    const date = String(dayDate.getDate()).padStart(2, '0');
+    const dateKey = `${year}-${month}-${date}`;
+
+    return getSearchFilteredEvents.filter(event => {
+      const eventDate = new Date(event.dateTime);
+      const eventYear = eventDate.getFullYear();
+      const eventMonth = String(eventDate.getMonth() + 1).padStart(2, '0');
+      const eventDate_num = String(eventDate.getDate()).padStart(2, '0');
+      const eventDateKey = `${eventYear}-${eventMonth}-${eventDate_num}`;
+
+      const eventHour = eventDate.getHours();
+      return eventDateKey === dateKey && venue === event.location && eventHour === hour;
+    });
   };
 
   // Navigate week
@@ -122,367 +130,366 @@ export default function CalendarClient({ events }: { events: IEvent[] }) {
     setSelectedDate(newDate);
   };
 
-  // Navigate day
-  const navigateDay = (direction: number) => {
-    const newDate = new Date(selectedDate);
-    newDate.setDate(newDate.getDate() + direction);
-    setSelectedDate(newDate);
+  // Get category color
+  const getCategoryColor = (category: string) => {
+    switch (category) {
+      case 'technical':
+        return 'bg-blue-600/80 border-blue-400';
+      case 'cultural':
+        return 'bg-pink-600/80 border-pink-400';
+      case 'convenor':
+        return 'bg-purple-600/80 border-purple-400';
+      default:
+        return 'bg-slate-600/80 border-slate-400';
+    }
+  };
+
+  const getCategoryIcon = (category: string) => {
+    switch (category) {
+      case 'technical':
+        return '⚙️';
+      case 'cultural':
+        return '🎭';
+      case 'convenor':
+        return '👑';
+      default:
+        return '✨';
+    }
+  };
+
+  // Drag and drop handlers for horizontal scroll
+  const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    const element = e.currentTarget;
+    setIsDragging(true);
+    setDragStart(e.pageX - element.offsetLeft);
+    setScrollLeft(element.scrollLeft);
+  };
+
+  const handleMouseLeave = () => {
+    setIsDragging(false);
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+  };
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!isDragging) return;
+    e.preventDefault();
+    
+    const element = e.currentTarget;
+    const x = e.pageX - element.offsetLeft;
+    const walk = (x - dragStart) * 1.5; // Multiplier for scroll speed
+    element.scrollLeft = scrollLeft - walk;
   };
 
   return (
-    <div className="space-y-6">
-      {/* View Mode Selector & Navigation */}
-      <div className="bg-slate-900/50 rounded-2xl shadow-2xl backdrop-blur-md border-2 border-slate-400/25 p-4">
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-          {/* View Mode Buttons */}
-          <div className="flex gap-2">
-            {(['day', 'week'] as ViewMode[]).map(mode => (
-              <button
-                key={mode}
-                onClick={() => setViewMode(mode)}
-                className={`px-4 py-2 rounded-lg font-semibold transition-all duration-300 capitalize ${
-                  viewMode === mode
-                    ? 'bg-gradient-to-r from-purple-600 to-magenta-600 text-white shadow-lg shadow-purple-500/30 border-2 border-purple-500/50'
-                    : 'bg-slate-800/50 text-slate-300 border-2 border-slate-700/30 hover:border-purple-500/30'
-                }`}
-              >
-                {mode}
-              </button>
-            ))}
+    <div className="space-y-6 w-full">
+      {/* Week Navigation */}
+      <div className="bg-slate-900/50 rounded-xl shadow-xl backdrop-blur-md border border-slate-700/50 p-3 md:p-4">
+        {/* Month and Year Display */}
+        <div className="text-center mb-3">
+          <div className="text-xs text-slate-400 uppercase font-semibold">
+            {selectedDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+          </div>
+        </div>
+
+        <div className="flex items-center justify-center gap-2 md:gap-4 mb-4">
+          <button
+            onClick={() => navigateWeek(-1)}
+            className="p-2 bg-slate-800/50 text-white rounded-lg hover:bg-slate-700/50 transition-all border border-slate-700/30 hover:border-purple-500/50 flex-shrink-0"
+          >
+            <ChevronLeft size={18} className="md:w-5 md:h-5" />
+          </button>
+
+          {/* Compact Week View - Scrollable on mobile, centered on desktop */}
+          <div className="flex gap-1.5 md:gap-2 overflow-x-auto pb-1 justify-center md:justify-center">
+            {getWeekDays.map((day, index) => {
+              const isToday = day.toDateString() === new Date().toDateString();
+              const isSelected = day.toDateString() === selectedDate.toDateString();
+
+              return (
+                <button
+                  key={index}
+                  onClick={() => setSelectedDate(day)}
+                  className={`px-2 md:px-3 py-1.5 md:py-2 rounded-lg font-semibold whitespace-nowrap transition-all border text-xs md:text-sm flex-shrink-0 ${
+                    isSelected
+                      ? 'bg-gradient-to-r from-purple-600 to-magenta-600 text-white border-purple-400 shadow-lg shadow-purple-500/30'
+                      : isToday
+                      ? 'bg-slate-800/80 text-white border-purple-500/50 shadow-md shadow-purple-500/20'
+                      : 'bg-slate-800/40 text-slate-300 border-slate-700/50 hover:border-purple-500/50'
+                  }`}
+                >
+                  <div className="text-xs text-slate-400 uppercase hidden md:block">
+                    {day.toLocaleDateString('en-US', { weekday: 'short' })}
+                  </div>
+                  <div className="text-base md:text-lg font-bold">{day.getDate()}</div>
+                </button>
+              );
+            })}
           </div>
 
-          {/* Navigation */}
-          <div className="flex items-center gap-4">
-            <button
-              onClick={() => viewMode === 'day' ? navigateDay(-1) : navigateWeek(-1)}
-              className="p-2 bg-slate-800/50 text-white rounded-lg hover:bg-slate-700/50 transition-all border-2 border-slate-700/30 hover:border-purple-500/30"
-            >
-              ← Prev
-            </button>
-            <div className="text-white font-bold text-lg">
-              {selectedDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+          <button
+            onClick={() => navigateWeek(1)}
+            className="p-2 bg-slate-800/50 text-white rounded-lg hover:bg-slate-700/50 transition-all border border-slate-700/30 hover:border-purple-500/50 flex-shrink-0"
+          >
+            <ChevronRight size={18} className="md:w-5 md:h-5" />
+          </button>
+        </div>
+
+        {/* Sort Venues Option */}
+        <div className="flex items-center justify-center gap-2 mb-4">
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={sortVenues}
+              onChange={(e) => setSortVenues(e.target.checked)}
+              className="w-4 h-4 rounded border-slate-600 bg-slate-800 accent-purple-600"
+            />
+            <span className="text-xs md:text-sm text-slate-300 font-semibold">Sort Venues Alphabetically</span>
+          </label>
+        </div>
+
+        {/* Search Bar */}
+        <div className="space-y-3">
+          <div className="flex gap-2 flex-col md:flex-row items-stretch md:items-center md:justify-center">
+            <div className="flex gap-2 flex-1 md:flex-initial">
+              <select
+                value={searchType}
+                onChange={(e) => setSearchType(e.target.value as 'all' | 'venue' | 'event')}
+                className="px-3 py-2 rounded-lg bg-slate-800/50 border border-slate-700/50 text-white text-xs md:text-sm font-semibold hover:border-purple-500/50 focus:outline-none focus:border-purple-500"
+              >
+                <option value="all">All</option>
+                <option value="venue">Venue</option>
+                <option value="event">Event</option>
+              </select>
+              
+              <input
+                type="text"
+                placeholder={searchType === 'venue' ? 'Search venues...' : searchType === 'event' ? 'Search events...' : 'Search venues or events...'}
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="flex-1 px-4 py-2 rounded-lg bg-slate-800/50 border border-slate-700/50 text-white text-xs md:text-sm placeholder-slate-400 hover:border-purple-500/50 focus:outline-none focus:border-purple-500 transition-all"
+              />
+              
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery('')}
+                  className="px-3 py-2 bg-slate-800/50 border border-slate-700/50 text-slate-300 rounded-lg hover:text-white hover:border-purple-500/50 transition-all text-sm font-semibold"
+                >
+                  ✕
+                </button>
+              )}
             </div>
-            <button
-              onClick={() => viewMode === 'day' ? navigateDay(1) : navigateWeek(1)}
-              className="p-2 bg-slate-800/50 text-white rounded-lg hover:bg-slate-700/50 transition-all border-2 border-slate-700/30 hover:border-purple-500/30"
-            >
-              Next →
-            </button>
           </div>
+          {searchQuery && (
+            <div className="text-xs md:text-sm text-slate-400 text-center">
+              Found {getSearchFilteredEvents.length} event{getSearchFilteredEvents.length !== 1 ? 's' : ''} matching your search
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Calendar Views */}
-      {viewMode === 'week' && (
-        <div className="bg-slate-900/50 rounded-3xl shadow-2xl backdrop-blur-md border-2 border-slate-400/25 overflow-hidden">
-          <div className="h-2 bg-gradient-to-r from-slate-300 via-orange-300 to-slate-300"></div>
-          
-          <div className="p-4">
-            <div className="grid grid-cols-1 md:grid-cols-7 gap-4">
-              {getWeekDays.map((day, index) => {
-                const year = day.getFullYear();
-                const month = String(day.getMonth() + 1).padStart(2, '0');
-                const dayNum = String(day.getDate()).padStart(2, '0');
-                const dateKey = `${year}-${month}-${dayNum}`;
-                const dayEvents = eventsByDate[dateKey] || [];
-                const isToday = day.toDateString() === new Date().toDateString();
-                const isSelected = day.toDateString() === selectedDate.toDateString();
-
-                return (
-                  <div
-                    key={index}
-                    onClick={() => setSelectedDate(day)}
-                    className={`cursor-pointer rounded-2xl p-4 transition-all duration-300 border-2 ${
-                      isSelected
-                        ? 'bg-gradient-to-br from-purple-900/50 to-magenta-900/50 border-purple-400 shadow-lg shadow-purple-500/30'
-                        : isToday
-                        ? 'bg-gradient-to-br from-slate-800/50 to-slate-700/50 border-purple-500/50'
-                        : 'bg-slate-800/30 border-slate-700/30 hover:border-purple-500/30'
-                    }`}
+      {/* Calendar Table */}
+      <div className="bg-slate-900/50 rounded-xl shadow-xl backdrop-blur-md border border-slate-700/50 overflow-hidden">
+        <style>{`
+          .calendar-scroll {
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+          }
+          .calendar-scroll::-webkit-scrollbar {
+            display: none;
+          }
+        `}</style>
+        <div 
+          className="overflow-x-auto calendar-scroll select-none"
+          onMouseDown={handleMouseDown}
+          onMouseLeave={handleMouseLeave}
+          onMouseUp={handleMouseUp}
+          onMouseMove={handleMouseMove}
+          style={{ cursor: isDragging ? 'grabbing' : 'grab' }}
+        >
+          <table className="w-full border-collapse">
+            {/* Header with Time Slots */}
+            <thead>
+              <tr className="border-b border-slate-700/50">
+                <th className="bg-slate-900 border-r border-slate-700/50 p-3 text-left text-white font-semibold w-32 sticky left-0 z-10">
+                  Venue
+                </th>
+                {hours.map(hour => (
+                  <th
+                    key={hour}
+                    className="bg-slate-900/80 border-r border-slate-700/50 p-2 text-center text-white font-semibold text-xs min-w-[100px]"
                   >
-                    <div className="text-center mb-3">
-                      <div className="text-xs text-slate-400 font-semibold uppercase">
-                        {day.toLocaleDateString('en-US', { weekday: 'short' })}
-                      </div>
-                      <div className={`text-2xl font-bold ${isSelected ? 'text-white' : 'text-white'}`}>
-                        {day.getDate()}
-                      </div>
-                    </div>
+                    {String(hour).padStart(2, '0')}:00 - {String((hour + 1) % 24).padStart(2, '0')}:00
+                  </th>
+                ))}
+              </tr>
+            </thead>
 
-                    {dayEvents.length > 0 ? (
-                      <div className="space-y-2">
-                        {dayEvents.slice(0, 2).map(event => {
-                          const style = getCategoryStyle(event.category);
-                          return (
-                            <div
-                              key={event._id}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setSelectedEvent(event);
-                              }}
-                              className={`cursor-pointer p-2 rounded-lg bg-gradient-to-r ${style.bg} border ${style.border} text-xs hover:shadow-lg hover:shadow-purple-500/20 transition-all duration-300 hover:scale-[1.02]`}
-                            >
-                              <div className="flex items-start gap-1">
-                                <span className="text-sm filter brightness-0 invert">{style.icon}</span>
-                                <div className="flex-1 min-w-0">
-                                  <div className="text-white font-semibold truncate">
-                                    {event.eventName}
-                                  </div>
-                                  <div className="text-slate-300 text-xs">
-                                    {new Date(event.dateTime).toLocaleTimeString('en-US', {
-                                      hour: '2-digit',
-                                      minute: '2-digit',
-                                    })}
-                                  </div>
+            {/* Venue Rows */}
+            <tbody>
+              {getAllVenues.map((venue, venueIndex) => (
+                <tr
+                  key={venue}
+                  className={`border-b border-slate-700/50 hover:bg-slate-800/30 transition-colors ${
+                    venueIndex % 2 === 0 ? 'bg-slate-800/20' : 'bg-slate-800/10'
+                  }`}
+                >
+                  {/* Venue Name */}
+                  <td className="bg-slate-900 border-r border-slate-700/50 p-3 text-white font-semibold sticky left-0 z-10 text-sm">
+                    {venue}
+                  </td>
+
+                  {/* Time Slots */}
+                  {hours.map(hour => {
+                    const slotEvents = getEventsForSlot(selectedDate, venue, hour);
+
+                    return (
+                      <td
+                        key={`${venue}-${hour}`}
+                        className="border-r border-slate-700/50 p-1 min-w-[100px] align-top bg-slate-900/20 hover:bg-slate-800/40 transition-colors"
+                      >
+                        {slotEvents.length > 0 && (
+                          <div className="space-y-1">
+                            {slotEvents.map(event => (
+                              <button
+                                key={event._id}
+                                onClick={() => setSelectedEvent(event)}
+                                className={`w-full p-2 rounded text-xs text-white font-semibold cursor-pointer transition-all hover:shadow-lg hover:scale-105 border border-opacity-50 ${getCategoryColor(
+                                  event.category
+                                )}`}
+                                title={event.eventName}
+                              >
+                                <div className="truncate">
+                                  {getCategoryIcon(event.category)} {event.eventName}
                                 </div>
-                              </div>
-                            </div>
-                          );
-                        })}
-                        {dayEvents.length > 2 && (
-                          <div 
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setSelectedDate(day);
-                              setViewMode('day');
-                            }}
-                            className="text-center text-slate-300 text-xs font-semibold py-1 cursor-pointer hover:text-white transition-colors"
-                          >
-                            ... {dayEvents.length - 2} more
+                                <div className="text-xs opacity-75">
+                                  {new Date(event.dateTime).toLocaleTimeString('en-US', {
+                                    hour: '2-digit',
+                                    minute: '2-digit',
+                                  })}
+                                </div>
+                              </button>
+                            ))}
                           </div>
                         )}
-                      </div>
-                    ) : (
-                      <div className="text-center text-slate-400 text-xs italic">
-                        No events
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
-          <div className="h-2 bg-gradient-to-r from-purple-500 via-magenta-500 to-purple-500"></div>
+                      </td>
+                    );
+                  })}
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
-      )}
-
-      {viewMode === 'day' && (
-        <div className="bg-slate-900/50 rounded-3xl shadow-2xl backdrop-blur-md border-2 border-slate-400/25 overflow-hidden">
-          <div className="h-2 bg-gradient-to-r from-slate-300 via-orange-300 to-slate-300"></div>
-          
-          <div className="p-6">
-            <h2 className="text-2xl font-bold text-white mb-6 text-center">
-              {selectedDate.toLocaleDateString('en-US', { 
-                weekday: 'long', 
-                month: 'long', 
-                day: 'numeric',
-                year: 'numeric' 
-              })}
-            </h2>
-
-            {selectedDateEvents.length > 0 ? (
-              <div className="space-y-4 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
-                {selectedDateEvents.map(event => {
-                  const style = getCategoryStyle(event.category);
-                  return (
-                    <div
-                      key={event._id}
-                      onClick={() => setSelectedEvent(event)}
-                      className={`cursor-pointer bg-gradient-to-r ${style.bg} border-2 ${style.border} rounded-2xl p-5 hover:shadow-lg hover:shadow-amber-500/20 transition-all duration-300 hover:scale-[1.02]`}
-                    >
-                      <div className="flex items-start gap-4">
-                        <span className="text-4xl filter brightness-0 invert">{style.icon}</span>
-                        <div className="flex-1">
-                          <div className="flex items-start justify-between gap-2 mb-2">
-                            <h3 className="text-xl font-bold text-white">
-                              {event.eventName}
-                            </h3>
-                            <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase ${style.text} bg-black/30`}>
-                              {event.category}
-                            </span>
-                          </div>
-                          <div className="space-y-2 text-sm">
-                            <div className="flex items-center gap-2 text-slate-300">
-                              <span className="filter brightness-0 invert">🏢</span>
-                              <span>{event.societyName}</span>
-                            </div>
-                            <div className="flex items-center gap-2 text-slate-300">
-                              <span className="filter brightness-0 invert">⏰</span>
-                              <span>
-                                {new Date(event.dateTime).toLocaleTimeString('en-US', {
-                                  hour: '2-digit',
-                                  minute: '2-digit',
-                                })}
-                              </span>
-                            </div>
-                            <div className="flex items-center gap-2 text-slate-300">
-                              <span className="filter brightness-0 invert">📍</span>
-                              <span>{event.location}</span>
-                            </div>
-                            <div className="flex items-center gap-2 text-slate-300">
-                              <span className="filter brightness-0 invert">💰</span>
-                              <span>₹{event.regFees}</span>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="text-center py-16">
-                <span className="text-6xl mb-4 block filter brightness-0 invert">🌙</span>
-                <p className="text-white text-lg font-semibold">A day of rest...</p>
-                <p className="text-slate-400 text-sm mt-2">No events scheduled for this day.</p>
-              </div>
-            )}
-          </div>
-
-          <div className="h-2 bg-gradient-to-r from-purple-500 via-magenta-500 to-purple-500"></div>
-        </div>
-      )}
+      </div>
 
       {/* Event Detail Modal */}
       {selectedEvent && (
-        <div 
-          className="fixed inset-0 bg-black/70 backdrop-blur-sm z-40 flex items-center justify-center p-4 pt-24 sm:pt-20"
+        <div
+          className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[999] flex items-center justify-center p-4 pt-24"
           onClick={() => setSelectedEvent(null)}
         >
-          <div 
-            className="bg-slate-900/50 rounded-3xl border-2 border-purple-500 max-w-2xl w-full max-h-[calc(100vh-120px)] overflow-y-auto custom-scrollbar"
-            onClick={(e) => e.stopPropagation()}
+          <div
+            className="bg-slate-900/95 rounded-2xl border-2 border-purple-500/50 max-w-2xl w-full max-h-[85vh] overflow-y-auto shadow-2xl"
+            onClick={e => e.stopPropagation()}
           >
-            <div className="h-2 bg-gradient-to-r from-slate-300 via-orange-300 to-slate-300"></div>
-            
-            <div className="p-8">
-              <div className="flex items-start justify-between mb-6">
-                <div className="flex items-start gap-4">
-                  <span className="text-5xl filter brightness-0 invert">{getCategoryStyle(selectedEvent.category).icon}</span>
-                  <div>
-                    <h2 className="text-3xl font-bold text-white mb-2">
-                      {selectedEvent.eventName}
-                    </h2>
-                    <div className="flex items-center gap-2">
-                      <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase ${getCategoryStyle(selectedEvent.category).text} bg-black/30`}>
-                        {selectedEvent.category}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-                <button
-                  onClick={() => setSelectedEvent(null)}
-                  className="text-white hover:text-slate-300 text-3xl leading-none"
-                >
-                  ×
-                </button>
-              </div>
-
-              <div className="space-y-4 text-slate-300">
-                <div className="flex items-center gap-3">
-                  <span className="text-2xl filter brightness-0 invert">🏢</span>
-                  <div>
-                    <div className="text-xs text-slate-400 uppercase">Society</div>
-                    <div className="text-lg">{selectedEvent.societyName}</div>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-3">
-                  <span className="text-2xl filter brightness-0 invert">📅</span>
-                  <div>
-                    <div className="text-xs text-slate-400 uppercase">Date & Time</div>
-                    <div className="text-lg">
-                      {new Date(selectedEvent.dateTime).toLocaleDateString('en-US', {
-                        weekday: 'long',
-                        month: 'long',
-                        day: 'numeric',
-                        year: 'numeric',
-                      })}{' '}
-                      at{' '}
-                      {new Date(selectedEvent.dateTime).toLocaleTimeString('en-US', {
-                        hour: '2-digit',
-                        minute: '2-digit',
-                      })}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-3">
-                  <span className="text-2xl filter brightness-0 invert">📍</span>
-                  <div>
-                    <div className="text-xs text-slate-400 uppercase">Location</div>
-                    <div className="text-lg">{selectedEvent.location}</div>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-3">
-                  <span className="text-2xl filter brightness-0 invert">💰</span>
-                  <div>
-                    <div className="text-xs text-slate-400 uppercase">Registration Fee</div>
-                    <div className="text-lg">₹{selectedEvent.regFees}</div>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-3">
-                  <span className="text-2xl filter brightness-0 invert">👥</span>
-                  <div>
-                    <div className="text-xs text-slate-400 uppercase">Team Info</div>
-                    <div className="text-lg">{selectedEvent.team}/{selectedEvent.teamLimit} teams registered</div>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-3">
-                  <span className="text-2xl filter brightness-0 invert">📝</span>
-                  <div>
-                    <div className="text-xs text-slate-400 uppercase mb-1">Description</div>
-                    <div className="text-sm leading-relaxed">{selectedEvent.briefDescription}</div>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-3">
-                  <span className="text-2xl filter brightness-0 invert">📞</span>
-                  <div>
-                    <div className="text-xs text-slate-400 uppercase">Contact</div>
-                    <div className="text-lg">{selectedEvent.contactInfo}</div>
-                  </div>
-                </div>
-
-                <div className="pt-4">
-                  <a
-                    href={selectedEvent.pdfLink}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-600 to-magenta-600 text-white font-bold rounded-xl hover:from-purple-500 hover:to-magenta-500 transition-all duration-300 shadow-lg shadow-purple-600/30 hover:shadow-purple-500/50 border-2 border-purple-500/30"
-                  >
-                    <span className="filter brightness-0 invert">📄</span>
-                    <span>View Details PDF</span>
-                  </a>
+            {/* Header */}
+            <div className="sticky top-0 bg-gradient-to-r from-slate-900 to-slate-800/90 border-b border-purple-500/30 p-6 flex items-start justify-between">
+              <div className="flex items-start gap-4 flex-1">
+                <span className="text-4xl">
+                  {getCategoryIcon(selectedEvent.category)}
+                </span>
+                <div>
+                  <h2 className="text-2xl font-bold text-white">
+                    {selectedEvent.eventName}
+                  </h2>
+                  <span className={`inline-block mt-2 px-3 py-1 rounded-full text-xs font-bold uppercase text-white ${
+                    selectedEvent.category === 'technical'
+                      ? 'bg-blue-600/50'
+                      : selectedEvent.category === 'cultural'
+                      ? 'bg-pink-600/50'
+                      : 'bg-purple-600/50'
+                  }`}>
+                    {selectedEvent.category}
+                  </span>
                 </div>
               </div>
+              <button
+                onClick={() => setSelectedEvent(null)}
+                className="text-slate-400 hover:text-white transition-colors"
+              >
+                <X size={28} />
+              </button>
             </div>
 
-            <div className="h-2 bg-gradient-to-r from-purple-500 via-magenta-500 to-purple-500"></div>
+            {/* Content */}
+            <div className="p-6 space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-slate-800/50 rounded-lg p-4 border border-slate-700/50">
+                  <div className="text-xs text-slate-400 uppercase font-semibold mb-1">Society</div>
+                  <div className="text-white font-semibold">{selectedEvent.societyName}</div>
+                </div>
+
+                <div className="bg-slate-800/50 rounded-lg p-4 border border-slate-700/50">
+                  <div className="text-xs text-slate-400 uppercase font-semibold mb-1">Registration Fee</div>
+                  <div className="text-white font-semibold">₹{selectedEvent.regFees}</div>
+                </div>
+
+                <div className="bg-slate-800/50 rounded-lg p-4 border border-slate-700/50">
+                  <div className="text-xs text-slate-400 uppercase font-semibold mb-1">Date & Time</div>
+                  <div className="text-white font-semibold text-sm">
+                    {new Date(selectedEvent.dateTime).toLocaleDateString('en-US', {
+                      month: 'short',
+                      day: 'numeric',
+                      year: 'numeric',
+                    })}
+                    {' at '}
+                    {new Date(selectedEvent.dateTime).toLocaleTimeString('en-US', {
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}
+                  </div>
+                </div>
+
+                <div className="bg-slate-800/50 rounded-lg p-4 border border-slate-700/50">
+                  <div className="text-xs text-slate-400 uppercase font-semibold mb-1">Location</div>
+                  <div className="text-white font-semibold">{selectedEvent.location}</div>
+                </div>
+
+                <div className="bg-slate-800/50 rounded-lg p-4 border border-slate-700/50">
+                  <div className="text-xs text-slate-400 uppercase font-semibold mb-1">Event Type</div>
+                  <div className="text-white font-semibold">
+                    {selectedEvent.isTeamEvent
+                      ? `👥 Team (${selectedEvent.minTeamMembers}-${selectedEvent.maxTeamMembers})`
+                      : '👤 Individual'}
+                  </div>
+                </div>
+
+                <div className="bg-slate-800/50 rounded-lg p-4 border border-slate-700/50">
+                  <div className="text-xs text-slate-400 uppercase font-semibold mb-1">Contact</div>
+                  <div className="text-white font-semibold text-sm">{selectedEvent.contactInfo}</div>
+                </div>
+              </div>
+
+              <div className="bg-slate-800/50 rounded-lg p-4 border border-slate-700/50">
+                <div className="text-xs text-slate-400 uppercase font-semibold mb-2">Description</div>
+                <div className="text-slate-300 text-sm leading-relaxed">{selectedEvent.briefDescription}</div>
+              </div>
+
+              <a
+                href={selectedEvent.pdfLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-600 to-magenta-600 text-white font-bold rounded-lg hover:from-purple-500 hover:to-magenta-500 transition-all duration-300 shadow-lg shadow-purple-600/30 hover:shadow-purple-500/50 border border-purple-500/30"
+              >
+                <span>📄</span>
+                <span>View Details PDF</span>
+              </a>
+            </div>
           </div>
         </div>
       )}
-
-      <style jsx>{`
-        .custom-scrollbar::-webkit-scrollbar {
-          width: 8px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-track {
-          background: rgba(139, 92, 246, 0.1);
-          border-radius: 10px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-          background: rgba(147, 51, 234, 0.5);
-          border-radius: 10px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-          background: rgba(147, 51, 234, 0.7);
-        }
-      `}</style>
     </div>
   );
 }

@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/dbConnect';
 import Event from '@/models/Event';
+import jwt from 'jsonwebtoken';
+import { sendEventDeletionEmail } from '@/lib/email';
 
 export async function GET(
   request: NextRequest,
@@ -103,6 +105,75 @@ export async function DELETE(
         { error: 'Event not found' },
         { status: 404 }
       );
+    }
+
+    // Send deletion notification email asynchronously
+    try {
+      const authHeader = request.headers.get('authorization');
+      const token = authHeader?.replace('Bearer ', '');
+      
+      let adminName = 'Admin';
+      let adminEmail = 'admin@pecfest.com';
+
+      if (token) {
+        try {
+          const adminSecret = process.env.JWT_SECRET || 'your-admin-secret-key-change-in-production';
+          const decoded = jwt.verify(token, adminSecret) as any;
+          adminName = decoded.name || 'Admin';
+          adminEmail = decoded.email || 'admin@pecfest.com';
+        } catch {
+          console.warn('⚠️ Could not decode admin token for event deletion notification');
+        }
+      }
+
+      const deletionTimestamp = new Date().toLocaleString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        timeZone: 'Asia/Kolkata',
+      });
+
+      // Send email to webmaster and Kaavya
+      const recipients = ['pecfestdev@gmail.com', 'kaavya7705@gmail.com'];
+      
+      try {
+        const eventDeletionData = {
+          eventId: deletedEvent.eventId,
+          eventName: deletedEvent.eventName,
+          category: deletedEvent.category,
+          societyName: deletedEvent.societyName,
+          regFees: deletedEvent.regFees,
+          dateTime: new Date(deletedEvent.dateTime).toLocaleString('en-US', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            timeZone: 'Asia/Kolkata',
+          }),
+          location: deletedEvent.location,
+          briefDescription: deletedEvent.briefDescription,
+        };
+
+        // Send to each recipient
+        for (const recipient of recipients) {
+          await sendEventDeletionEmail(
+            recipient,
+            eventDeletionData,
+            adminName,
+            adminEmail,
+            deletionTimestamp
+          );
+        }
+        console.log('✅ Event deletion emails sent successfully to all recipients');
+      } catch (emailError) {
+        console.error('❌ Error sending event deletion email:', emailError);
+      }
+    } catch (error) {
+      console.error('❌ Error in event deletion notification process:', error);
     }
 
     return NextResponse.json(

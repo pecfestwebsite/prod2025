@@ -1,14 +1,18 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { ChevronRight, ChevronLeft, Check, AlertCircle } from 'lucide-react';
 import { getAdminUser, getLockedSocietyName } from '@/lib/accessControl';
+import { uploadImageToFirebase } from '@/lib/firebaseStorage';
+import Compressor from 'compressorjs';
 
 interface FormData {
   category: 'technical' | 'cultural' | 'convenor';
   societyName: string;
+  additionalClub: string;
   eventName: string;
-  regFees: number;
+  regFees: number | '';
   dateTime: string;
   location: string;
   briefDescription: string;
@@ -19,8 +23,9 @@ interface FormData {
     longitude: number | '';
   };
   contactInfo: string;
-  team: number;
-  teamLimit: number;
+  isTeamEvent: boolean;
+  minTeamMembers: number;
+  maxTeamMembers: number;
 }
 
 interface FormErrors {
@@ -37,7 +42,7 @@ interface AdminUser {
 }
 
 const CLUBS_SOCS = [
-  "None",
+  "None", "MegaShows",  
   //Clubs
   'Dramatics', 'SAASC', 'APC', 'ELC', 'Music',
   'HEB', 'PDC', 'PEB', 'Rotaract', 'SCC',
@@ -71,6 +76,16 @@ const getCategoryFromClubSoc = (clubsoc: string): 'technical' | 'cultural' | 'co
   return 'convenor';
 };
 
+// Helper function to validate URL format
+const isValidUrl = (url: string): boolean => {
+  try {
+    new URL(url);
+    return true;
+  } catch {
+    return false;
+  }
+};
+
 const steps = [
   { id: 1, title: 'Basic Info', description: 'Club/Society & Category' },
   { id: 2, title: 'Event Details', description: 'Name & Date' },
@@ -81,13 +96,15 @@ const steps = [
 ];
 
 export default function AddEventsPage() {
+  const router = useRouter();
   const [currentStep, setCurrentStep] = useState(1);
   const [adminUser, setAdminUser] = useState<AdminUser | null>(null);
   const [formData, setFormData] = useState<FormData>({
     category: 'technical',
     societyName: '',
+    additionalClub: 'None',
     eventName: '',
-    regFees: 0,
+    regFees: '',
     dateTime: '',
     location: '',
     briefDescription: '',
@@ -95,30 +112,72 @@ export default function AddEventsPage() {
     image: '',
     mapCoordinates: { latitude: '', longitude: '' },
     contactInfo: '',
-    team: 0,
-    teamLimit: 0,
+    isTeamEvent: false,
+    minTeamMembers: 1,
+    maxTeamMembers: 1,
   });
 
   const [errors, setErrors] = useState<FormErrors>({});
   const [submitted, setSubmitted] = useState(false);
   const [imagePreview, setImagePreview] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [isInitialized, setIsInitialized] = useState(false);
 
   // Load admin user on mount and set locked society name if needed
   useEffect(() => {
     const admin = getAdminUser();
     setAdminUser(admin);
     
-    // If user is level 2, lock their society name
-    const lockedSociety = getLockedSocietyName(admin);
-    if (lockedSociety) {
-      setFormData(prev => ({
-        ...prev,
-        societyName: lockedSociety,
-        category: getCategoryFromClubSoc(lockedSociety)
-      }));
+    // Load form data from localStorage if available
+    try {
+      const savedFormData = localStorage.getItem('eventFormData');
+      if (savedFormData) {
+        const parsedData = JSON.parse(savedFormData);
+        setFormData(parsedData);
+        
+        // Load image preview if it exists
+        const savedImagePreview = localStorage.getItem('eventFormImagePreview');
+        if (savedImagePreview) {
+          setImagePreview(savedImagePreview);
+        }
+      } else {
+        // If user is level 2, lock their society name
+        const lockedSociety = getLockedSocietyName(admin);
+        if (lockedSociety) {
+          setFormData(prev => ({
+            ...prev,
+            societyName: lockedSociety,
+            category: getCategoryFromClubSoc(lockedSociety)
+          }));
+        }
+      }
+    } catch (error) {
+      console.error('Error loading saved form data:', error);
+      // If user is level 2, lock their society name
+      const lockedSociety = getLockedSocietyName(admin);
+      if (lockedSociety) {
+        setFormData(prev => ({
+          ...prev,
+          societyName: lockedSociety,
+          category: getCategoryFromClubSoc(lockedSociety)
+        }));
+      }
     }
+    
+    setIsInitialized(true);
   }, []);
+
+  // Save form data to localStorage whenever it changes (after initialization)
+  useEffect(() => {
+    if (isInitialized && formData.societyName) {
+      try {
+        localStorage.setItem('eventFormData', JSON.stringify(formData));
+      } catch (error) {
+        console.error('Error saving form data to localStorage:', error);
+      }
+    }
+  }, [formData, isInitialized]);
 
   // Auto-update category when societyName changes
   useEffect(() => {
@@ -142,17 +201,21 @@ export default function AddEventsPage() {
       case 2:
         if (!formData.eventName.trim()) newErrors.eventName = 'Event name is required';
         if (!formData.societyName.trim()) newErrors.societyName = 'Society name is required';
+        if (!formData.dateTime.trim()) newErrors.dateTime = 'Date & time is required';
         break;
       case 3:
-        if (formData.regFees < 0) newErrors.regFees = 'Registration fees cannot be negative';
-        if (formData.teamLimit < 0) newErrors.teamLimit = 'Team limit cannot be negative';
+        if (formData.regFees === '') newErrors.regFees = 'Registration fees is required';
+        if (!formData.minTeamMembers || formData.minTeamMembers < 1) newErrors.minTeamMembers = 'Minimum team members is required and must be at least 1';
+        if (!formData.maxTeamMembers || formData.maxTeamMembers < 1) newErrors.maxTeamMembers = 'Maximum team members is required and must be at least 1';
+        if (formData.minTeamMembers > formData.maxTeamMembers) newErrors.maxTeamMembers = 'Maximum team members must be greater than or equal to minimum';
         break;
       case 4:
         if (!formData.location.trim()) newErrors.location = 'Location is required';
         break;
       case 5:
-        if (!formData.image) newErrors.image = 'Image is required';
-        if (!formData.pdfLink.trim()) newErrors.pdfLink = 'PDF link is required';
+        // Image is optional - will use default if not uploaded
+        // PDF link is optional
+        if (formData.pdfLink && !isValidUrl(formData.pdfLink)) newErrors.pdfLink = 'PDF link must be a valid URL (e.g., https://drive.google.com/... or https://example.com/resource)';
         break;
       case 6:
         if (!formData.briefDescription.trim())
@@ -180,10 +243,10 @@ export default function AddEventsPage() {
           [field]: value ? parseFloat(value) : '',
         },
       }));
-    } else if (name === 'regFees' || name === 'team' || name === 'teamLimit') {
+    } else if (name === 'regFees' || name === 'minTeamMembers' || name === 'maxTeamMembers') {
       setFormData((prev) => ({
         ...prev,
-        [name]: value ? parseFloat(value) : 0,
+        [name]: value === '' ? 0 : parseFloat(value),
       }));
     } else {
       setFormData((prev) => ({
@@ -196,16 +259,79 @@ export default function AddEventsPage() {
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const result = reader.result as string;
-        setFormData((prev) => ({
-          ...prev,
-          image: result,
-        }));
-        setImagePreview(result);
-      };
-      reader.readAsDataURL(file);
+      // Compress the image to 200KB before storing
+      new Compressor(file, {
+        quality: 0.6,
+        maxWidth: 1920,
+        maxHeight: 1920,
+        convertSize: 200000, // Try to convert to JPEG if size exceeds 200KB
+        success: (compressedResult) => {
+          // Convert Blob to File
+          const compressedFile = new File([compressedResult], file.name, {
+            type: compressedResult.type,
+            lastModified: Date.now(),
+          });
+          
+          // Check if compressed file is still larger than 200KB
+          if (compressedFile.size > 200000) {
+            // Try again with lower quality
+            new Compressor(file, {
+              quality: 0.4,
+              maxWidth: 1600,
+              maxHeight: 1600,
+              convertSize: 200000,
+              success: (secondCompressedResult) => {
+                const finalFile = new File([secondCompressedResult], file.name, {
+                  type: secondCompressedResult.type,
+                  lastModified: Date.now(),
+                });
+                
+                // Store the compressed file for later upload
+                setImageFile(finalFile);
+                
+                // Create preview
+                const reader = new FileReader();
+                reader.onloadend = () => {
+                  const previewUrl = reader.result as string;
+                  setImagePreview(previewUrl);
+                  // Save preview to localStorage
+                  try {
+                    localStorage.setItem('eventFormImagePreview', previewUrl);
+                  } catch (error) {
+                    console.error('Error saving image preview:', error);
+                  }
+                };
+                reader.readAsDataURL(finalFile);
+              },
+              error: (err) => {
+                console.error('Secondary compression error:', err);
+                setErrors({ image: 'Failed to compress image. Please try a smaller file.' });
+              },
+            });
+          } else {
+            // Store the compressed file for later upload
+            setImageFile(compressedFile);
+            
+            // Create preview
+            const reader = new FileReader();
+            reader.onloadend = () => {
+              const previewUrl = reader.result as string;
+              setImagePreview(previewUrl);
+              // Save preview to localStorage
+              try {
+                localStorage.setItem('eventFormImagePreview', previewUrl);
+              } catch (error) {
+                console.error('Error saving image preview:', error);
+              }
+            };
+            reader.readAsDataURL(compressedFile);
+          }
+        },
+        error: (err) => {
+          console.error('Compression error:', err);
+          setErrors({ image: 'Failed to compress image. Please try a different file.' });
+        },
+      });
     }
   };
 
@@ -228,40 +354,73 @@ export default function AddEventsPage() {
     if (validateStep(6)) {
       setIsLoading(true);
       try {
+        // Set default image if no image is provided
+        const defaultPecfestLogo = 'https://pec.ac.in/sites/default/files/styles/event/public/headline/images/PECFEST_2024-10.jpg?itok=UJX4d-Bv';
+        
+        let imageUrl = defaultPecfestLogo;
+        
+        // Upload image to Firebase if provided
+        if (imageFile) {
+          try {
+            imageUrl = await uploadImageToFirebase(
+              imageFile,
+              'events',
+              `event_${formData.societyName}_${Date.now()}`
+            );
+          } catch (uploadError) {
+            console.error('Error uploading image:', uploadError);
+            setErrors({ image: 'Failed to upload image. Please try again.' });
+            setIsLoading(false);
+            return;
+          }
+        }
+
+        const submitData = {
+          ...formData,
+          image: imageUrl,
+          regFees: typeof formData.regFees === 'string' ? 0 : formData.regFees,
+        };
+
+        console.log('📤 Submitting event data:', submitData);
+
         const response = await fetch('/api/events', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify(formData),
+          body: JSON.stringify(submitData),
         });
 
         if (response.ok) {
+          // Clear form data from localStorage on successful submission
+          try {
+            localStorage.removeItem('eventFormData');
+            localStorage.removeItem('eventFormImagePreview');
+          } catch (error) {
+            console.error('Error clearing localStorage:', error);
+          }
+          
           setSubmitted(true);
           setTimeout(() => {
-            setCurrentStep(1);
-            setFormData({
-              category: 'technical',
-              societyName: '',
-              eventName: '',
-              regFees: 0,
-              dateTime: '',
-              location: '',
-              briefDescription: '',
-              pdfLink: '',
-              image: '',
-              mapCoordinates: { latitude: '', longitude: '' },
-              contactInfo: '',
-              team: 0,
-              teamLimit: 0,
+            router.push('/admin/viewevents');
+          }, 2000);
+        } else {
+          const errorData = await response.json();
+          console.error('Server validation error:', errorData);
+          
+          // Handle validation errors
+          if (errorData.errors) {
+            const newErrors: FormErrors = {};
+            Object.keys(errorData.errors).forEach(key => {
+              newErrors[key] = errorData.errors[key].message;
             });
-            setImagePreview('');
-            setSubmitted(false);
-            setIsLoading(false);
-          }, 3000);
+            setErrors(newErrors);
+          }
+          setIsLoading(false);
         }
       } catch (error) {
         console.error('Error submitting form:', error);
+        setErrors({ submit: 'Failed to submit form. Please try again.' });
         setIsLoading(false);
       }
     }
@@ -318,8 +477,9 @@ export default function AddEventsPage() {
                 setFormData({
                   category: 'technical',
                   societyName: '',
+                  additionalClub: 'None',
                   eventName: '',
-                  regFees: 0,
+                  regFees: '',
                   dateTime: '',
                   location: '',
                   briefDescription: '',
@@ -327,8 +487,9 @@ export default function AddEventsPage() {
                   image: '',
                   mapCoordinates: { latitude: '', longitude: '' },
                   contactInfo: '',
-                  team: 0,
-                  teamLimit: 0,
+                  isTeamEvent: false,
+                  minTeamMembers: 1,
+                  maxTeamMembers: 1,
                 });
                 setImagePreview('');
                 setSubmitted(false);
@@ -472,19 +633,22 @@ export default function AddEventsPage() {
               <div>
                 <label className="block text-sm font-semibold text-white mb-2">
                   Category <span className="text-red-400">*</span>
-                  {formData.societyName && formData.societyName !== 'None' && (
+                  {formData.societyName && formData.societyName !== 'None' && formData.societyName !== 'MegaShows' && (
                     <span className="text-xs text-slate-400 ml-2">(Auto-set based on club/society)</span>
+                  )}
+                  {formData.societyName === 'MegaShows' && (
+                    <span className="text-xs text-slate-400 ml-2">(Select category for MegaShows)</span>
                   )}
                 </label>
                 <select
                   name="category"
                   value={formData.category}
                   onChange={handleInputChange}
-                  disabled={!!(formData.societyName && formData.societyName !== 'None')}
+                  disabled={!!(formData.societyName && formData.societyName !== 'None' && formData.societyName !== 'MegaShows')}
                   className={`w-full px-4 py-3 border-2 rounded-xl focus:outline-none transition-all font-medium ${
-                    formData.societyName && formData.societyName !== 'None'
+                    formData.societyName && formData.societyName !== 'None' && formData.societyName !== 'MegaShows'
                       ? 'bg-slate-700/50 border-slate-600 text-slate-400 cursor-not-allowed opacity-75'
-                      : 'border-purple-500/50 bg-blue-900/40 text-slate-100 focus:border-slate-300 hover:border-slate-300'
+                      : 'border-purple-500/50 bg-purple-900/50 text-slate-100 focus:border-slate-300 hover:border-slate-300'
                   }`}
                 >
                   <option value="technical">⚙️ Technical</option>
@@ -494,15 +658,33 @@ export default function AddEventsPage() {
 
               <div>
                 <label className="block text-sm font-semibold text-white mb-2">
-                  Contact Info <span className="text-red-400">*</span>
+                  Additional Club/Society <span className="text-slate-400 text-xs">(Optional)</span>
                 </label>
+                <select
+                  name="additionalClub"
+                  value={formData.additionalClub}
+                  onChange={handleInputChange}
+                  className={`w-full px-4 py-3 border-2 rounded-xl focus:outline-none transition-all font-medium bg-purple-900/50 border-purple-500/50 focus:border-slate-300 hover:border-slate-300 text-slate-100`}
+                >
+                  <option value="None">None</option>
+                  {CLUBS_SOCS.filter(
+                    (club) => club !== formData.societyName && club !== 'None'
+                  ).map((club) => (
+                    <option key={club} value={club} className="bg-slate-900">
+                      {club}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
                 <input
                   type="text"
                   name="contactInfo"
                   value={formData.contactInfo}
                   onChange={handleInputChange}
                   placeholder="Phone or Email"
-                  className={`w-full px-4 py-3 border-2 rounded-xl focus:outline-none transition-all font-medium bg-blue-900/40 ${
+                  className={`w-full px-4 py-3 border-2 rounded-xl focus:outline-none transition-all font-medium bg-purple-900/50 ${
                     errors.contactInfo
                       ? 'border-red-500 bg-red-900/30'
                       : 'border-purple-500/50 focus:border-slate-300 hover:border-slate-300'
@@ -536,11 +718,11 @@ export default function AddEventsPage() {
                   value={formData.eventName}
                   onChange={handleInputChange}
                   placeholder="Enter event name"
-                  className={`w-full px-4 py-3 border-2 rounded-xl focus:outline-none transition-all font-medium bg-blue-900/40 ${
+                  className={`w-full px-4 py-3 border-2 rounded-xl focus:outline-none transition-all font-medium bg-purple-900/50 ${
                     errors.eventName
                       ? 'border-red-500 bg-red-900/30'
-                      : 'border-amber-400/50 focus:border-amber-400 hover:border-amber-400'
-                  } text-amber-100 placeholder-purple-300`}
+                      : 'border-purple-500/50 focus:border-slate-300 hover:border-slate-300'
+                  } text-slate-100 placeholder-purple-300`}
                 />
                 {errors.eventName && (
                   <p className="text-red-400 text-sm mt-1 flex items-center gap-1 font-medium">
@@ -558,8 +740,17 @@ export default function AddEventsPage() {
                   name="dateTime"
                   value={formData.dateTime}
                   onChange={handleInputChange}
-                  className="w-full px-4 py-3 border-2 border-amber-400/50 rounded-xl focus:outline-none focus:border-amber-400 hover:border-amber-400 transition-all bg-purple-900/50 font-medium text-amber-100"
+                  className={`w-full px-4 py-3 border-2 rounded-xl focus:outline-none focus:border-slate-300 hover:border-slate-300 transition-all bg-purple-900/50 font-medium text-slate-100 ${
+                    errors.dateTime
+                      ? 'border-red-500 bg-red-900/30'
+                      : 'border-purple-500/50'
+                  }`}
                 />
+                {errors.dateTime && (
+                  <p className="text-red-400 text-sm mt-1 flex items-center gap-1 font-medium">
+                    <AlertCircle size={16} /> {errors.dateTime}
+                  </p>
+                )}
               </div>
             </div>
           )}
@@ -577,18 +768,46 @@ export default function AddEventsPage() {
                 <label className="block text-sm font-semibold text-white mb-2">
                   Registration Fees (₹) <span className="text-red-400">*</span>
                 </label>
-                <input
-                  type="number"
+                {/* <input
+                  type="text"
+                  inputMode="numeric"
                   name="regFees"
-                  value={formData.regFees}
-                  onChange={handleInputChange}
-                  placeholder="0"
-                  min="0"
+                  value={formData.regFees === 0 ? '' : formData.regFees}
+                  onChange={(e) => {
+                    const { name, value } = e.target;
+                    const numValue = value === '' ? 0 : parseFloat(value) || 0;
+                    setFormData((prev) => ({
+                      ...prev,
+                      [name]: isNaN(numValue) ? 0 : numValue,
+                    }));
+                  }}
+                  placeholder="Enter amount in rupees"
+                  pattern="[0-9]*"
                   className={`w-full px-4 py-3 border-2 rounded-xl focus:outline-none transition-all font-medium bg-purple-900/50 ${
                     errors.regFees
                       ? 'border-red-500 bg-red-900/30'
-                      : 'border-amber-400/50 focus:border-amber-400 hover:border-amber-400'
-                  } text-amber-100 placeholder-purple-300`}
+                      : 'border-purple-500/50 focus:border-slate-300 hover:border-slate-300'
+                  } text-slate-100 placeholder-purple-300`}
+                /> */}
+                <input
+                  type="number" 
+                  name="regFees"
+                  value={formData.regFees}
+                  onChange={(e) => {
+                    const { name, value } = e.target;
+                    const numValue = value === '' ? '' : Number(value); 
+                    setFormData((prev) => ({
+                      ...prev,
+                      [name]: numValue === '' ? '' : Math.max(0, numValue),
+                    }));
+                  }}
+                  placeholder="Enter 0 for free event"
+                  pattern="0|[1-9][0-9]*"
+                  className={`w-full px-4 py-3 border-2 rounded-xl focus:outline-none transition-all font-medium bg-purple-900/50 ${
+                    errors.regFees
+                      ? 'border-red-500 bg-red-900/30'
+                      : 'border-purple-500/50 focus:border-slate-300 hover:border-slate-300'
+                  } text-slate-100 placeholder-purple-300`}
                 />
                 {errors.regFees && (
                   <p className="text-red-400 text-sm mt-1 flex items-center gap-1 font-medium">
@@ -597,42 +816,125 @@ export default function AddEventsPage() {
                 )}
               </div>
 
+              <div>
+                <label className="block text-sm font-semibold text-white mb-2">
+                  Event Type <span className="text-red-400">*</span>
+                </label>
+                <div className="flex gap-4">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="isTeamEvent"
+                      checked={!formData.isTeamEvent}
+                      onChange={() => {
+                        setFormData((prev) => ({
+                          ...prev,
+                          isTeamEvent: false,
+                          minTeamMembers: 1,
+                          maxTeamMembers: 1,
+                        }));
+                      }}
+                      className="w-4 h-4"
+                    />
+                    <span className="text-slate-100 font-medium">👤 Individual</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="isTeamEvent"
+                      checked={formData.isTeamEvent}
+                      onChange={() => {
+                        setFormData((prev) => ({
+                          ...prev,
+                          isTeamEvent: true,
+                        }));
+                      }}
+                      className="w-4 h-4"
+                    />
+                    <span className="text-slate-100 font-medium">👥 Team</span>
+                  </label>
+                </div>
+              </div>
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-semibold text-white mb-2">
-                    Team Size (default)
+                    Min Team Members <span className="text-red-400">*</span>
+                    {!formData.isTeamEvent && (
+                      <span className="text-xs text-slate-400 ml-2">(Locked for Individual)</span>
+                    )}
                   </label>
                   <input
-                    type="number"
-                    name="team"
-                    value={formData.team}
-                    onChange={handleInputChange}
-                    placeholder="0"
-                    min="0"
-                    className="w-full px-4 py-3 border-2 border-amber-400/50 rounded-xl focus:outline-none focus:border-amber-400 hover:border-amber-400 transition-all bg-purple-900/50 font-medium text-amber-100 placeholder-purple-300"
+                    type="text"
+                    inputMode="numeric"
+                    name="minTeamMembers"
+                    value={!formData.isTeamEvent ? '1' : (formData.minTeamMembers === 0 ? '' : formData.minTeamMembers)}
+                    onChange={(e) => {
+                      if (!formData.isTeamEvent) return; // Prevent changes when Individual is selected
+                      const { name, value } = e.target;
+                      const numValue = value === '' ? 1 : parseFloat(value) || 1;
+                      setFormData((prev) => ({
+                        ...prev,
+                        [name]: isNaN(numValue) ? 1 : numValue,
+                      }));
+                    }}
+                    placeholder="Enter minimum team members"
+                    pattern="[0-9]*"
+                    disabled={!formData.isTeamEvent}
+                    className={`w-full px-4 py-3 border-2 rounded-xl focus:outline-none transition-all font-medium ${
+                      !formData.isTeamEvent
+                        ? 'bg-slate-700/50 border-slate-600 text-slate-400 cursor-not-allowed opacity-75'
+                        : `bg-purple-900/50 ${
+                            errors.minTeamMembers
+                              ? 'border-red-500 bg-red-900/30'
+                              : 'border-purple-500/50 focus:border-slate-300 hover:border-slate-300'
+                          } text-slate-100`
+                    } placeholder-purple-300`}
                   />
+                  {errors.minTeamMembers && (
+                    <p className="text-red-400 text-sm mt-1 flex items-center gap-1 font-medium">
+                      <AlertCircle size={16} /> {errors.minTeamMembers}
+                    </p>
+                  )}
                 </div>
 
                 <div>
                   <label className="block text-sm font-semibold text-white mb-2">
-                    Team Limit <span className="text-red-400">*</span>
+                    Max Team Members <span className="text-red-400">*</span>
+                    {!formData.isTeamEvent && (
+                      <span className="text-xs text-slate-400 ml-2">(Locked for Individual)</span>
+                    )}
                   </label>
                   <input
-                    type="number"
-                    name="teamLimit"
-                    value={formData.teamLimit}
-                    onChange={handleInputChange}
-                    placeholder="0"
-                    min="0"
-                    className={`w-full px-4 py-3 border-2 rounded-xl focus:outline-none transition-all font-medium bg-purple-900/50 ${
-                      errors.teamLimit
-                        ? 'border-red-500 bg-red-900/30'
-                        : 'border-amber-400/50 focus:border-amber-400 hover:border-amber-400'
-                    } text-amber-100 placeholder-purple-300`}
+                    type="text"
+                    inputMode="numeric"
+                    name="maxTeamMembers"
+                    value={!formData.isTeamEvent ? '1' : (formData.maxTeamMembers === 0 ? '' : formData.maxTeamMembers)}
+                    onChange={(e) => {
+                      if (!formData.isTeamEvent) return; // Prevent changes when Individual is selected
+                      const { name, value } = e.target;
+                      const numValue = value === '' ? 1 : parseFloat(value) || 1;
+                      setFormData((prev) => ({
+                        ...prev,
+                        [name]: isNaN(numValue) ? 1 : numValue,
+                      }));
+                    }}
+                    placeholder="Enter maximum team members"
+                    pattern="[0-9]*"
+                    disabled={!formData.isTeamEvent}
+                    className={`w-full px-4 py-3 border-2 rounded-xl focus:outline-none transition-all font-medium ${
+                      !formData.isTeamEvent
+                        ? 'bg-slate-700/50 border-slate-600 text-slate-400 cursor-not-allowed opacity-75'
+                        : `bg-purple-900/50 ${
+                            errors.maxTeamMembers
+                              ? 'border-red-500 bg-red-900/30'
+                              : 'border-purple-500/50 focus:border-slate-300 hover:border-slate-300'
+                          } text-slate-100`
+                    } placeholder-purple-300`}
                   />
-                  {errors.teamLimit && (
+                  {errors.maxTeamMembers && (
                     <p className="text-red-400 text-sm mt-1 flex items-center gap-1 font-medium">
-                      <AlertCircle size={16} /> {errors.teamLimit}
+                      <AlertCircle size={16} /> {errors.maxTeamMembers}
                     </p>
                   )}
                 </div>
@@ -662,8 +964,8 @@ export default function AddEventsPage() {
                   className={`w-full px-4 py-3 border-2 rounded-xl focus:outline-none transition-all font-medium bg-purple-900/50 ${
                     errors.location
                       ? 'border-red-500 bg-red-900/30'
-                      : 'border-amber-400/50 focus:border-amber-400 hover:border-amber-400'
-                  } text-amber-100 placeholder-purple-300`}
+                      : 'border-purple-500/50 focus:border-slate-300 hover:border-slate-300'
+                  } text-slate-100 placeholder-purple-300`}
                 />
                 {errors.location && (
                   <p className="text-red-400 text-sm mt-1 flex items-center gap-1 font-medium">
@@ -686,7 +988,7 @@ export default function AddEventsPage() {
                       onChange={handleInputChange}
                       placeholder="e.g., 28.5355"
                       step="0.0001"
-                      className="w-full px-4 py-3 border-2 border-amber-400/50 rounded-xl focus:outline-none focus:border-amber-400 hover:border-amber-400 transition-all bg-purple-900/50 font-medium text-amber-100 placeholder-purple-300"
+                      className="w-full px-4 py-3 border-2 border-purple-500/50 rounded-xl focus:outline-none focus:border-slate-300 hover:border-slate-300 transition-all bg-purple-900/50 font-medium text-slate-100 placeholder-purple-300"
                     />
                   </div>
 
@@ -699,7 +1001,7 @@ export default function AddEventsPage() {
                       onChange={handleInputChange}
                       placeholder="e.g., 77.1670"
                       step="0.0001"
-                      className="w-full px-4 py-3 border-2 border-amber-400/50 rounded-xl focus:outline-none focus:border-amber-400 hover:border-amber-400 transition-all bg-purple-900/50 font-medium text-amber-100 placeholder-purple-300"
+                      className="w-full px-4 py-3 border-2 border-purple-500/50 rounded-xl focus:outline-none focus:border-slate-300 hover:border-slate-300 transition-all bg-purple-900/50 font-medium text-slate-100 placeholder-purple-300"
                     />
                   </div>
                 </div>
@@ -718,9 +1020,9 @@ export default function AddEventsPage() {
 
               <div>
                 <label className="block text-sm font-semibold text-white mb-2">
-                  Event Image <span className="text-red-400">*</span>
+                  Event Image <span className="text-slate-400 text-xs">(Optional - uses Pecfest logo if not provided)</span>
                 </label>
-                <div className="border-4 border-dashed border-amber-400/50 rounded-2xl p-8 text-center hover:border-amber-400 hover:bg-purple-900/30 transition-all cursor-pointer bg-purple-900/20">
+                <div className="border-4 border-dashed border-purple-500/50 rounded-2xl p-8 text-center hover:border-slate-300 hover:bg-purple-900/40 transition-all cursor-pointer bg-purple-900/20">
                   <input
                     type="file"
                     accept="image/*"
@@ -734,17 +1036,17 @@ export default function AddEventsPage() {
                         <img
                           src={imagePreview}
                           alt="Preview"
-                          className="max-h-48 mx-auto rounded-xl border-2 border-amber-400/50"
+                          className="max-h-48 mx-auto rounded-xl border-2 border-purple-500/50"
                         />
-                        <p className="text-sm text-amber-300 font-semibold">Click to change image</p>
+                        <p className="text-sm text-slate-300 font-semibold">Click to change image</p>
                       </div>
                     ) : (
                       <div className="space-y-2">
                         <p className="text-4xl">🎞️</p>
-                        <p className="text-sm text-amber-200 font-semibold">
+                        <p className="text-sm text-slate-200 font-semibold">
                           Click to upload or drag and drop
                         </p>
-                        <p className="text-xs text-amber-300/70 font-medium">PNG, JPG up to 10MB</p>
+                        <p className="text-xs text-slate-400 font-medium">PNG, JPG up to 10MB</p>
                       </div>
                     )}
                   </label>
@@ -758,23 +1060,37 @@ export default function AddEventsPage() {
 
               <div>
                 <label className="block text-sm font-semibold text-white mb-2">
-                  PDF Link <span className="text-red-400">*</span>
+                  PDF Link <span className="text-slate-400 text-xs">(Optional)</span>
                 </label>
                 <input
                   type="url"
                   name="pdfLink"
                   value={formData.pdfLink}
                   onChange={handleInputChange}
-                  placeholder="https://example.com/event.pdf"
+                  placeholder="https://drive.google.com/... or https://example.com/resource"
                   className={`w-full px-4 py-3 border-2 rounded-xl focus:outline-none transition-all font-medium bg-purple-900/50 ${
                     errors.pdfLink
                       ? 'border-red-500 bg-red-900/30'
-                      : 'border-amber-400/50 focus:border-amber-400 hover:border-amber-400'
-                  } text-amber-100 placeholder-purple-300`}
+                      : formData.pdfLink && isValidUrl(formData.pdfLink)
+                      ? 'border-green-500 bg-green-900/20'
+                      : formData.pdfLink
+                      ? 'border-yellow-500 bg-yellow-900/20'
+                      : 'border-purple-500/50 focus:border-slate-300 hover:border-slate-300'
+                  } text-slate-100 placeholder-purple-300`}
                 />
+                {formData.pdfLink && !errors.pdfLink && isValidUrl(formData.pdfLink) && (
+                  <p className="text-green-400 text-sm mt-1 flex items-center gap-1 font-medium">
+                    ✓ Valid link
+                  </p>
+                )}
                 {errors.pdfLink && (
                   <p className="text-red-400 text-sm mt-1 flex items-center gap-1 font-medium">
                     <AlertCircle size={16} /> {errors.pdfLink}
+                  </p>
+                )}
+                {formData.pdfLink && !errors.pdfLink && !isValidUrl(formData.pdfLink) && (
+                  <p className="text-yellow-400 text-sm mt-1 flex items-center gap-1 font-medium">
+                    ⚠️ This doesn't appear to be a valid URL
                   </p>
                 )}
               </div>
@@ -804,8 +1120,8 @@ export default function AddEventsPage() {
                   className={`w-full px-4 py-3 border-2 rounded-xl focus:outline-none transition-all resize-none font-medium bg-purple-900/50 ${
                     errors.briefDescription
                       ? 'border-red-500 bg-red-900/30'
-                      : 'border-amber-400/50 focus:border-amber-400 hover:border-amber-400'
-                  } text-amber-100 placeholder-purple-300`}
+                      : 'border-purple-500/50 focus:border-slate-300 hover:border-slate-300'
+                  } text-slate-100 placeholder-purple-300`}
                 />
                 {errors.briefDescription && (
                   <p className="text-red-400 text-sm mt-1 flex items-center gap-1 font-medium">
@@ -815,51 +1131,80 @@ export default function AddEventsPage() {
               </div>
 
               {/* Summary Card */}
-              <div className="bg-gradient-to-br from-purple-900/50 via-indigo-900/50 to-purple-900/50 rounded-2xl p-6 space-y-4 border-2 border-amber-400/30">
+              <div className="bg-gradient-to-br from-purple-900/50 via-indigo-900/50 to-purple-900/50 rounded-2xl p-6 space-y-4 border-2 border-purple-500/50">
                 <h3 className="font-bold text-lg text-white flex items-center gap-2">
                   <span className="text-2xl">📋</span> Event Summary
                 </h3>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="bg-purple-900/50 rounded-xl p-4 border-2 border-amber-400/20">
-                    <p className="text-xs text-amber-300/70 font-bold">Category</p>
-                    <p className="text-sm font-bold text-amber-100 mt-1 capitalize">
+                  <div className="bg-purple-900/50 rounded-xl p-4 border-2 border-purple-500/40">
+                    <p className="text-xs text-slate-400 font-bold">Category</p>
+                    <p className="text-sm font-bold text-slate-100 mt-1 capitalize">
                       {formData.category}
                     </p>
                   </div>
-                  <div className="bg-purple-900/50 rounded-xl p-4 border-2 border-amber-400/20">
-                    <p className="text-xs text-amber-300/70 font-bold">Event Name</p>
-                    <p className="text-sm font-bold text-amber-100 mt-1">{formData.eventName}</p>
+                  <div className="bg-purple-900/50 rounded-xl p-4 border-2 border-purple-500/40">
+                    <p className="text-xs text-slate-400 font-bold">Event Name</p>
+                    <p className="text-sm font-bold text-slate-100 mt-1">{formData.eventName}</p>
                   </div>
-                  <div className="bg-purple-900/50 rounded-xl p-4 border-2 border-amber-400/20">
-                    <p className="text-xs text-amber-300/70 font-bold">Society</p>
-                    <p className="text-sm font-bold text-amber-100 mt-1">{formData.societyName}</p>
+                  <div className="bg-purple-900/50 rounded-xl p-4 border-2 border-purple-500/40">
+                    <p className="text-xs text-slate-400 font-bold">Society</p>
+                    <p className="text-sm font-bold text-slate-100 mt-1">{formData.societyName}</p>
                   </div>
-                  <div className="bg-purple-900/50 rounded-xl p-4 border-2 border-amber-400/20">
-                    <p className="text-xs text-amber-300/70 font-bold">Registration Fees</p>
-                    <p className="text-sm font-bold text-amber-100 mt-1">₹{formData.regFees}</p>
+                  {formData.additionalClub && formData.additionalClub !== 'None' && (
+                    <div className="bg-purple-900/50 rounded-xl p-4 border-2 border-purple-500/40">
+                      <p className="text-xs text-slate-400 font-bold">Additional Club</p>
+                      <p className="text-sm font-bold text-slate-100 mt-1">{formData.additionalClub}</p>
+                    </div>
+                  )}
+                  <div className="bg-purple-900/50 rounded-xl p-4 border-2 border-purple-500/40">
+                    <p className="text-xs text-slate-400 font-bold">Registration Fees</p>
+                    <p className="text-sm font-bold text-slate-100 mt-1">₹{formData.regFees}</p>
                   </div>
-                  <div className="bg-purple-900/50 rounded-xl p-4 border-2 border-amber-400/20">
-                    <p className="text-xs text-amber-300/70 font-bold">Team Limit</p>
-                    <p className="text-sm font-bold text-amber-100 mt-1">{formData.teamLimit}</p>
+                  <div className="bg-purple-900/50 rounded-xl p-4 border-2 border-purple-500/40">
+                    <p className="text-xs text-slate-400 font-bold">Event Type</p>
+                    <p className="text-sm font-bold text-slate-100 mt-1">{formData.isTeamEvent ? '👥 Team' : '👤 Individual'}</p>
                   </div>
-                  <div className="bg-purple-900/50 rounded-xl p-4 col-span-full border-2 border-amber-400/20">
-                    <p className="text-xs text-amber-300/70 font-bold">Date & Time</p>
-                    <p className="text-sm font-bold text-amber-100 mt-1">
+                  <div className="bg-purple-900/50 rounded-xl p-4 border-2 border-purple-500/40">
+                    <p className="text-xs text-slate-400 font-bold">Min Team Members</p>
+                    <p className="text-sm font-bold text-slate-100 mt-1">{formData.minTeamMembers}</p>
+                  </div>
+                  <div className="bg-purple-900/50 rounded-xl p-4 border-2 border-purple-500/40">
+                    <p className="text-xs text-slate-400 font-bold">Max Team Members</p>
+                    <p className="text-sm font-bold text-slate-100 mt-1">{formData.maxTeamMembers}</p>
+                  </div>
+                  <div className="bg-purple-900/50 rounded-xl p-4 col-span-full border-2 border-purple-500/40">
+                    <p className="text-xs text-slate-400 font-bold">Date & Time</p>
+                    <p className="text-sm font-bold text-slate-100 mt-1">
                       {new Date(formData.dateTime).toLocaleString() || 'Not set'}
                     </p>
                   </div>
-                  <div className="bg-purple-900/50 rounded-xl p-4 col-span-full border-2 border-amber-400/20">
-                    <p className="text-xs text-amber-300/70 font-bold">Location</p>
-                    <p className="text-sm font-bold text-amber-100 mt-1">{formData.location}</p>
+                  <div className="bg-purple-900/50 rounded-xl p-4 col-span-full border-2 border-purple-500/40">
+                    <p className="text-xs text-slate-400 font-bold">Location</p>
+                    <p className="text-sm font-bold text-slate-100 mt-1">{formData.location}</p>
+                  </div>
+                  <div className="bg-purple-900/50 rounded-xl p-4 col-span-full border-2 border-purple-500/40">
+                    <p className="text-xs text-slate-400 font-bold">PDF Link</p>
+                    {formData.pdfLink ? (
+                      <a
+                        href={formData.pdfLink}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-sm font-bold text-blue-300 mt-1 hover:text-blue-200 underline break-all"
+                      >
+                        {formData.pdfLink}
+                      </a>
+                    ) : (
+                      <p className="text-sm font-bold text-slate-400 mt-1">No PDF link provided</p>
+                    )}
                   </div>
                   {imagePreview && (
                     <div className="col-span-full">
-                      <p className="text-xs text-amber-300/70 font-bold mb-2">Event Image</p>
+                      <p className="text-xs text-slate-400 font-bold mb-2">Event Image</p>
                       <img
                         src={imagePreview}
                         alt="Event"
-                        className="w-full max-h-48 rounded-xl object-cover border-2 border-amber-400/50"
+                        className="w-full max-h-48 rounded-xl object-cover border-2 border-purple-500/50"
                       />
                     </div>
                   )}
@@ -869,14 +1214,14 @@ export default function AddEventsPage() {
           )}
 
           {/* Navigation Buttons */}
-          <div className="flex gap-3 mt-8 pt-8 border-t-2 border-amber-400/20">
+          <div className="flex gap-3 mt-8 pt-8 border-t-2 border-purple-500/30">
             <button
               onClick={handlePrevStep}
               disabled={currentStep === 1}
               className={`flex items-center gap-2 px-6 py-3 rounded-xl font-semibold transition-all duration-300 border-2 ${
                 currentStep === 1
-                  ? 'bg-purple-900/30 text-amber-300/50 cursor-not-allowed border-purple-700/50'
-                  : 'bg-purple-900/50 text-amber-300 border-purple-700/50 hover:border-amber-400 hover:bg-purple-900/70 hover:shadow-lg hover:shadow-amber-400/20 hover:scale-105'
+                  ? 'bg-purple-900/30 text-slate-400/50 cursor-not-allowed border-purple-700/50'
+                  : 'bg-purple-900/50 text-slate-300 border-purple-700/50 hover:border-slate-300 hover:bg-purple-900/70 hover:shadow-lg hover:shadow-slate-300/20 hover:scale-105'
               }`}
             >
               <ChevronLeft size={20} />
@@ -910,7 +1255,7 @@ export default function AddEventsPage() {
             ) : (
               <button
                 onClick={handleNextStep}
-                className="flex items-center gap-2 px-8 py-3 bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-700 hover:to-amber-800 text-white rounded-xl font-semibold transition-all duration-300 hover:shadow-lg hover:shadow-amber-500/30 hover:scale-105 border-2 border-amber-800"
+                className="flex items-center gap-2 px-8 py-3 bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white rounded-xl font-semibold transition-all duration-300 hover:shadow-lg hover:shadow-purple-500/30 hover:scale-105 border-2 border-purple-800"
               >
                 <span>Next</span>
                 <ChevronRight size={20} />

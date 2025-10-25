@@ -24,6 +24,12 @@ const AdminSchema = new Schema<IAdmin>(
       required: [true, 'User ID is required, same as email for now'],
       trim: true,
     },
+    name: {
+      type: String,
+      required: false,
+      trim: true,
+      default: 'Admin',
+    },
     accesslevel: {
       type: Number,
       required: [true, 'Required'],
@@ -37,7 +43,6 @@ const AdminSchema = new Schema<IAdmin>(
     clubsoc: {
       type: String,
       required: [true, 'From these 28 clubs/socs only'],
-      // This will store base64url encoded image/document
     },
     dateTime: {
       type: Date,
@@ -51,11 +56,11 @@ const AdminSchema = new Schema<IAdmin>(
 );
 
 // Add indexes for better query performance
-AdminSchema.index({ eventId: 1 });
+AdminSchema.index({ email: 1 });
 AdminSchema.index({ userId: 1 });
 AdminSchema.index({ userId: 1, accesslevel: 1 }); // Composite index for userId + accesslevel
-AdminSchema.index({ eventId: 1, userId: 1 }); // Composite index for unique registrations per event per user
 AdminSchema.index({ verified: 1 });
+AdminSchema.index({ accesslevel: 1 });
 
 // Prevent model recompilation in development (Next.js hot reload)
 const Admin = models.Admin || model<IAdmin>('Admin', AdminSchema);

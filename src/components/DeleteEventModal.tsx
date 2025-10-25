@@ -31,11 +31,21 @@ export default function DeleteEventModal({ event, onClose, onDelete }: DeleteEve
     setError('');
 
     try {
+      // Get admin token from localStorage
+      const token = localStorage.getItem('adminToken');
+      
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+
+      // Add Authorization header if token exists
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
       const response = await fetch(`/api/events/${event.eventId}`, {
         method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers,
       });
 
       if (response.ok) {

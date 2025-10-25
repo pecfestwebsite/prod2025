@@ -24,25 +24,46 @@ export default function AdminNavbar() {
   // Load admin user info from localStorage on mount and listen for changes
   useEffect(() => {
     const loadAdminData = () => {
-      const adminData = localStorage.getItem('adminUser');
-      if (adminData) {
-        try {
-          const parsedUser = JSON.parse(adminData) as AdminUser;
-          setAdminUser(parsedUser);
-          setIsLoggedIn(true);
-        } catch (error) {
-          console.error('Failed to parse admin user data:', error);
+      try {
+        const adminData = localStorage.getItem('adminUser');
+        const token = localStorage.getItem('adminToken');
+        
+        // Only show user info if BOTH token and adminData exist
+        if (adminData && token) {
+          try {
+            const parsedUser = JSON.parse(adminData) as AdminUser;
+            setAdminUser(parsedUser);
+            setIsLoggedIn(true);
+          } catch (parseError) {
+            console.error('Failed to parse admin user data:', parseError);
+            setAdminUser(null);
+            setIsLoggedIn(false);
+          }
+        } else {
+          // If token or adminData is missing, clear everything
+          if (!token || !adminData) {
+            localStorage.removeItem('adminToken');
+            localStorage.removeItem('adminUser');
+            document.cookie = 'adminToken=; path=/; max-age=0';
+          }
+          setAdminUser(null);
           setIsLoggedIn(false);
         }
-      } else {
+      } catch (error) {
+        console.error('Failed to load admin user data:', error);
         setAdminUser(null);
         setIsLoggedIn(false);
       }
     };
 
-    // Load on mount
+    // Load on mount immediately
     loadAdminData();
-
+    
+    // Also load after a short delay to catch any updates from redirect
+    const delayTimer = setTimeout(() => {
+      loadAdminData();
+    }, 100);
+    
     // Listen for storage changes (login/logout in other tabs or same tab)
     window.addEventListener('storage', loadAdminData);
     
@@ -52,23 +73,50 @@ export default function AdminNavbar() {
     };
     window.addEventListener('adminUserChanged', handleCustomStorageChange);
 
+    // Listen for modal opening to close dropdown
+    const handleCloseDropdown = () => {
+      setOpenDropdown(null);
+    };
+    window.addEventListener('closeDropdown', handleCloseDropdown);
+
     return () => {
+      clearTimeout(delayTimer);
       window.removeEventListener('storage', loadAdminData);
       window.removeEventListener('adminUserChanged', handleCustomStorageChange);
+      window.removeEventListener('closeDropdown', handleCloseDropdown);
     };
   }, []);
 
-  const handleLogout = () => {
-    localStorage.removeItem('adminToken');
-    localStorage.removeItem('adminUser');
-    document.cookie = 'adminToken=; path=/; max-age=0';
-    setAdminUser(null);
-    setIsLoggedIn(false);
-    
-    // Dispatch custom event to notify all listeners
-    window.dispatchEvent(new Event('adminUserChanged'));
-    
-    router.push('/admin/login');
+  const handleLogout = async () => {
+    try {
+      // Call logout API endpoint
+      await fetch('/api/admin/logout', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+    } catch (error) {
+      console.error('Logout error:', error);
+    } finally {
+      // Clear local storage and cookies regardless of API call result
+      localStorage.removeItem('adminToken');
+      localStorage.removeItem('adminUser');
+      document.cookie = 'adminToken=; path=/; max-age=0';
+      setAdminUser(null);
+      setIsLoggedIn(false);
+      
+      // Dispatch custom event to notify all listeners
+      window.dispatchEvent(new Event('adminUserChanged'));
+      
+      // Redirect and refresh the page
+      router.push('/admin/login');
+      
+      // Refresh the page after a short delay to ensure redirect happens first
+      setTimeout(() => {
+        window.location.reload();
+      }, 100);
+    }
   };
 
   const menuGroups = {
@@ -92,6 +140,7 @@ export default function AdminNavbar() {
       label: 'Manage',
       icon: Users,
       items: [
+        { label: 'Users', href: '/admin/users', icon: User },
         { label: 'Registrations', href: '/admin/registrations', icon: Users },
         { label: 'Clearance', href: '/admin/clearance', icon: FileText },
       ],
@@ -121,7 +170,7 @@ export default function AdminNavbar() {
         {/* Dropdown Menu */}
         <div
           onMouseLeave={() => setOpenDropdown(null)}
-          className={`absolute top-full left-1/2 -translate-x-1/2 mt-2 w-56 rounded-xl border-2 border-slate-400/30 shadow-2xl backdrop-blur-sm transition-all duration-300 origin-top ${
+          className={`absolute top-full left-1/2 -translate-x-1/2 mt-2 w-56 rounded-xl border-2 border-slate-400/30 shadow-2xl backdrop-blur-sm transition-all duration-300 origin-top z-40 ${
             isOpen
               ? 'opacity-100 scale-y-100 visible'
               : 'opacity-0 scale-y-95 invisible'
@@ -157,10 +206,10 @@ export default function AdminNavbar() {
         <div className="hidden xl:block px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-20 max-w-7xl mx-auto">
             {/* Logo Section */}
-            <Link href="/admin/dashboard" className="flex items-center gap-3 group">
+            <Link href="/" className="flex items-center gap-3 group">
               <div className="text-3xl group-hover:scale-110 transition-transform duration-300 filter brightness-0 invert">✨</div>
               <div className="flex flex-col">
-                <span className="font-bold text-lg text-white" style={{ fontFamily: "'Protest Guerrilla', sans-serif" }}>
+                <span className="font-bold text-lg text-white">
                   PECFest
                 </span>
                 <span className="text-xs text-slate-400/60 font-semibold">Admin</span>
@@ -203,10 +252,10 @@ export default function AdminNavbar() {
         <div className="xl:hidden px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-20">
             {/* Logo Section */}
-            <Link href="/admin/dashboard" className="flex items-center gap-3 group">
+            <Link href="/" className="flex items-center gap-3 group">
               <div className="text-3xl group-hover:scale-110 transition-transform duration-300 filter brightness-0 invert">✨</div>
               <div className="flex flex-col">
-                <span className="font-bold text-lg text-white" style={{ fontFamily: "'Protest Guerrilla', sans-serif" }}>
+                <span className="font-bold text-lg text-white">
                   PECFest
                 </span>
                 <span className="text-xs text-slate-400/60 font-semibold">Admin</span>

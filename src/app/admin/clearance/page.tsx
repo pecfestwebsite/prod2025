@@ -32,7 +32,7 @@ async function getAdmins(): Promise<IAdmin[]> {
       accesslevel: admin.accesslevel,
       clubsoc: admin.clubsoc,
       verified: admin.verified,
-      name: admin.name,
+      name: admin.name || 'Admin',
       dateTime: admin.dateTime.toISOString(),
       createdAt: admin.createdAt.toISOString(),
     }));

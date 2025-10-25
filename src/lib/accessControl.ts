@@ -92,9 +92,12 @@ export function filterEventsByAccessLevel(
     return events;
   }
 
-  // Club/Soc Admin (1) can only see events from their club/soc
+  // Club/Soc Admin (1) can see events from their club/soc OR where their club is the additional club
   if (adminUser.accesslevel === 1) {
-    return events.filter((event) => event.societyName === adminUser.clubsoc);
+    return events.filter((event) => 
+      event.societyName === adminUser.clubsoc || 
+      event.additionalClub === adminUser.clubsoc
+    );
   }
 
   // Simple users (0) can't see events
@@ -116,12 +119,41 @@ export function filterRegistrationsByAccessLevel(
     return registrations;
   }
 
-  // Club/Soc Admin (1) can see all registrations (no filtering by society)
+  // Club/Soc Admin (1) can see registrations for their club/soc only
   if (adminUser.accesslevel === 1) {
-    return registrations;
+    return registrations.filter((reg) => reg.societyName === adminUser.clubsoc);
   }
 
   // Simple users (0) can't see registrations
+  return [];
+}
+
+/**
+ * Filter users based on user access level
+ * Club/Soc Admin (1) can only see users who have registered for their club/soc events
+ */
+export function filterUsersByAccessLevel(
+  users: any[],
+  adminUser: AdminUser | null
+): any[] {
+  // If no admin user yet (loading), return all users (will filter once loaded)
+  if (!adminUser) return users;
+
+  // Super Admin (2) and Webmaster (3) can see all users
+  if (adminUser.accesslevel === 2 || adminUser.accesslevel === 3) {
+    return users;
+  }
+
+  // Club/Soc Admin (1) can see users who have registrations for their club/soc events
+  // This includes events where their club is primary OR additional club
+  if (adminUser.accesslevel === 1) {
+    return users.filter((user) => 
+      user.registrations.length > 0 && 
+      user.registrations.some((reg: any) => reg.societyName === adminUser.clubsoc || reg.additionalClub === adminUser.clubsoc)
+    );
+  }
+
+  // Simple users (0) can't see users
   return [];
 }
 
@@ -172,6 +204,52 @@ export function isFieldEditable(
   // Club/Soc Admin can edit other fields
   if (accessLevel === 1) {
     return true;
+  }
+
+  return false;
+}
+
+/**
+ * Check if a specific event can be edited by the admin
+ * Club/Soc admins can edit events where their club is primary or additional
+ */
+export function canEditEventByAdmin(
+  event: any,
+  adminUser: AdminUser | null
+): boolean {
+  if (!adminUser) return false;
+
+  // Super Admin (2) and Webmaster (3) can edit all events
+  if (adminUser.accesslevel === 2 || adminUser.accesslevel === 3) {
+    return true;
+  }
+
+  // Club/Soc Admin (1) can edit if their club is primary or additional
+  if (adminUser.accesslevel === 1) {
+    return event.societyName === adminUser.clubsoc || event.additionalClub === adminUser.clubsoc;
+  }
+
+  return false;
+}
+
+/**
+ * Check if a specific event can be deleted by the admin
+ * Club/Soc admins can delete events where their club is primary or additional
+ */
+export function canDeleteEventByAdmin(
+  event: any,
+  adminUser: AdminUser | null
+): boolean {
+  if (!adminUser) return false;
+
+  // Super Admin (2) and Webmaster (3) can delete all events
+  if (adminUser.accesslevel === 2 || adminUser.accesslevel === 3) {
+    return true;
+  }
+
+  // Club/Soc Admin (1) can delete if their club is primary or additional
+  if (adminUser.accesslevel === 1) {
+    return event.societyName === adminUser.clubsoc || event.additionalClub === adminUser.clubsoc;
   }
 
   return false;

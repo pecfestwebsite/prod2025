@@ -2,9 +2,17 @@ import { NextRequest, NextResponse } from 'next/server';
 import nodemailer from 'nodemailer';
 import { nanoid } from 'nanoid';
 import { otpStore } from '@/lib/session-store';
+import bcrypt from "bcryptjs";
+import { checkRateLimit, updateRateLimit } from '@/lib/rate-limit';
 
 export async function POST(request: NextRequest) {
   try {
+    // Check device-based rate limit
+    const rateLimitCheck = checkRateLimit(request);
+    if (!rateLimitCheck.allowed) {
+      return rateLimitCheck.response;
+    }
+
     const { email } = await request.json();
 
     if (!email || !email.includes('@')) {
@@ -14,12 +22,63 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const normalizedEmail = email.toLowerCase();
+    const existingData = otpStore.get(normalizedEmail);
+    const now = Date.now();
+
+
+
+    // Check cooldown period (60 seconds between attempts)
+    if (existingData?.lastAttempt && (now - existingData.lastAttempt) < 60000) {
+      const remainingCooldown = Math.ceil((60000 - (now - existingData.lastAttempt)) / 1000);
+      return NextResponse.json(
+        { error: `Please wait ${remainingCooldown} seconds before requesting another OTP.` },
+        { status: 429 }
+      );
+    }
+
+    // Check daily limit (max 10 OTPs per email per day)
+    const DAILY_LIMIT = 3;
+    const ONE_DAY = 6 * 60 * 60 * 1000;
+    const startOfDay = now - (now % ONE_DAY);
+    
+    if (existingData?.dailyCount) {
+      // Reset count if it's a new day
+      if (existingData.dailyCountResetTime && existingData.dailyCountResetTime < startOfDay) {
+        existingData.dailyCount = 0;
+      }
+      
+      // Check if daily limit exceeded
+      if (existingData.dailyCount >= DAILY_LIMIT) {
+        const nextResetTime = new Date(startOfDay + ONE_DAY);
+        return NextResponse.json(
+          { error: `Daily OTP limit reached. Please try again after ${nextResetTime.toLocaleTimeString()}.` },
+          { status: 429 }
+        );
+      }
+    }
+
     // Generate 6-digit OTP
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    const expiresAt = Date.now() + 10 * 60 * 1000; // 10 minutes
+    const expiresAt = now + 10 * 60 * 1000; // 10 minutes
 
-    // Store OTP
-    otpStore.set(email.toLowerCase(), { otp, expiresAt });
+    // Store OTP with attempt tracking
+    const hashedOtp = (await bcrypt.hash(otp, 10)).toString();
+    
+    // Calculate daily count using existing startOfDay
+    const dailyCount = (existingData?.dailyCountResetTime || 0) < startOfDay ? 1 : (existingData?.dailyCount || 0) + 1;
+    
+    otpStore.set(normalizedEmail, {
+      otp: hashedOtp,
+      expiresAt,
+      attempts: 0, // Reset attempts for new OTP
+      lastAttempt: now,
+      // lockoutUntil: undefined,
+      dailyCount,
+      dailyCountResetTime: startOfDay
+    });
+  // console.log("Send-otp stored creds:");
+  // console.log(otpStore.get(email.toLowerCase()));
 
     // Create transporter
     const transporter = nodemailer.createTransport({
@@ -36,124 +95,185 @@ export async function POST(request: NextRequest) {
     const mailOptions = {
       from: process.env.SMTP_FROM || process.env.SMTP_USER,
       to: email,
-      subject: '🌙 Your Portal Access Code - PECFEST 2025',
+      subject: 'Your Portal Access Code - PECFEST 2025',
       html: `
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <style>
-            body {
-              font-family: Arial, sans-serif;
-              background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-              margin: 0;
-              padding: 20px;
-            }
-            .container {
-              max-width: 600px;
-              margin: 0 auto;
-              background: white;
-              border-radius: 20px;
-              overflow: hidden;
-              box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-            }
-            .header {
-              background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-              padding: 40px 20px;
-              text-align: center;
-              color: white;
-            }
-            .header h1 {
-              margin: 0;
-              font-size: 32px;
-              color: #ffd700;
-              text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
-            }
-            .header p {
-              margin: 10px 0 0 0;
-              font-size: 18px;
-              opacity: 0.9;
-            }
-            .content {
-              padding: 40px;
-              text-align: center;
-            }
-            .otp-box {
-              background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-              color: #ffd700;
-              font-size: 48px;
-              font-weight: bold;
-              letter-spacing: 10px;
-              padding: 30px;
-              border-radius: 15px;
-              margin: 30px 0;
-              box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
-            }
-            .message {
-              color: #333;
-              font-size: 16px;
-              line-height: 1.6;
-              margin: 20px 0;
-            }
-            .footer {
-              background: #f8f9fa;
-              padding: 20px;
-              text-align: center;
-              color: #666;
-              font-size: 14px;
-            }
-            .lantern {
-              font-size: 40px;
-              display: inline-block;
-              animation: swing 3s ease-in-out infinite;
-            }
-            @keyframes swing {
-              0%, 100% { transform: rotate(-5deg); }
-              50% { transform: rotate(5deg); }
-            }
-          </style>
-        </head>
-        <body>
-          <div class="container">
-            <div class="header">
-              <div class="lantern">🏮</div>
-              <h1>PECFEST 2025</h1>
-              <p>Arabian Nights</p>
-            </div>
-            <div class="content">
-              <h2 style="color: #764ba2; margin-top: 0;">✨ Your  Code Has Arrived ✨</h2>
-              <p class="message">
-                Greetings, traveler! Your portal access code is ready.
-              </p>
-              <div class="otp-box">
-                ${otp}
-              </div>
-              <p class="message">
-                <strong>This code expires in 10 minutes.</strong><br>
-                Enter this code to unlock your  experience.
-              </p>
-              <p class="message" style="color: #999; font-size: 14px;">
-                If you didn't request this code, you can safely ignore this message.
-              </p>
-            </div>
-            <div class="footer">
-              <p>🌙 PECFEST 2025 - OTP 🌙</p>
-              <p>May your journey be filled with wonder</p>
-            </div>
-          </div>
-        </body>
-        </html>
+      <!DOCTYPE html>
+<html>
+  <head>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        background: #140655;
+        margin: 0;
+        padding: 20px;
+        position: relative;
+      }
+      
+      .stars {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        top: 0;
+        left: 0;
+        pointer-events: none;
+      }
+      
+      .star {
+        position: absolute;
+        color: white;
+        font-size: 16px;
+        animation: twinkle 3s infinite;
+        opacity: 0.4;
+      }
+      
+      @keyframes twinkle {
+        0%, 100% { opacity: 0.2; }
+        50% { opacity: 0.6; }
+      }
+      
+      .container {
+        max-width: 600px;
+        margin: 0 auto;
+        background: rgba(15, 4, 68, 0.9);
+        border-radius: 25px;
+        overflow: hidden;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+        border: 2px solid rgba(102, 126, 234, 0.3);
+        position: relative;
+        z-index: 10;
+      }
+      
+      .header {
+        background: linear-gradient(135deg, #4321a9 0%, #b53da1 100%);
+        padding: 40px 20px;
+        text-align: center;
+        color: white;
+      }
+      
+      .header h1 {
+        margin: 0;
+        font-size: 36px;
+        font-weight: bold;
+      }
+      
+      .header p {
+        margin: 10px 0 0 0;
+        font-size: 16px;
+        opacity: 0.95;
+      }
+      
+      .content {
+        padding: 40px;
+        text-align: center;
+      }
+      
+      .content h2 {
+        color: white;
+        font-size: 24px;
+        margin-top: 0;
+        margin-bottom: 20px;
+      }
+      
+      .otp-box {
+        background: linear-gradient(90deg, #2a0a56, #4321a9, #642aa5, #b53da1);
+        color: white;
+        font-size: 48px;
+        font-weight: bold;
+        text-align: center;
+        letter-spacing: 12px;
+        padding: 35px;
+        border-radius: 15px;
+        margin: 30px 0;
+        box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+        font-family: 'Courier New', monospace;
+      }
+      
+      .message {
+        color: #e0e7ff;
+        font-size: 15px;
+        line-height: 1.7;
+        margin: 15px 0;
+      }
+      
+      .highlight {
+        color: white;
+        font-weight: bold;
+      }
+      
+      .warning {
+        background: rgba(59, 130, 246, 0.15);
+        border: 1px solid rgba(102, 126, 234, 0.3);
+        border-radius: 12px;
+        padding: 15px;
+        margin: 20px 0;
+        color: #a5b4fc;
+        font-size: 14px;
+      }
+      
+      .footer {
+        background: rgba(102, 126, 234, 0.1);
+        padding: 25px 20px;
+        text-align: center;
+        color: #a5b4fc;
+        font-size: 13px;
+        border-top: 1px solid rgba(102, 126, 234, 0.2);
+      }
+      
+      .footer p {
+        margin: 8px 0;
+        color: white;
+      }
+    </style>
+  </head>
+  <body>
+    PFA Code ${otp}
+    <div class="container">
+      <div class="header">
+        <h1>PECFEST 2025</h1>
+        <p>Portal Access</p>
+      </div>
+      
+      <div class="content">
+        <h2>✨ Your Code Has Arrived ✨</h2>
+        
+        <p class="message">
+          Greetings, traveler! Your portal access code is ready.
+        </p>
+        
+        <div class="otp-box">
+          ${otp}</div>
+        
+        <p class="message">
+          <span class="highlight">This code expires in 10 minutes.</span><br>
+          Enter this code to unlock your admin experience.
+        </p>
+        
+        <div class="warning">
+          If you didn't request this code, you can safely ignore this message.
+        </div>
+      </div>
+      
+      <div class="footer">
+        <p>🏮 PECFEST 2025 - OTP 🏮</p>
+        <p style="font-size: 12px; margin-top: 12px; color: #a5b4fc;">Protected by mystical enchantments</p>
+      </div>
+    </div>
+  </body>
+</html>
       `,
       text: `Your PECFEST 2025 login code is: ${otp}\n\nThis code expires in 10 minutes.\n\nIf you didn't request this code, please ignore this email.`,
     };
 
     await transporter.sendMail(mailOptions);
 
-    return NextResponse.json({ 
+    // Create success response and update rate limit cookie
+    const response = NextResponse.json({ 
       success: true, 
       message: 'OTP sent successfully' 
     });
+    return updateRateLimit(response, request);
   } catch (error) {
-    console.error('Error sending OTP:', error);
+    console.error('Error sending OTP:');
     return NextResponse.json(
       { error: 'Failed to send OTP. Please try again.' },
       { status: 500 }

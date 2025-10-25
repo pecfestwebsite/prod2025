@@ -2,21 +2,40 @@
 
 import React, { useState, useEffect } from 'react';
 import { X, Check } from 'lucide-react';
+import { getAdminUser, getLockedSocietyName } from '@/lib/accessControl';
+import { uploadImageToFirebase } from '@/lib/firebaseStorage';
+import Compressor from 'compressorjs';
+
+const CLUBS_SOCS = [
+  "None",
+  //Clubs
+  'Dramatics', 'SAASC', 'APC', 'ELC', 'Music',
+  'HEB', 'PDC', 'PEB', 'Rotaract', 'SCC',
+  'CIM', 'EIC', 'WEC', 'EEB', "NCC", "NSS", "Sports",
+
+  //SOCS
+  'Robotics', 'ACM', 'ATS', 'ASME', 'ASCE',
+  'ASPS', 'IEEE', 'IGS', 'IIM',
+  'SESI', 'SAE', 'SME', "ES"
+];
 
 interface Event {
   _id: string;
   eventId: string;
   category: 'technical' | 'cultural' | 'convenor';
   societyName: string;
+  additionalClub?: string;
   eventName: string;
   regFees: number;
   dateTime: string;
   location: string;
   briefDescription: string;
   pdfLink: string;
+  image: string;
   contactInfo: string;
-  teamLimit: number;
-  team: number;
+  isTeamEvent: boolean;
+  minTeamMembers: number;
+  maxTeamMembers: number;
 }
 
 interface EditEventModalProps {
@@ -30,6 +49,16 @@ export default function EditEventModal({ event, onClose, onUpdate }: EditEventMo
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
+  const [lockedSociety, setLockedSociety] = useState<string | null>(null);
+  const [imagePreview, setImagePreview] = useState<string>(event.image);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+
+  // Check if society name should be locked for this admin
+  useEffect(() => {
+    const admin = getAdminUser();
+    const locked = getLockedSocietyName(admin);
+    setLockedSociety(locked);
+  }, []);
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
@@ -37,10 +66,66 @@ export default function EditEventModal({ event, onClose, onUpdate }: EditEventMo
     const { name, value } = e.target;
     setFormData((prev) => ({
       ...prev,
-      [name]: name === 'regFees' || name === 'teamLimit' || name === 'team' 
+      [name]: name === 'regFees' || name === 'minTeamMembers' || name === 'maxTeamMembers' 
         ? parseFloat(value) || 0 
+        : name === 'isTeamEvent'
+        ? e.target instanceof HTMLInputElement ? e.target.checked : value === 'true'
         : value,
     }));
+  };
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      new Compressor(file, {
+        quality: 0.6,
+        maxWidth: 1920,
+        maxHeight: 1920,
+        convertSize: 200000,
+        success: (compressedResult) => {
+          const compressedFile = new File([compressedResult], file.name, {
+            type: compressedResult.type,
+            lastModified: Date.now(),
+          });
+
+          if (compressedFile.size > 200000) {
+            new Compressor(file, {
+              quality: 0.4,
+              maxWidth: 1600,
+              maxHeight: 1600,
+              convertSize: 200000,
+              success: (secondCompressedResult) => {
+                const finalFile = new File([secondCompressedResult], file.name, {
+                  type: secondCompressedResult.type,
+                  lastModified: Date.now(),
+                });
+                setImageFile(finalFile);
+                const reader = new FileReader();
+                reader.onloadend = () => {
+                  setImagePreview(reader.result as string);
+                };
+                reader.readAsDataURL(finalFile);
+              },
+              error: (err) => {
+                console.error('Compression error:', err);
+                setError('Failed to compress image');
+              },
+            });
+          } else {
+            setImageFile(compressedFile);
+            const reader = new FileReader();
+            reader.onloadend = () => {
+              setImagePreview(reader.result as string);
+            };
+            reader.readAsDataURL(compressedFile);
+          }
+        },
+        error: (err) => {
+          console.error('Compression error:', err);
+          setError('Failed to compress image');
+        },
+      });
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -49,12 +134,35 @@ export default function EditEventModal({ event, onClose, onUpdate }: EditEventMo
     setError('');
 
     try {
+      let imageUrl = formData.image;
+
+      // Upload new image if selected
+      if (imageFile) {
+        try {
+          imageUrl = await uploadImageToFirebase(
+            imageFile,
+            'events',
+            `event_${formData.eventName}_${Date.now()}`
+          );
+        } catch (uploadError) {
+          console.error('Error uploading image:', uploadError);
+          setError('Failed to upload image');
+          setLoading(false);
+          return;
+        }
+      }
+
+      const updatedFormData = {
+        ...formData,
+        image: imageUrl,
+      };
+
       const response = await fetch(`/api/events/${event.eventId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(updatedFormData),
       });
 
       if (response.ok) {
@@ -159,14 +267,31 @@ export default function EditEventModal({ event, onClose, onUpdate }: EditEventMo
 
               {/* Society Name */}
               <div>
-                <label className="block text-sm font-semibold text-white mb-2">Society Name</label>
-                <input
-                  type="text"
+                <label className="block text-sm font-semibold text-white mb-2">
+                  Society Name {lockedSociety && <span className="text-xs text-slate-400">(Locked)</span>}
+                </label>
+                <select
                   name="societyName"
                   value={formData.societyName}
                   onChange={handleInputChange}
-                  className="w-full px-4 py-2 rounded-lg border-2 border-purple-500/50 focus:border-purple-500 focus:outline-none bg-blue-900/40 text-white placeholder-slate-400 transition-all"
-                />
+                  disabled={!!lockedSociety}
+                  className={`w-full px-4 py-2 rounded-lg border-2 border-purple-500/50 focus:border-purple-500 focus:outline-none transition-all ${
+                    lockedSociety
+                      ? 'bg-slate-700/50 text-slate-400 cursor-not-allowed opacity-75'
+                      : 'bg-blue-900/40 text-white'
+                  }`}
+                >
+                  <option value="" className="text-slate-900">Select a Society/Club</option>
+                  {CLUBS_SOCS.filter(club => club !== 'None').map((club) => (
+                    <option key={club} value={club} className="text-slate-900">{club}</option>
+                  ))}
+                </select>
+                {formData.additionalClub && formData.additionalClub !== 'None' && (
+                  <div className="mt-2 p-2 bg-purple-900/30 border border-purple-500/30 rounded text-xs text-purple-200 flex items-center gap-1.5">
+                    <span className="text-purple-400">+</span>
+                    <span>{formData.additionalClub}</span>
+                  </div>
+                )}
               </div>
 
               {/* Registration Fees */}
@@ -194,19 +319,95 @@ export default function EditEventModal({ event, onClose, onUpdate }: EditEventMo
                 />
               </div>
 
-              {/* Team Limit */}
+              {/* Event Type */}
               <div>
-                <label className="block text-sm font-semibold text-white mb-2">Team Limit</label>
+                <label className="block text-sm font-semibold text-white mb-2">Event Type</label>
+                <div className="flex gap-4 mt-2">
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="radio"
+                      name="isTeamEvent"
+                      checked={!formData.isTeamEvent}
+                      onChange={() => setFormData((prev) => ({ 
+                        ...prev, 
+                        isTeamEvent: false,
+                        minTeamMembers: 1,
+                        maxTeamMembers: 1
+                      }))}
+                      className="w-4 h-4"
+                    />
+                    <span className="text-white">👤 Individual</span>
+                  </label>
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="radio"
+                      name="isTeamEvent"
+                      checked={formData.isTeamEvent}
+                      onChange={() => setFormData((prev) => ({ 
+                        ...prev, 
+                        isTeamEvent: true 
+                      }))}
+                      className="w-4 h-4"
+                    />
+                    <span className="text-white">👥 Team</span>
+                  </label>
+                </div>
+              </div>
+
+              {/* Min Team Members */}
+              <div>
+                <label className="block text-sm font-semibold text-white mb-2">
+                  Min Team Members {!formData.isTeamEvent && <span className="text-xs text-slate-400">(Locked)</span>}
+                </label>
                 <input
                   type="number"
-                  name="teamLimit"
-                  value={formData.teamLimit}
+                  name="minTeamMembers"
+                  value={formData.minTeamMembers}
                   onChange={handleInputChange}
-                  min="0"
-                  className="w-full px-4 py-2 rounded-lg border-2 border-purple-500/50 focus:border-purple-500 focus:outline-none bg-blue-900/40 text-white placeholder-slate-400 transition-all"
+                  disabled={!formData.isTeamEvent}
+                  min="1"
+                  className={`w-full px-4 py-2 rounded-lg border-2 border-purple-500/50 focus:border-purple-500 focus:outline-none transition-all ${
+                    !formData.isTeamEvent
+                      ? 'bg-slate-700/50 text-slate-400 cursor-not-allowed opacity-75'
+                      : 'bg-blue-900/40 text-white'
+                  }`}
                 />
               </div>
-            </div>
+
+              {/* Max Team Members */}
+              <div>
+                <label className="block text-sm font-semibold text-white mb-2">
+                  Max Team Members {!formData.isTeamEvent && <span className="text-xs text-slate-400">(Locked)</span>}
+                </label>
+                <input
+                  type="number"
+                  name="maxTeamMembers"
+                  value={formData.maxTeamMembers}
+                  onChange={handleInputChange}
+                  disabled={!formData.isTeamEvent}
+                  min="1"
+                  className={`w-full px-4 py-2 rounded-lg border-2 border-purple-500/50 focus:border-purple-500 focus:outline-none transition-all ${
+                    !formData.isTeamEvent
+                      ? 'bg-slate-700/50 text-slate-400 cursor-not-allowed opacity-75'
+                      : 'bg-blue-900/40 text-white'
+                  }`}
+                />
+              </div>
+
+              {/* Additional Club */}
+              <div>
+                <label className="block text-sm font-semibold text-white mb-2">Additional Club (Optional)</label>
+                <select
+                  name="additionalClub"
+                  value={formData.additionalClub || 'None'}
+                  onChange={handleInputChange}
+                  className="w-full px-4 py-2 rounded-lg border-2 border-purple-500/50 focus:border-purple-500 focus:outline-none bg-blue-900/40 text-white transition-all"
+                >
+                  {CLUBS_SOCS.filter(club => club !== formData.societyName).map((club) => (
+                    <option key={club} value={club} className="text-slate-900">{club}</option>
+                  ))}
+                </select>
+              </div>
 
             {/* Location */}
             <div>
@@ -244,6 +445,47 @@ export default function EditEventModal({ event, onClose, onUpdate }: EditEventMo
               />
             </div>
 
+            {/* Event Image */}
+            <div>
+              <label className="block text-sm font-semibold text-white mb-2">Event Image</label>
+              <div className="border-4 border-dashed border-purple-500/50 rounded-xl p-6 text-center hover:border-purple-400 hover:bg-purple-900/30 transition-all cursor-pointer bg-purple-900/10">
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageChange}
+                  className="hidden"
+                  id="editImageInput"
+                />
+                <label htmlFor="editImageInput" className="cursor-pointer block">
+                  {imagePreview && imagePreview !== event.image ? (
+                    <div className="space-y-2">
+                      <img
+                        src={imagePreview}
+                        alt="Preview"
+                        className="max-h-32 mx-auto rounded-lg border-2 border-purple-500/50"
+                      />
+                      <p className="text-xs text-slate-300 font-semibold">Click to change image</p>
+                    </div>
+                  ) : imagePreview ? (
+                    <div className="space-y-2">
+                      <img
+                        src={imagePreview}
+                        alt="Current"
+                        className="max-h-32 mx-auto rounded-lg border-2 border-purple-500/50"
+                      />
+                      <p className="text-xs text-slate-300 font-semibold">Click to change image</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-1">
+                      <p className="text-2xl">🖼️</p>
+                      <p className="text-xs text-slate-300 font-semibold">Click to upload or drag and drop</p>
+                      <p className="text-xs text-slate-400">PNG, JPG up to 10MB</p>
+                    </div>
+                  )}
+                </label>
+              </div>
+            </div>
+
             {/* Brief Description */}
             <div>
               <label className="block text-sm font-semibold text-white mb-2">Brief Description</label>
@@ -254,6 +496,7 @@ export default function EditEventModal({ event, onClose, onUpdate }: EditEventMo
                 rows={3}
                 className="w-full px-4 py-2 rounded-lg border-2 border-purple-500/50 focus:border-purple-500 focus:outline-none bg-blue-900/40 text-white placeholder-slate-400 transition-all resize-none"
               />
+            </div>
             </div>
           </form>
 

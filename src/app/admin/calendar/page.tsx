@@ -8,6 +8,7 @@ export interface IEvent {
   eventId: string;
   category: 'technical' | 'cultural' | 'convenor';
   societyName: string;
+  additionalClub?: string;
   eventName: string;
   regFees: number;
   dateTime: string;
@@ -16,8 +17,9 @@ export interface IEvent {
   pdfLink: string;
   image: string;
   contactInfo: string;
-  team: number;
-  teamLimit: number;
+  isTeamEvent: boolean;
+  minTeamMembers: number;
+  maxTeamMembers: number;
 }
 
 async function getEvents(): Promise<IEvent[]> {
@@ -33,6 +35,7 @@ async function getEvents(): Promise<IEvent[]> {
       eventId: event.eventId,
       category: event.category,
       societyName: event.societyName,
+      additionalClub: event.additionalClub,
       eventName: event.eventName,
       regFees: event.regFees,
       dateTime: event.dateTime.toISOString(),
@@ -41,8 +44,9 @@ async function getEvents(): Promise<IEvent[]> {
       pdfLink: event.pdfLink,
       image: event.image,
       contactInfo: event.contactInfo,
-      team: event.team,
-      teamLimit: event.teamLimit,
+      isTeamEvent: event.isTeamEvent,
+      minTeamMembers: event.minTeamMembers,
+      maxTeamMembers: event.maxTeamMembers,
     }));
   } catch (error) {
     console.error('Error fetching events:', error);

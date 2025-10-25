@@ -7,6 +7,8 @@ export interface IUser {
   name?: string;
   college?: string;
   studentId?: string;
+  teamid?: string[];
+  eventid?: string[];
   phoneNumber?: string;
   referralCode?: string;
   branch?: string;

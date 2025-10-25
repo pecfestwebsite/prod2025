@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
       userId: body.userId.trim(),
       accesslevel: body.accesslevel,
       clubsoc: body.clubsoc.trim(),
-      name: body.name.trim(),
+      name: body.name ? body.name.trim() : 'Admin',
       verified: body.verified !== undefined ? body.verified : false,
       dateTime: body.dateTime ? new Date(body.dateTime) : new Date(),
     };

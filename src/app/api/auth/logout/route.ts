@@ -1,22 +1,40 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { sessionStore } from '@/lib/session-store';
+import jwt from 'jsonwebtoken';
 
+/**
+ * Logout endpoint
+ * Accepts JWT token in Authorization header
+ * Client should remove token from localStorage after successful logout
+ */
 export async function POST(request: NextRequest) {
-  // Get session ID from cookie
-  const sessionId = request.cookies.get('session')?.value;
-  
-  // Remove session from store if it exists
-  if (sessionId) {
-    sessionStore.delete(sessionId);
+  try {
+    const authHeader = request.headers.get('authorization');
+    const token = authHeader?.replace('Bearer ', '');
+
+    // Token verification is optional for logout
+    // We mainly use this for logging/audit purposes
+    if (token) {
+      const secret = process.env.JWT_USER_SECRET || 'your-user-secret-key-change-in-production';
+      try {
+        const decoded = jwt.verify(token, secret);
+        console.log('User logged out:', (decoded as any).email);
+      } catch (error) {
+        // Token might be expired, but logout is still successful
+        console.log('Logout with expired/invalid token');
+      }
+    }
+
+    const response = NextResponse.json({
+      success: true,
+      message: 'Logged out successfully',
+    });
+
+    return response;
+  } catch (error) {
+    console.error('Error during logout:', error);
+    return NextResponse.json({
+      success: true,
+      message: 'Logged out successfully',
+    });
   }
-
-  const response = NextResponse.json({
-    success: true,
-    message: 'Logged out successfully',
-  });
-
-  // Clear session cookie
-  response.cookies.delete('session');
-
-  return response;
 }
