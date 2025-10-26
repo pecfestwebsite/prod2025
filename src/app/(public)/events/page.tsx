@@ -243,6 +243,7 @@ export default function EventsPage() {
   const [events, setEvents] = useState<IEvent[]>([]);
   const [filteredEvents, setFilteredEvents] = useState<IEvent[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedSociety, setSelectedSociety] = useState<string>('all');
@@ -256,6 +257,12 @@ export default function EventsPage() {
   const sectionRefs = useRef<Record<string, HTMLElement | null>>({});
   const { user } = useAuth();
   const [isFilterBarSticky, setIsFilterBarSticky] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [totalPages, setTotalPages] = useState(1);
+  const loadMoreRef = useRef<HTMLDivElement>(null);
+  const EVENTS_PER_PAGE = 12;
+  const prevSearchTerm = useRef<string>('');
 
   const societiesAndClubs = [
     // CLUBS
@@ -347,36 +354,186 @@ export default function EventsPage() {
 
   const [isFilterMenuOpen, setIsFilterMenuOpen] = useState(false);
 
-  // Fetch events from backend
+  // Fetch events from backend with pagination
+  const fetchEvents = useCallback(async (page: number, resetEvents: boolean = false) => {
+    try {
+      if (page === 1) {
+        setLoading(true);
+      } else {
+        setLoadingMore(true);
+      }
+      
+      console.log(`Fetching events page ${page}...`);
+      
+      // Build query params
+      const params = new URLSearchParams({
+        page: page.toString(),
+        limit: EVENTS_PER_PAGE.toString(),
+      });
+      
+      // Add category filter if selected
+      if (selectedCategory !== 'all') {
+        params.append('category', selectedCategory);
+      }
+      
+      const response = await fetch(`/api/events?${params.toString()}`);
+      console.log('Response status:', response.status);
+      const data = await response.json();
+      console.log('Events data:', data);
+      
+      if (data.events && data.events.length > 0) {
+        setEvents(prev => resetEvents ? data.events : [...prev, ...data.events]);
+        setHasMore(data.pagination.page < data.pagination.totalPages);
+        setTotalPages(data.pagination.totalPages);
+      } else {
+        setHasMore(false);
+      }
+    } catch (error) {
+      console.error('Error fetching events:', error);
+      setHasMore(false);
+    } finally {
+      setLoading(false);
+      setLoadingMore(false);
+    }
+  }, [selectedCategory, EVENTS_PER_PAGE]);
+
+  // Initial fetch
   useEffect(() => {
-    const fetchEvents = async () => {
+    setCurrentPage(1);
+    setEvents([]);
+    setHasMore(true);
+    fetchEvents(1, true);
+  }, [selectedCategory, fetchEvents]);
+
+  // Handle search - fetch all matching events from server
+  useEffect(() => {
+    const searchEvents = async () => {
+      if (!searchTerm.trim()) {
+        // If search is cleared, return to normal pagination
+        return;
+      }
+
       try {
         setLoading(true);
-        console.log('Fetching events...');
-        const response = await fetch('/api/events?limit=100');
-        console.log('Response status:', response.status);
+        console.log('🔍 Searching for:', searchTerm);
+        
+        // Fetch all events (large limit) for search
+        const params = new URLSearchParams({
+          page: '1',
+          limit: '1000', // Get all events for search
+        });
+        
+        if (selectedCategory !== 'all') {
+          params.append('category', selectedCategory);
+        }
+        
+        const response = await fetch(`/api/events?${params.toString()}`);
         const data = await response.json();
-        console.log('Events data:', data);
-        setEvents(data.events || []);
-        setFilteredEvents(data.events || []);
+        
+        if (data.events) {
+          setEvents(data.events);
+          setHasMore(false); // No pagination during search
+          console.log(`✅ Found ${data.events.length} events for search`);
+        }
       } catch (error) {
-        console.error('Error fetching events:', error);
+        console.error('Error searching events:', error);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchEvents();
-  }, []);
+    // Debounce search by 300ms
+    const timer = setTimeout(() => {
+      if (searchTerm.trim()) {
+        searchEvents();
+      }
+    }, 300);
 
-  // Filter and sort events
+    return () => clearTimeout(timer);
+  }, [searchTerm, selectedCategory]);
+
+  // Reset pagination when search is cleared
+  useEffect(() => {
+    // Check if search was cleared (had value before, empty now)
+    if (prevSearchTerm.current && !searchTerm.trim()) {
+      console.log('🔄 Search cleared, resetting to pagination');
+      setCurrentPage(1);
+      setEvents([]);
+      setHasMore(true);
+      fetchEvents(1, true);
+    }
+    
+    // Update previous search term
+    prevSearchTerm.current = searchTerm;
+  }, [searchTerm, fetchEvents]);
+
+  // Load more when scroll reaches bottom
+  useEffect(() => {
+    const currentRef = loadMoreRef.current;
+    console.log('🔄 IntersectionObserver setup:', { 
+      currentRef: !!currentRef, 
+      hasMore, 
+      loadingMore, 
+      currentPage,
+      eventsCount: events.length
+    });
+    
+    // Don't set up observer until we have events loaded
+    if (events.length === 0) {
+      console.log('⏸️ Waiting for initial events to load');
+      return;
+    }
+    
+    if (!currentRef) {
+      console.log('❌ No ref found');
+      return;
+    }
+
+    if (!hasMore) {
+      console.log('⏸️ No more events to load');
+      return;
+    }
+
+    if (loadingMore) {
+      console.log('⏸️ Already loading');
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[0];
+        console.log('👁️ IntersectionObserver callback:', { 
+          isIntersecting: entry.isIntersecting,
+          intersectionRatio: entry.intersectionRatio,
+          hasMore,
+          loadingMore
+        });
+        
+        if (entry.isIntersecting) {
+          console.log('✅ INTERSECTION DETECTED - Loading next page...');
+          const nextPage = currentPage + 1;
+          console.log('📄 Calling fetchEvents for page:', nextPage);
+          fetchEvents(nextPage, false);
+        }
+      },
+      { 
+        threshold: 0,
+        rootMargin: '300px'
+      }
+    );
+
+    observer.observe(currentRef);
+    console.log('✅ Observer attached successfully to element:', currentRef);
+
+    return () => {
+      console.log('🧹 Cleaning up observer');
+      observer.disconnect();
+    };
+  }, [hasMore, loadingMore, currentPage, fetchEvents]);
+
+  // Filter and sort events (client-side filtering for other filters)
   useEffect(() => {
     let result = [...events];
-
-    // Filter by category
-    if (selectedCategory !== 'all') {
-      result = result.filter(event => event.category === selectedCategory);
-    }
 
     // Filter by society
     if (selectedSociety !== 'all') {
@@ -396,7 +553,7 @@ export default function EventsPage() {
       );
     }
 
-    // Filter by search term
+    // Filter by search term (client-side filter on already fetched search results)
     if (searchTerm) {
       result = result.filter(event =>
         event.eventName.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -409,7 +566,7 @@ export default function EventsPage() {
     result.sort((a, b) => a.eventName.localeCompare(b.eventName));
 
     setFilteredEvents(result);
-  }, [events, selectedCategory, selectedSociety, selectedDate, searchTerm, selectedEventType]);
+  }, [events, selectedSociety, selectedDate, searchTerm, selectedEventType]);
 
   // Detect if the filter bar is sticky
   useEffect(() => {
@@ -574,6 +731,20 @@ export default function EventsPage() {
         .arabian-border {
           border-image: linear-gradient(45deg, #b53da1, #ed6ab8, #fea6cc, #ffd4b9) 1;
         }
+        @supports (background-clip: text) {
+          .gradient-title {
+            color: white;
+            background: linear-gradient(to right, #ffd4b9, #fea6cc, #ed6ab8);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+          }
+        }
+        @supports not (background-clip: text) {
+          .gradient-title {
+            color: #ffd4b9;
+          }
+        }
       `}</style>
       
       <main className="min-h-screen bg-blue-800/5 text-white relative">
@@ -600,7 +771,7 @@ export default function EventsPage() {
                 <div className="w-32 h-1 bg-gradient-to-r from-transparent via-[#fea6cc] to-transparent"></div>
               </div>
               
-              <h1 className="font-display text-7xl py-2 md:text-9xl text-transparent bg-clip-text bg-gradient-to-r from-[#ffd4b9] via-[#fea6cc] to-[#ed6ab8] drop-shadow-[0_8px_20px_rgba(237,106,184,0.4)] mb-6 tracking-wider">
+              <h1 className="font-display text-7xl py-2 md:text-9xl gradient-title drop-shadow-[0_8px_20px_rgba(237,106,184,0.4)] mb-6 tracking-wider">
                 EVENTS
               </h1>
               
@@ -690,7 +861,7 @@ export default function EventsPage() {
 
         {/* Events Grid */}
         <div className="max-w-7xl mx-auto px-4 pt-8 pb-24 relative z-10">
-          {filteredEvents.length === 0 ? (
+          {filteredEvents.length === 0 && !loading && events.length === 0 ? (
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -700,7 +871,19 @@ export default function EventsPage() {
               <h3 className="text-3xl font-bold text-[#ffd4b9] mb-4 font-display">No Events Found</h3>
               <p className="text-xl text-[#fea6cc] font-arabian mb-2">Try adjusting your search or filter criteria</p>
             </motion.div>
-          ) : (
+          ) : filteredEvents.length === 0 && !loading && events.length > 0 ? (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="text-center py-20"
+            >
+              <div className="text-8xl mb-6 animate-pulse">🔍</div>
+              <h3 className="text-3xl font-bold text-[#ffd4b9] mb-4 font-display">No Matching Events</h3>
+              <p className="text-xl text-[#fea6cc] font-arabian mb-2">Try a different search term or adjust your filters</p>
+            </motion.div>
+          ) : null}
+          
+          {filteredEvents.length > 0 && (
             <div>
             
               <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -772,7 +955,60 @@ export default function EventsPage() {
                   );
                 })}
               </div>
-             
+
+              {/* Loading More Indicator */}
+              <div 
+                ref={loadMoreRef} 
+                className="mt-12 flex flex-col items-center justify-center min-h-[120px] gap-4 rounded-xl p-6"
+                style={{ border: '2px dashed rgba(254, 166, 204, 0.3)', backgroundColor: 'rgba(42, 10, 86, 0.2)' }}
+              >
+                {loadingMore && (
+                  <div className="flex flex-col items-center gap-3">
+                    <motion.div
+                      animate={{ rotate: 360 }}
+                      transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                      className="w-12 h-12 border-4 border-[#fea6cc] border-t-transparent rounded-full"
+                    />
+                    <p className="text-[#fea6cc] text-sm">Loading more events...</p>
+                  </div>
+                )}
+                {!loadingMore && hasMore && !searchTerm && (
+                  <div className="text-center">
+                    <div className="text-[#fea6cc] text-base font-medium mb-3">
+                      👇 Scroll to load more events
+                    </div>
+                    <p className="text-[#fea6cc]/50 text-xs mb-4">
+                      ({events.length} of {totalPages * 12} total)
+                    </p>
+                    <button
+                      onClick={() => {
+                        console.log('🖱️ Manual load button clicked');
+                        const nextPage = currentPage + 1;
+                        setCurrentPage(nextPage);
+                        fetchEvents(nextPage, false);
+                      }}
+                      className="px-6 py-2 bg-gradient-to-r from-[#b53da1] to-[#ed6ab8] text-white font-medium rounded-full hover:from-[#ed6ab8] hover:to-[#fea6cc] transition-all"
+                    >
+                      Load More Events
+                    </button>
+                  </div>
+                )}
+                {searchTerm && (
+                  <div className="text-center text-[#fea6cc]/70 text-sm">
+                    🔍 Showing all search results
+                  </div>
+                )}
+                {!hasMore && events.length > 0 && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="text-center py-8"
+                  >
+                    <div className="text-[#ffd4b9] text-lg font-medium">✨ You've reached the end ✨</div>
+                    <p className="text-[#fea6cc] text-sm mt-2">All {events.length} events loaded</p>
+                  </motion.div>
+                )}
+              </div>
             </div>
           )}
         </div>
@@ -780,7 +1016,7 @@ export default function EventsPage() {
         {/* Registration Form Modal */}
         {showRegistrationForm && selectedEvent && (
           <EventRegistrationForm
-            event={selectedEvent}
+            event={selectedEvent!}
             onClose={() => {
               setShowRegistrationForm(false);
               setSelectedEvent(null);

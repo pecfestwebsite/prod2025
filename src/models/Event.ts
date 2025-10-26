@@ -32,7 +32,6 @@ const EventSchema = new Schema<IEvent>(
       required: true,
       unique: true,
       trim: true,
-      index: true,
     },
     category: {
       type: String,
@@ -140,7 +139,7 @@ const EventSchema = new Schema<IEvent>(
 );
 
 // Add indexes for better query performance
-EventSchema.index({ eventId: 1 });
+// Note: eventId already has unique index from field definition
 EventSchema.index({ category: 1 });
 EventSchema.index({ dateTime: 1 });
 

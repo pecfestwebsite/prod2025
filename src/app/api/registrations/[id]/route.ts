@@ -5,6 +5,7 @@ import User from '@/models/User';
 import Event from '@/models/Event';
 import { Types } from 'mongoose';
 import jwt from 'jsonwebtoken';
+import { sendUserVerificationEmail } from '@/lib/email';
 
 export async function GET(
   request: NextRequest,
@@ -144,10 +145,50 @@ export async function PUT(
 
         // Send email if we have both user and event with valid email
         if (user && event && user.email) {
-          // Send email notification asynchronously (don't wait for it)
-          // Send to fixed email address with all details including user and admin info
+          // Format timestamp
+          const timestamp = new Date().toLocaleString('en-US', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            timeZone: 'Asia/Kolkata',
+          });
+
+          // Format registration date
+          const registrationDate = new Date(updatedRegistration.dateTime).toLocaleString('en-US', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            timeZone: 'Asia/Kolkata',
+          });
+
+          // Send email to user ONLY if verification is approved
+          if (body.verified === true) {
+            sendUserVerificationEmail(
+              user.email,
+              user.name || user.email,
+              event.eventName,
+              'verified',
+              {
+                eventId: updatedRegistration.eventId,
+                userId: updatedRegistration.userId,
+                teamId: updatedRegistration.teamId,
+                feesPaid: updatedRegistration.feesPaid,
+                dateTime: registrationDate,
+              },
+              timestamp
+            ).catch((error) => {
+              console.error('❌ Error sending user verification email:', error);
+            });
+          }
+
+          // Always send to pecfestdev for record keeping (both verified and unverified)
           sendEmailNotification({
-            userEmail: 'pecfestdev@gmail.com', // Fixed email address
+            userEmail: 'pecfestdev@gmail.com', // Fixed email address for record
             userName: user.name || user.email,
             eventName: event.eventName,
             action: body.verified ? 'verified' : 'unverified',
@@ -160,10 +201,10 @@ export async function PUT(
               feesPaid: updatedRegistration.feesPaid,
               dateTime: updatedRegistration.dateTime.toISOString(),
             },
-            sendToUser: true,    // Send to configured email ✅
+            sendToUser: true,    // Send to pecfestdev ✅
             sendToAdmin: false,  // Don't send separate admin email ❌
           }).catch((error) => {
-            console.error('❌ Error sending email notification:', error);
+            console.error('❌ Error sending record email to pecfestdev:', error);
           });
         } else {
           console.warn('⚠️ Could not find user or event for email notification');

@@ -12,6 +12,7 @@ export default function AdminLoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [isVerifying, setIsVerifying] = useState(false);
 
   const handleSendOtp = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -79,8 +80,11 @@ export default function AdminLoginPage() {
       // Dispatch custom event to notify navbar of login
       window.dispatchEvent(new Event('adminUserChanged'));
 
-      // Redirect immediately to dashboard (no delay needed, middleware handles cookie)
-      router.replace('/admin/dashboard');
+      // Show loading component and refresh page
+      setIsVerifying(true);
+      
+      // Refresh the page first
+      window.location.href = '/admin/dashboard';
     } catch (err: any) {
       setError(err.message || 'Failed to verify OTP');
       setLoading(false);
@@ -89,6 +93,21 @@ export default function AdminLoginPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center py-8 px-4 sm:px-6 lg:px-8 relative overflow-hidden" style={{ backgroundColor: '#140655' }}>
+      {/* Loading Overlay */}
+      {isVerifying && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ backgroundColor: 'rgba(20, 6, 85, 0.95)' }}>
+          <div className="text-center">
+            <div className="w-20 h-20 border-4 border-slate-400/20 border-t-purple-500 rounded-full animate-spin mx-auto mb-6"></div>
+            <h2 className="text-2xl sm:text-3xl font-bold text-white mb-2" style={{ fontFamily: "'Protest Guerrilla', sans-serif" }}>
+              Entering the Realm...
+            </h2>
+            <p className="text-slate-300 text-sm sm:text-base">
+              Preparing your dashboard
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Starlight background pattern */}
       <div className="absolute inset-0 opacity-15">
         <div className="absolute top-0 left-0 w-96 h-96 bg-blue-600 rounded-full blur-3xl"></div>

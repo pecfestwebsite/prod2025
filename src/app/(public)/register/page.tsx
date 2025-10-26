@@ -135,8 +135,6 @@ export default function RegisterPage() {
       // Store JWT token in localStorage
       if (verifyData.token) {
         localStorage.setItem('token', verifyData.token);
-        // Dispatch custom event to trigger auth check in useAuth hook
-        window.dispatchEvent(new Event('tokenChanged'));
       }
 
       // OTP is valid - check if this is an existing user or new registration
@@ -243,8 +241,6 @@ export default function RegisterPage() {
       }
 
       setSuccess('Registration successful! Redirecting...');
-      // Dispatch event before redirecting
-      window.dispatchEvent(new Event('tokenChanged'));
       // Redirect to home page after a brief delay
       setTimeout(() => {
         router.push('/');

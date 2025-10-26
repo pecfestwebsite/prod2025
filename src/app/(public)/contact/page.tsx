@@ -215,8 +215,8 @@ export default function ContactPage() {
                                 <ContactItem 
                                     icon={<Mail size={20} />}
                                     title="Reach out via email at"
-                                    text="convener.pecfest@pec.edu.in"
-                                    href="mailto:convener.pecfest@pec.edu.in"
+                                    text="pecfestdev@gmail.com"
+                                    href="mailto:pecfestdev@gmail.com"
                                 />
                                 <ContactItem 
                                     icon={<MapPin size={20} />}

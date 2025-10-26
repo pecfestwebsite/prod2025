@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import jwt from 'jsonwebtoken';
 import dbConnect from '@/lib/dbConnect';
 import Admin, { IAdmin } from '@/models/adminUser';
-import { otpStore } from '@/lib/session-store';
+import OTP from '@/models/OTP';
 import bcrypt from 'bcryptjs';
 
 // Generate JWT token with 12 hour expiration
@@ -45,20 +45,23 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Verify OTP
-    const storedData = otpStore.get(normalizedEmail);
+    // Connect to database
+    await dbConnect();
 
-    if (!storedData) {
+    // Verify OTP from database
+    const storedOTP = await OTP.findOne({ email: normalizedEmail });
+
+    if (!storedOTP) {
       console.log('OTP not found for email:', normalizedEmail);
-      console.log('Available emails in OTP store:', Array.from(otpStore.entries()).map(([key]) => key));
       return NextResponse.json(
         { error: 'OTP not found or expired. Please request a new one.' },
         { status: 400 }
       );
     }
 
-    if (Date.now() > storedData.expiresAt) {
-      otpStore.delete(normalizedEmail);
+    const currentTime = new Date();
+    if (currentTime > storedOTP.expiresAt) {
+      await OTP.deleteOne({ email: normalizedEmail });
       console.log('OTP expired for email:', normalizedEmail);
       return NextResponse.json(
         { error: 'OTP has expired. Please request a new one.' },
@@ -66,29 +69,20 @@ export async function POST(request: NextRequest) {
       );
     }
 
-  const isOtpMatched = await bcrypt.compare(sanitizedOtp, storedData?.otp);
+    const isOtpMatched = await bcrypt.compare(sanitizedOtp, storedOTP.otp);
 
-    // if (storedData.otp !== sanitizedOtp) {
-    //   console.log('Invalid OTP. Expected:', storedData.otp, 'Got:', sanitizedOtp);
-    //   return NextResponse.json(
-    //     { error: 'Invalid OTP. Please try again.' },
-    //     { status: 400 }
-    //   );
-    // }
-
-     if (!isOtpMatched) {
-      console.log('Invalid OTP. Expected:', storedData.otp, 'Got:', sanitizedOtp);
+    if (!isOtpMatched) {
+      console.log('Invalid OTP for email:', normalizedEmail);
       return NextResponse.json(
         { error: 'Invalid OTP. Please try again.' },
         { status: 400 }
       );
     }
 
-    // OTP is valid, consume it
-    otpStore.delete(normalizedEmail);
+    // OTP is valid, delete it from database
+    await OTP.deleteOne({ email: normalizedEmail });
 
     // Check if admin exists in MongoDB
-    await dbConnect();
     const admin = (await Admin.findOne({ email: normalizedEmail }).lean()) as IAdmin | null;
 
     if (!admin) {

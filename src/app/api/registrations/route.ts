@@ -2,7 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import jwt from 'jsonwebtoken';
 import dbConnect from '@/lib/dbConnect';
 import Registration from '@/models/Registration';
-import Event from '@/models/Event';   // ✅ Import Event model
+import Event from '@/models/Event';
+import User from '@/models/User';
+import { sendRegistrationConfirmationEmail } from '@/lib/email';
 
 /**
  * Create a new registration
@@ -101,6 +103,48 @@ export async function POST(request: NextRequest) {
     };
 
     const newRegistration = await Registration.create(registrationData);
+
+    // Fetch user details for sending email
+    const user = await User.findOne({ email: userId });
+    
+    // Send confirmation email to the user
+    try {
+      const emailData = {
+        userEmail: userId,
+        userName: user?.name || 'Participant',
+        eventName: event.eventName,
+        eventId: event.eventId,
+        teamId: body.teamId || undefined,
+        isLeader: body.isLeader || false,
+        regFees: event.regFees,
+        feesPaid: feesPaid !== '' && feesPaid !== 0,
+        registrationDate: new Date().toLocaleString('en-US', {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+          timeZone: 'Asia/Kolkata',
+        }),
+        eventDateTime: new Date(event.dateTime).toLocaleString('en-US', {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+          timeZone: 'Asia/Kolkata',
+        }),
+        eventLocation: event.location,
+      };
+
+      // Send email asynchronously (don't wait for it to complete)
+      sendRegistrationConfirmationEmail(emailData).catch((error) => {
+        console.error('Failed to send registration confirmation email:', error);
+      });
+    } catch (emailError) {
+      // Log email error but don't fail the registration
+      console.error('Error preparing registration confirmation email:', emailError);
+    }
 
     return NextResponse.json(
       { message: 'Registration successful', registration: newRegistration },

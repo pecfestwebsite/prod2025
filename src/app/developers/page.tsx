@@ -102,16 +102,30 @@ const FloatingLantern = ({
 const DeveloperCard = ({ developer, index }: { developer: Developer; index: number }) => {
   return (
     <motion.div
-      initial={{ opacity: 0, y: 30, rotateX: -20 }}
+      initial={{ opacity: 0, y: 50, rotateX: -25 }}
       whileInView={{ opacity: 1, y: 0, rotateX: 0 }}
-      transition={{ duration: 0.6, delay: index * 0.1 }}
-      viewport={{ once: true }}
-      className="h-64 sm:h-72 md:h-80 group"
+      transition={{ duration: 0.7, delay: index * 0.08 }}
+      viewport={{ once: true, margin: "-50px" }}
+      className="h-64 sm:h-72 md:h-80 group relative perspective"
       whileHover={{
-        y: -8,
+        y: -12,
         transition: { duration: 0.3 },
       }}
     >
+      {/* Outer Glow */}
+      <motion.div
+        className="absolute -inset-1 bg-gradient-to-br from-[#ed6ab8] via-[#b53da1] to-[#4321a9] rounded-2xl blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 -z-20"
+        animate={{
+          scale: [0.95, 1.05, 0.95],
+        }}
+        transition={{
+          duration: 4,
+          repeat: Number.POSITIVE_INFINITY,
+          repeatType: "mirror",
+        }}
+      />
+
+      {/* Inner Shadow */}
       <motion.div
         className="absolute inset-0 bg-gradient-to-br from-[#ed6ab8]/20 to-[#b53da1]/20 rounded-xl blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 -z-10"
         animate={{
@@ -123,6 +137,10 @@ const DeveloperCard = ({ developer, index }: { developer: Developer; index: numb
           repeatType: "mirror",
         }}
       />
+      
+      {/* Card Border Gradient */}
+      <div className="absolute inset-0 bg-gradient-to-br from-[#ed6ab8]/30 to-[#b53da1]/10 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 border border-[#ed6ab8]/20 group-hover:border-[#ed6ab8]/60" />
+      
       <DirectionAwareHover
         imageUrl={developer.image}
         name={developer.name}
@@ -171,50 +189,84 @@ export default function DevelopersPage() {
       <FloatingLantern duration={6} size={35} x="15%" y="60%" delay={2} />
       <FloatingLantern duration={4.5} size={28} x="85%" y="70%" delay={1.5} />
 
-      <div className="relative z-10 pt-20 pb-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
+      <div className="relative z-10 pt-20 pb-20 px-4 sm:px-8 lg:px-12 w-full">
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8 }}
-          className="text-center mb-16 sm:mb-20"
+          className="text-center mb-24 sm:mb-32"
         >
-          <h1 className="font-display text-5xl sm:text-6xl md:text-7xl font-bold mb-4 text-transparent bg-clip-text bg-gradient-to-r from-[#ffd4b9] via-[#fea6cc] to-[#ed6ab8] drop-shadow-[0_8px_20px_rgba(237,106,184,0.4)] tracking-wider">
+          <h1 className="font-display text-6xl sm:text-7xl md:text-8xl font-bold mb-4 text-transparent bg-clip-text bg-gradient-to-r from-[#ffd4b9] via-[#fea6cc] to-[#ed6ab8] drop-shadow-[0_8px_20px_rgba(237,106,184,0.4)] tracking-wider">
             Meet Our Developers
           </h1>
-          <p className="text-base sm:text-lg text-[#fea6cc] font-arabian max-w-2xl mx-auto">
+          <div className="h-1 w-32 mx-auto bg-gradient-to-r from-transparent via-[#ed6ab8] to-transparent mb-6"></div>
+          <p className="text-lg sm:text-xl text-[#fea6cc] font-arabian max-w-3xl mx-auto">
             The talented minds behind the Pecfest 2025 experience
           </p>
         </motion.div>
 
-        {/* Heads Section */}
+        {/* Heads Section - Centered 3 in a row */}
         {developersData?.heads && developersData.heads.length > 0 && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.8, delay: 0.2 }}
-            className="mb-20"
+            className="mb-32"
           >
-            <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-8 text-center text-transparent bg-clip-text bg-gradient-to-r from-[#ffd4b9] via-[#fea6cc] to-[#ed6ab8] font-display">
-              Leadership Team
-            </h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-8 sm:gap-10 md:gap-12 max-w-4xl mx-auto">
+            <motion.h2 
+              initial={{ opacity: 0, x: -50 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              className="text-4xl sm:text-5xl md:text-6xl font-bold mb-16 text-center text-transparent bg-clip-text bg-gradient-to-r from-[#ffd4b9] via-[#fea6cc] to-[#ed6ab8] font-display"
+            >
+              Leadership Team ✨
+            </motion.h2>
+            <div className="flex flex-wrap justify-center gap-12 md:gap-20">
               {developersData.heads.map((head, index) => (
-                <DeveloperCard key={head.id} developer={head} index={index} />
+                <motion.div 
+                  key={head.id} 
+                  className="w-full sm:w-1/2 lg:w-1/3"
+                  initial={{ opacity: 0, y: 30 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.15 }}
+                  viewport={{ once: true }}
+                >
+                  <DeveloperCard developer={head} index={index} />
+                </motion.div>
               ))}
             </div>
           </motion.div>
         )}
 
-        {/* Developers Section */}
+        {/* Developers Section - Centered 4 in a row */}
         {developersData?.developers && developersData.developers.length > 0 && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.8, delay: 0.4 }}>
-            <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-8 text-center text-transparent bg-clip-text bg-gradient-to-r from-[#ffd4b9] via-[#fea6cc] to-[#ed6ab8] font-display">
-              Development Team
-            </h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 sm:gap-10 md:gap-12">
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.8, delay: 0.4 }}
+            className="mb-20"
+          >
+            <motion.h2 
+              initial={{ opacity: 0, x: -50 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              className="text-4xl sm:text-5xl md:text-6xl font-bold mb-16 text-center text-transparent bg-clip-text bg-gradient-to-r from-[#ffd4b9] via-[#fea6cc] to-[#ed6ab8] font-display"
+            >
+              Development Team 🚀
+            </motion.h2>
+            <div className="flex flex-wrap justify-center gap-12 md:gap-16">
               {developersData.developers.map((dev, index) => (
-                <DeveloperCard key={dev.id} developer={dev} index={index} />
+                <motion.div 
+                  key={dev.id} 
+                  className="w-full sm:w-1/2 lg:w-1/4"
+                  initial={{ opacity: 0, y: 30 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.15 }}
+                  viewport={{ once: true }}
+                >
+                  <DeveloperCard developer={dev} index={index} />
+                </motion.div>
               ))}
             </div>
           </motion.div>

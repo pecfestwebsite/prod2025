@@ -46,3 +46,35 @@ body {
   scrollbar-color: transparent transparent;
 }
 
+/* Magic Lamp Animations */
+@keyframes pulse-glow {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+@keyframes genie-pop {
+  0% {
+    transform: scale(0.5);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.1);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.magic-lamp-genie {
+  animation: genie-pop 0.6s ease-out;
+}
+
+.magic-lamp-dot {
+  animation: pulse-glow 1s ease-in-out infinite;
+  box-shadow: 0 0 20px rgba(255, 255, 255, 0.8), 0 0 40px rgba(255, 255, 255, 0.5);
+}

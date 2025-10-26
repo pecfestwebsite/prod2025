@@ -2,7 +2,7 @@
   "heads": [
     {
       "id": "head-1",
-      "name": "John Doe",
+      "name": "Ribhav Aggarwal",
       "image": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=400&auto=format&fit=crop",
       "instagram": "https://instagram.com",
       "linkedin": "https://linkedin.com",
@@ -17,13 +17,23 @@
       "linkedin": "https://linkedin.com",
       "email": "jane@example.com",
       "phone": "+91-9876543211"
+    },
+    {
+      "id": "head-3",
+      "name": "Krittika Jari", 
+      "image": "/WhatsApp Image 2025-10-26 at 12.49.08_4291d7dd.jpg",
+      "instagram": "ms_krittika",
+      "linkedin":"https://www.linkedin.com/in/krittika-jari-676897268?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=android_app",
+      "email": "jarikrittika@gmail.com ",
+      "phone": "+91-9041548926"
     }
   ],
   "developers": [
+    
     {
       "id": "dev-1",
       "name": "Kaavya Sidher",
-      "image": "/api/proxy/image?id=1dlqm9otpSckods5wOBYmevekOJ7hBcR2",
+      "image": "/WhatsApp Image 2025-10-12 at 01.16.49_ea688ec3.jpg",
       "instagram": "https://www.instagram.com/kaavya7705?igsh=MWJ1dnhqaGxkNzJ0",
       "linkedin": "https://www.linkedin.com/in/kaavya-sidher-30a82a29a/",
       "email": "kaavya4860@gmail.com",
@@ -32,7 +42,7 @@
     {
       "id": "dev-2",
       "name": "Bhavik Vishal Sharma",
-      "image": "/api/proxy/image?id=18b3xfTmm5m6M4dGlVJCxs13Rors1Y59a",
+      "image": "/bhavik.jpeg",
       "instagram": "https://www.instagram.com/its_bhavik7pvt/",
       "linkedin": "https://www.linkedin.com/in/bhavik-sharma-09a6391ab/",
       "email": "bhavik85747@gmail.com",
@@ -40,39 +50,22 @@
     },
     {
       "id": "dev-3",
-      "name": "Carol Davis",
-      "image": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=400&auto=format&fit=crop",
-      "instagram": "https://instagram.com",
-      "linkedin": "https://linkedin.com",
-      "email": "carol@example.com",
-      "phone": "+91-9876543214"
+      "name": "Akshat Gupta",
+      "image": "/WhatsApp Image 2025-10-26 at 13.42.14_6b2b8469.jpg",
+      "instagram": "https://www.instagram.com/akshatguptax/?next=%2F&hl=en",
+      "linkedin": "https://www.linkedin.com/in/akshat-gupta-b0781827a/",
+      "email": "akshatgupta1673@gmail.com",
+      "phone": "+91-9872889057"
     },
     {
       "id": "dev-4",
-      "name": "David Brown",
-      "image": "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?q=80&w=400&auto=format&fit=crop",
-      "instagram": "https://instagram.com",
-      "linkedin": "https://linkedin.com",
-      "email": "david@example.com",
-      "phone": "+91-9876543215"
-    },
-    {
-      "id": "dev-5",
-      "name": "Eva Martinez",
-      "image": "https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=400&auto=format&fit=crop",
-      "instagram": "https://instagram.com",
-      "linkedin": "https://linkedin.com",
-      "email": "eva@example.com",
-      "phone": "+91-9876543216"
-    },
-    {
-      "id": "dev-6",
-      "name": "Frank Chen",
-      "image": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=400&auto=format&fit=crop",
-      "instagram": "https://instagram.com",
-      "linkedin": "https://linkedin.com",
-      "email": "frank@example.com",
-      "phone": "+91-9876543217"
+      "name": "Arushi",
+      "image": "/WhatsApp Image 2025-10-26 at 00.17.52_14e81aaa.jpg",
+      "instagram": "https://www.instagram.com/arushi_866",
+      "linkedin": "https://www.linkedin.com/in/arushi866/",
+      "email": "arushijain866@gmail.com",
+      "phone": "+91-9872553799"
     }
+    
   ]
 }

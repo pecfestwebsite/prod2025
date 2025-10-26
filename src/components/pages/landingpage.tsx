@@ -215,6 +215,21 @@ export default function LandingPage() {
                 .font-display { font-family: 'Protest Guerrilla', sans-serif; }
                 .font-aladin { font-family: 'Aladin', cursive; }
                 .font-arabian { font-family: 'Scheherazade New', serif; }
+                
+                @supports (background-clip: text) {
+                  .gradient-title {
+                    color: white;
+                    background: linear-gradient(to right, #fea6cc, #ffd4b9, #fea7a0);
+                    background-clip: text;
+                    -webkit-background-clip: text;
+                    -webkit-text-fill-color: transparent;
+                  }
+                }
+                @supports not (background-clip: text) {
+                  .gradient-title {
+                    color: #fea6cc;
+                  }
+                }
             `}</style>
             
             <main className="relative w-full bg-[#010101] overflow-x-hidden text-white">
@@ -248,7 +263,7 @@ export default function LandingPage() {
                     <section id="about" className="min-h-screen flex flex-col items-center justify-center text-center p-4">
                         <header className="flex flex-col items-center pt-20">
                             <motion.h1
-                                className="font-display text-8xl md:text-9xl text-transparent bg-clip-text bg-gradient-to-r from-[#fea6cc] via-[#ffd4b9] to-[#fea7a0] drop-shadow-[0_4px_10px_rgba(181,61,161,0.3)] flex flex-col items-center leading-[0.8]"
+                                className="font-display text-8xl md:text-9xl gradient-title drop-shadow-[0_4px_10px_rgba(181,61,161,0.3)] flex flex-col items-center leading-[0.8]"
                                 initial={{ opacity: 0, y: -50 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 1, ease: 'easeOut' }}
                             >
                                 <span>PEC</span>

@@ -1,7 +1,3 @@
-// Shared session store for all auth routes
-// Uses global object to persist across hot-reloads in development
-// In production, replace this with Redis or a database
-
 interface Session {
   email: string;
   createdAt: number;

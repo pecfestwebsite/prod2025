@@ -1,12 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import nodemailer from 'nodemailer';
-import { nanoid } from 'nanoid';
-import { otpStore } from '@/lib/session-store';
 import bcrypt from "bcryptjs";
 import { checkRateLimit, updateRateLimit } from '@/lib/rate-limit';
+import dbConnect from '@/lib/dbConnect';
+import OTP from '@/models/OTP';
 
 export async function POST(request: NextRequest) {
   try {
+    // Connect to database
+    await dbConnect();
+
     // Check device-based rate limit
     const rateLimitCheck = checkRateLimit(request);
     if (!rateLimitCheck.allowed) {
@@ -23,36 +26,18 @@ export async function POST(request: NextRequest) {
     }
 
     const normalizedEmail = email.toLowerCase();
-    const existingData = otpStore.get(normalizedEmail);
-    const now = Date.now();
+    const now = new Date();
 
-
+    // Check for existing OTP
+    const existingOTP = await OTP.findOne({ email: normalizedEmail });
 
     // Check cooldown period (60 seconds between attempts)
-    if (existingData?.lastAttempt && (now - existingData.lastAttempt) < 60000) {
-      const remainingCooldown = Math.ceil((60000 - (now - existingData.lastAttempt)) / 1000);
-      return NextResponse.json(
-        { error: `Please wait ${remainingCooldown} seconds before requesting another OTP.` },
-        { status: 429 }
-      );
-    }
-
-    // Check daily limit (max 10 OTPs per email per day)
-    const DAILY_LIMIT = 3;
-    const ONE_DAY = 6 * 60 * 60 * 1000;
-    const startOfDay = now - (now % ONE_DAY);
-    
-    if (existingData?.dailyCount) {
-      // Reset count if it's a new day
-      if (existingData.dailyCountResetTime && existingData.dailyCountResetTime < startOfDay) {
-        existingData.dailyCount = 0;
-      }
-      
-      // Check if daily limit exceeded
-      if (existingData.dailyCount >= DAILY_LIMIT) {
-        const nextResetTime = new Date(startOfDay + ONE_DAY);
+    if (existingOTP && existingOTP.createdAt) {
+      const timeSinceLastAttempt = now.getTime() - existingOTP.createdAt.getTime();
+      if (timeSinceLastAttempt < 60000) {
+        const remainingCooldown = Math.ceil((60000 - timeSinceLastAttempt) / 1000);
         return NextResponse.json(
-          { error: `Daily OTP limit reached. Please try again after ${nextResetTime.toLocaleTimeString()}.` },
+          { error: `Please wait ${remainingCooldown} seconds before requesting another OTP.` },
           { status: 429 }
         );
       }
@@ -60,25 +45,24 @@ export async function POST(request: NextRequest) {
 
     // Generate 6-digit OTP
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    const expiresAt = now + 10 * 60 * 1000; // 10 minutes
+    const expiresAt = new Date(now.getTime() + 10 * 60 * 1000); // 10 minutes
 
-    // Store OTP with attempt tracking
-    const hashedOtp = (await bcrypt.hash(otp, 10)).toString();
-    
-    // Calculate daily count using existing startOfDay
-    const dailyCount = (existingData?.dailyCountResetTime || 0) < startOfDay ? 1 : (existingData?.dailyCount || 0) + 1;
-    
-    otpStore.set(normalizedEmail, {
-      otp: hashedOtp,
-      expiresAt,
-      attempts: 0, // Reset attempts for new OTP
-      lastAttempt: now,
-      // lockoutUntil: undefined,
-      dailyCount,
-      dailyCountResetTime: startOfDay
-    });
-  // console.log("Send-otp stored creds:");
-  // console.log(otpStore.get(email.toLowerCase()));
+    // Hash OTP
+    const hashedOtp = await bcrypt.hash(otp, 10);
+
+    // Update or create OTP in database
+    await OTP.findOneAndUpdate(
+      { email: normalizedEmail },
+      {
+        email: normalizedEmail,
+        otp: hashedOtp,
+        createdAt: now,
+        expiresAt,
+        attempts: 0,
+        isAdmin: false,
+      },
+      { upsert: true, new: true }
+    );
 
     // Create transporter
     const transporter = nodemailer.createTransport({

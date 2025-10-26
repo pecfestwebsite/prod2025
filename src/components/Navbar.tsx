@@ -48,7 +48,7 @@ export default function Navbar() {
     { label: 'Home', href: '/' },
     { label: 'About', href: '/aboutus' },
     { label: 'Events', href: '/events' },
-    { label: 'Brochure', href: '/brochure' },
+    // { label: 'Brochure', href: '/brochure' }, ABHI KE LIYE BROCHURE HATARKHA 
     { label: 'Contact', href: '/contact' },
   ];
 

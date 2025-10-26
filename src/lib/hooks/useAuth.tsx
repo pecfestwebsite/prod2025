@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 interface User {
   email: string;
@@ -16,6 +16,7 @@ interface User {
 export function useAuth() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const checkAuthInProgress = useRef(false);
 
   useEffect(() => {
     checkAuth();
@@ -43,6 +44,14 @@ export function useAuth() {
   }, []);
 
   const checkAuth = async () => {
+    // Prevent duplicate simultaneous calls
+    if (checkAuthInProgress.current) {
+      console.log('⏭️ Skipping duplicate checkAuth call');
+      return;
+    }
+
+    checkAuthInProgress.current = true;
+
     try {
       // Get token from localStorage
       const token = localStorage.getItem('token');
@@ -90,6 +99,8 @@ export function useAuth() {
       console.error('Auth check failed:', error);
       setUser(null);
       setLoading(false);
+    } finally {
+      checkAuthInProgress.current = false;
     }
   };
 
