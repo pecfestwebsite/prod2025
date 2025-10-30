@@ -56,7 +56,6 @@ const AdminSchema = new Schema<IAdmin>(
 );
 
 // Add indexes for better query performance
-AdminSchema.index({ email: 1 });
 AdminSchema.index({ userId: 1 });
 AdminSchema.index({ userId: 1, accesslevel: 1 }); // Composite index for userId + accesslevel
 AdminSchema.index({ verified: 1 });

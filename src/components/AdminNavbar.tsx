@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Menu, X, LogOut, Home, Calendar, Users, FileText, Plus, Eye, ChevronDown, User } from 'lucide-react';
+import { Menu, X, LogOut, Home, Calendar, Users, FileText, Plus, Eye, ChevronDown, User, Percent } from 'lucide-react';
 
 interface AdminUser {
   id: string;
@@ -142,6 +142,7 @@ export default function AdminNavbar() {
       items: [
         { label: 'Users', href: '/admin/users', icon: User },
         { label: 'Registrations', href: '/admin/registrations', icon: Users },
+        { label: 'Discounts', href: '/admin/discounts', icon: Percent },
         { label: 'Clearance', href: '/admin/clearance', icon: FileText },
       ],
     },

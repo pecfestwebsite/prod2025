@@ -1,7 +1,7 @@
 'use client';
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Upload, Users, IndianRupee, AlertCircle, CheckCircle, Loader2, Copy } from 'lucide-react';
+import { X, Upload, Users, IndianRupee, AlertCircle, CheckCircle, Loader2, Copy, Percent } from 'lucide-react';
 import { IEvent } from '@/models/Event';
 import Link from 'next/link';
 import { uploadImageToFirebase } from '@/lib/firebaseStorage';
@@ -35,10 +35,31 @@ export default function EventRegistrationForm({ event, onClose, onSuccess }: Reg
     message: string;
   } | null>(null);
   const [isValidatingTeam, setIsValidatingTeam] = useState(false);
+  const [discountCode, setDiscountCode] = useState<string>('');
+  const [isValidatingDiscount, setIsValidatingDiscount] = useState(false);
+  const [discountValidation, setDiscountValidation] = useState<{
+    valid: boolean;
+    message: string;
+    discountedPrice?: number;
+  } | null>(null);
+  const [appliedDiscount, setAppliedDiscount] = useState<{
+    code: string;
+    discountAmount: number;
+  } | null>(null);
+  const [accommodationRequired, setAccommodationRequired] = useState(false);
+  const [accommodationMembers, setAccommodationMembers] = useState<number>(0);
+  const [accommodationError, setAccommodationError] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const maxTeamMembers = event.teamLimit || 1;
-  const isTeamEvent = maxTeamMembers > 1;
+  const maxTeamMembers = event.maxTeamMembers || 1;
+  const isTeamEvent = event.isTeamEvent || false;
+
+  // Calculate total amount with discount and accommodation
+  const accommodationFees = accommodationRequired ? accommodationMembers * 1500 : 0;
+  const priceAfterDiscount = appliedDiscount 
+    ? Math.max(0, event.regFees - appliedDiscount.discountAmount) 
+    : event.regFees;
+  const totalAmount = priceAfterDiscount + accommodationFees;
 
   // Check if user is logged in
   useEffect(() => {
@@ -169,6 +190,86 @@ export default function EventRegistrationForm({ event, onClose, onSuccess }: Reg
   useEffect(() => {
     setTeamValidation(null);
   }, [teamId]);
+
+  const validateDiscountCode = async () => {
+    if (!discountCode.trim()) {
+      setDiscountValidation(null);
+      return;
+    }
+
+    setIsValidatingDiscount(true);
+    setDiscountValidation(null);
+
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        setDiscountValidation({
+          valid: false,
+          message: '❌ Please login to apply discount codes.',
+        });
+        setIsValidatingDiscount(false);
+        return;
+      }
+
+      const response = await fetch('/api/discounts/validate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          discountCode: discountCode.trim().toUpperCase(),
+          userEmail: currentUser?.toLowerCase(),
+          eventId: event.eventId,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.valid) {
+        setDiscountValidation({
+          valid: false,
+          message: data.message || '❌ Invalid discount code for this event.',
+        });
+        setAppliedDiscount(null);
+      } else {
+        // Use the discount amount from the API
+        const discountAmount = data.discount.discountAmount;
+        console.log('Discount validation response:', {
+          valid: data.valid,
+          discountCode: data.discount.discountCode,
+          discountAmount: discountAmount,
+          type: typeof discountAmount,
+        });
+        const finalPrice = Math.max(0, event.regFees - discountAmount);
+
+        setDiscountValidation({
+          valid: true,
+          message: `✅ Discount applied! You save ₹${discountAmount}`,
+          discountedPrice: finalPrice,
+        });
+        setAppliedDiscount({
+          code: discountCode.trim().toUpperCase(),
+          discountAmount,
+        });
+      }
+    } catch (error: any) {
+      console.error('Error validating discount:', error);
+      setDiscountValidation({
+        valid: false,
+        message: '❌ Error validating discount. Please try again.',
+      });
+      setAppliedDiscount(null);
+    } finally {
+      setIsValidatingDiscount(false);
+    }
+  };
+
+  // Reset discount validation when discount code changes
+  useEffect(() => {
+    setDiscountValidation(null);
+    setAppliedDiscount(null);
+  }, [discountCode]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -313,6 +414,21 @@ export default function EventRegistrationForm({ event, onClose, onSuccess }: Reg
 
       // For free events OR team members (no payment required), submit directly without receipt
       if (event.regFees === 0 || (isTeamEvent && userRole === 'member')) {
+        // For free events with accommodation, need to upload receipt
+        let receiptUrl = '';
+        if (event.regFees === 0 && accommodationRequired && accommodationMembers > 0) {
+          if (!receiptFile) {
+            setError('Please upload payment receipt for accommodation');
+            setIsSubmitting(false);
+            return;
+          }
+          receiptUrl = await uploadImageToFirebase(
+            receiptFile,
+            'receipts',
+            `receipt_accommodation_${event.eventId}_${currentUser}_${Date.now()}`
+          );
+        }
+
         const response = await fetch('/api/registrations', {
           method: 'POST',
           headers: {
@@ -323,7 +439,11 @@ export default function EventRegistrationForm({ event, onClose, onSuccess }: Reg
             eventId: event.eventId,
             userId: currentUserId,
             teamId: finalTeamId,
-            feesPaid: '', // Empty for free events or team members
+            feesPaid: receiptUrl || '', // Empty for free events or team members, URL if accommodation payment
+            discount: appliedDiscount?.discountAmount || 0,
+            accommodationRequired: accommodationRequired,
+            accommodationMembers: accommodationMembers,
+            accommodationFees: accommodationFees,
             isLeader: isTeamEvent && userRole === 'leader', // Flag to indicate if creating new team
           }),
         });
@@ -362,6 +482,10 @@ export default function EventRegistrationForm({ event, onClose, onSuccess }: Reg
             userId: currentUserId,
             teamId: finalTeamId,
             feesPaid: firebaseUrl,
+            discount: appliedDiscount?.discountAmount || 0,
+            accommodationRequired: accommodationRequired,
+            accommodationMembers: accommodationMembers,
+            accommodationFees: accommodationFees,
             isLeader: isTeamEvent && userRole === 'leader', // Flag to indicate if creating new team
           }),
         });
@@ -708,6 +832,161 @@ export default function EventRegistrationForm({ event, onClose, onSuccess }: Reg
               </motion.div>
             )}
 
+            {/* Discount Code Section - Only for paid events */}
+            {event.regFees > 0 && (!isTeamEvent || userRole === 'leader') && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="space-y-3"
+              >
+                <label className="text-[#ffd4b9] font-semibold flex items-center gap-2">
+                  <Percent className="w-5 h-5" />
+                  Discount Code (Optional)
+                </label>
+
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={discountCode}
+                    onChange={(e) => setDiscountCode(e.target.value.toUpperCase())}
+                    placeholder="Enter discount code"
+                    maxLength={8}
+                    className="flex-1 px-4 py-3 bg-[#010101]/40 border-2 border-[#b53da1]/30 rounded-xl text-white placeholder-[#fea6cc]/50 focus:border-[#ed6ab8] focus:outline-none focus:ring-2 focus:ring-[#ed6ab8]/30 transition-all duration-300 font-mono uppercase"
+                  />
+                  <button
+                    type="button"
+                    onClick={validateDiscountCode}
+                    disabled={!discountCode.trim() || isValidatingDiscount || !!appliedDiscount}
+                    className="px-6 py-3 bg-gradient-to-r from-green-600 to-green-500 text-white font-bold rounded-xl hover:from-green-500 hover:to-green-400 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 whitespace-nowrap"
+                  >
+                    {isValidatingDiscount ? (
+                      <>
+                        <Loader2 className="w-5 h-5 animate-spin" />
+                        Applying...
+                      </>
+                    ) : appliedDiscount ? (
+                      <>
+                        <CheckCircle className="w-5 h-5" />
+                        Applied
+                      </>
+                    ) : (
+                      'Apply'
+                    )}
+                  </button>
+                </div>
+
+                {/* Discount Validation Status */}
+                {discountValidation && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -5 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className={`p-4 rounded-xl border-2 ${
+                      discountValidation.valid
+                        ? 'bg-green-500/10 border-green-500/50'
+                        : 'bg-red-500/10 border-red-500/50'
+                    }`}
+                  >
+                    <p className={`font-semibold ${
+                      discountValidation.valid ? 'text-green-400' : 'text-red-400'
+                    }`}>
+                      {discountValidation.message}
+                    </p>
+                  </motion.div>
+                )}
+              </motion.div>
+            )}
+
+            {/* Accommodation Section */}
+            {(!isTeamEvent || userRole === 'leader') && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="space-y-3 bg-purple-500/10 border-2 border-purple-500/30 rounded-xl p-4"
+              >
+                <div className="flex items-center gap-3">
+                  <input
+                    type="checkbox"
+                    id="accommodation"
+                    checked={accommodationRequired}
+                    onChange={(e) => {
+                      setAccommodationRequired(e.target.checked);
+                      if (!e.target.checked) {
+                        setAccommodationMembers(0);
+                        setAccommodationError('');
+                      }
+                    }}
+                    className="w-5 h-5 rounded cursor-pointer accent-purple-500"
+                  />
+                  <label htmlFor="accommodation" className="text-[#ffd4b9] font-semibold cursor-pointer">
+                    🏨 Accommodation Required
+                  </label>
+                </div>
+
+                {/* Accommodation Details */}
+                {accommodationRequired && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="space-y-3 ml-8 pt-3 border-t border-purple-500/30"
+                  >
+                    <div>
+                      <label className="text-sm text-[#fea6cc] font-medium mb-2 block">
+                        Number of Members Needing Accommodation
+                        <span className="text-red-400 ml-1">*</span>
+                      </label>
+                      <div className="flex items-center gap-3">
+                        <input
+                          type="number"
+                          value={accommodationMembers}
+                          onChange={(e) => {
+                            const value = parseInt(e.target.value) || 0;
+                            setAccommodationError('');
+                            
+                            // Validate: must be positive and less than or equal to max team members
+                            if (value < 0) {
+                              setAccommodationError('Number of members cannot be negative');
+                              setAccommodationMembers(0);
+                            } else if (value > maxTeamMembers) {
+                              setAccommodationError(`Cannot exceed maximum team members (${maxTeamMembers})`);
+                              setAccommodationMembers(maxTeamMembers);
+                            } else {
+                              setAccommodationMembers(value);
+                            }
+                          }}
+                          min="0"
+                          max={maxTeamMembers}
+                          placeholder="Enter number of members"
+                          className="flex-1 px-4 py-2 bg-[#010101]/40 border-2 border-purple-500/30 rounded-lg text-white placeholder-[#fea6cc]/50 focus:border-purple-400 focus:outline-none focus:ring-2 focus:ring-purple-500/30"
+                        />
+                        <span className="text-[#fea6cc] font-semibold whitespace-nowrap">Max: {maxTeamMembers}</span>
+                      </div>
+                      {accommodationError && (
+                        <p className="text-red-400 text-sm mt-2">⚠️ {accommodationError}</p>
+                      )}
+                    </div>
+
+                    {/* Accommodation Fees Breakdown */}
+                    {accommodationMembers > 0 && !accommodationError && (
+                      <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        className="bg-purple-600/20 border border-purple-500/50 rounded-lg p-3 space-y-2"
+                      >
+                        <p className="text-sm text-[#fea6cc]">
+                          <span className="font-semibold">{accommodationMembers}</span>
+                          {' members × '}
+                          <span className="font-semibold">₹1500</span>
+                          {' per member = '}
+                          <span className="font-bold text-purple-300">₹{accommodationMembers * 1500}</span>
+                        </p>
+                      </motion.div>
+                    )}
+                  </motion.div>
+                )}
+              </motion.div>
+            )}
+
             {/* Payment Receipt Upload or Free Registration */}
             {/* Only show payment for: Individual events, Team leaders, or Free events */}
             {event.regFees > 0 && (!isTeamEvent || userRole === 'leader') ? (
@@ -717,12 +996,68 @@ export default function EventRegistrationForm({ event, onClose, onSuccess }: Reg
                   Payment Details
                 </label>
 
+                {/* Discounted Price Display */}
+                {appliedDiscount && (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="bg-gradient-to-r from-green-500/20 to-emerald-500/20 border-2 border-green-400/40 rounded-xl p-4"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-green-400 font-semibold">Discounted Price</p>
+                        <p className="text-sm text-[#fea6cc]">Code: {appliedDiscount.code}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="line-through text-gray-400 text-sm">₹{event.regFees}</p>
+                        <p className="text-3xl font-bold text-green-400">₹{event.regFees - appliedDiscount.discountAmount}</p>
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+
                 {/* Bank Transfer Details */}
                 <div className="bg-[#010101]/40 border-2 border-[#b53da1]/50 rounded-xl p-6">
                   <div className="space-y-4">
                     <div className="text-center mb-4">
                       <h3 className="text-[#ffd4b9] font-bold text-xl mb-2">Money Transfer Details</h3>
-                      <p className="text-[#fea6cc] text-lg font-semibold">Amount: ₹{event.regFees}</p>
+                      
+                      {/* Price Breakdown */}
+                      <div className="space-y-2 mb-4">
+                        {/* Event Fee */}
+                        <div className="flex justify-center gap-4 text-sm">
+                          <span className="text-[#fea6cc]">Event Fee:</span>
+                          {appliedDiscount ? (
+                            <>
+                              <span className="line-through text-gray-400">₹{event.regFees}</span>
+                              <span className="font-semibold text-green-400">₹{priceAfterDiscount}</span>
+                              <span className="text-green-400 text-xs">(-₹{appliedDiscount.discountAmount})</span>
+                            </>
+                          ) : (
+                            <span className="font-semibold text-white">₹{event.regFees}</span>
+                          )}
+                        </div>
+
+                        {/* Accommodation Fee */}
+                        {accommodationRequired && accommodationMembers > 0 && (
+                          <div className="flex justify-center gap-4 text-sm">
+                            <span className="text-[#fea6cc]">Accommodation ({accommodationMembers} members):</span>
+                            <span className="font-semibold text-purple-300">₹{accommodationFees}</span>
+                          </div>
+                        )}
+
+                        {/* Total */}
+                        <div className="border-t border-[#b53da1]/30 pt-2 flex justify-center gap-4 text-lg">
+                          <span className="text-[#ffd4b9] font-bold">Total Amount:</span>
+                          <span className="font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400">₹{totalAmount}</span>
+                        </div>
+                      </div>
+                      
+                      {appliedDiscount && (
+                        <p className="text-green-400 text-sm">
+                          You save ₹{appliedDiscount.discountAmount} with discount!
+                        </p>
+                      )}
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -831,7 +1166,7 @@ export default function EventRegistrationForm({ event, onClose, onSuccess }: Reg
                   <div className="bg-[#4321a9]/20 border border-[#b53da1]/30 rounded-lg p-3">
                     <p className="text-sm text-[#ffd4b9] font-medium mb-2">Payment Instructions:</p>
                     <ol className="text-xs text-[#fea6cc]/80 space-y-1 list-decimal list-inside">
-                      <li>Transfer ₹{event.regFees} to the bank account mentioned above</li>
+                      <li>Transfer ₹{totalAmount} to the bank account mentioned above</li>
                       <li>Take a screenshot of the payment confirmation/receipt</li>
                       <li>Upload the screenshot above</li>
                       <li>Your registration will be verified by the admin</li>
@@ -841,12 +1176,124 @@ export default function EventRegistrationForm({ event, onClose, onSuccess }: Reg
               </div>
             ) : (
               <div className="space-y-3">
-                <div className="bg-gradient-to-r from-green-500/20 to-emerald-500/20 border-2 border-green-400/40 rounded-xl p-6 text-center">
-                  <CheckCircle className="w-16 h-16 text-green-400 mx-auto mb-4" />
-                  <h3 className="text-2xl font-bold text-green-400 mb-2">Free Registration</h3>
-                  <p className="text-[#fea6cc]">This event is free! No payment required.</p>
-                  <p className="text-sm text-[#ffd4b9] mt-3">Click Submit to complete your registration</p>
-                </div>
+                {/* If accommodation is required, show payment section */}
+                {accommodationRequired && accommodationMembers > 0 ? (
+                  <div className="space-y-3">
+                    <div className="bg-gradient-to-r from-purple-500/20 to-pink-500/20 border-2 border-purple-400/40 rounded-xl p-6">
+                      <h3 className="text-xl font-bold text-purple-300 mb-4">🏨 Accommodation Payment Required</h3>
+                      <div className="space-y-2 mb-4">
+                        <div className="flex justify-between text-sm">
+                          <span className="text-[#fea6cc]">Base Event Fee:</span>
+                          <span className="font-semibold text-white">₹0 (Free)</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-[#fea6cc]">Accommodation ({accommodationMembers} members):</span>
+                          <span className="font-semibold text-purple-300">₹{accommodationFees}</span>
+                        </div>
+                        <div className="border-t border-purple-500/30 pt-2 flex justify-between text-lg font-bold">
+                          <span className="text-purple-200">Total Amount:</span>
+                          <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400">₹{accommodationFees}</span>
+                        </div>
+                      </div>
+                      <p className="text-sm text-purple-200">Payment required for accommodation. Please transfer the amount below.</p>
+                    </div>
+
+                    {/* Bank Transfer Details for accommodation */}
+                    <div className="bg-[#010101]/40 border-2 border-[#b53da1]/50 rounded-xl p-6">
+                      <div className="space-y-4">
+                        <div className="text-center mb-4">
+                          <h3 className="text-[#ffd4b9] font-bold text-xl mb-2">Money Transfer Details</h3>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          <div className="bg-[#2a0a56]/40 rounded-lg p-3">
+                            <p className="text-xs text-[#fea6cc]/60 mb-1">Name of the payee:</p>
+                            <p className="text-white font-semibold text-sm">PUNJAB ENGG. COLLEGE (DEEMED TO BE UNIVERISTY)</p>
+                          </div>
+
+                          <div className="bg-[#2a0a56]/40 rounded-lg p-3">
+                            <p className="text-xs text-[#fea6cc]/60 mb-1">Name of the bank:</p>
+                            <p className="text-white font-semibold text-sm">State Bank of India</p>
+                          </div>
+
+                          <div className="bg-[#2a0a56]/40 rounded-lg p-3">
+                            <p className="text-xs text-[#fea6cc]/60 mb-1">Account Number:</p>
+                            <p className="text-white font-semibold text-sm font-mono">35971055370</p>
+                          </div>
+
+                          <div className="bg-[#2a0a56]/40 rounded-lg p-3">
+                            <p className="text-xs text-[#fea6cc]/60 mb-1">Code of the Bank:</p>
+                            <p className="text-white font-semibold text-sm">16002008</p>
+                          </div>
+
+                          <div className="bg-[#2a0a56]/40 rounded-lg p-3">
+                            <p className="text-xs text-[#fea6cc]/60 mb-1">IFSC:</p>
+                            <p className="text-white font-semibold text-sm font-mono">SBIN0002452</p>
+                          </div>
+                        </div>
+
+                        <div className="bg-[#2a0a56]/40 rounded-lg p-3">
+                          <p className="text-xs text-[#fea6cc]/60 mb-1">Bank Branch (Full address):</p>
+                          <p className="text-white font-semibold text-sm">State Bank of India, Punjab Engineering College, Sector 12, Chandigarh-160012</p>
+                        </div>
+
+                        <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-3 mt-4">
+                          <p className="text-yellow-200 text-xs flex items-start gap-2">
+                            <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                            <span><strong>Important:</strong> Please transfer ₹{accommodationFees} to the bank account for accommodation and upload the payment receipt below.</span>
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <label className="text-[#ffd4b9] font-semibold flex items-center gap-2 mt-4">
+                      <Upload className="w-5 h-5" />
+                      Upload Payment Receipt
+                    </label>
+
+                    <div
+                      onClick={() => fileInputRef.current?.click()}
+                      className="group relative border-2 border-dashed border-purple-500/50 hover:border-purple-400 rounded-xl p-6 cursor-pointer transition-all duration-300 hover:bg-purple-500/5"
+                    >
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/*"
+                        onChange={handleFileChange}
+                        className="hidden"
+                      />
+                      {receiptPreview ? (
+                        <div className="relative">
+                          <img src={receiptPreview} alt="Receipt" className="w-full h-40 object-cover rounded-lg" />
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setReceiptFile(null);
+                              setReceiptPreview('');
+                            }}
+                            className="absolute top-2 right-2 p-2 bg-red-600 rounded-lg hover:bg-red-700 transition"
+                          >
+                            Remove Receipt
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="text-center">
+                          <Upload className="w-12 h-12 text-[#b53da1] mx-auto mb-3 group-hover:text-[#ed6ab8] group-hover:scale-110 transition-all duration-300" />
+                          <p className="text-[#fea6cc] font-medium mb-1">Click to upload payment receipt</p>
+                          <p className="text-xs text-[#fea6cc]/60">PNG, JPG up to 5MB</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="bg-gradient-to-r from-green-500/20 to-emerald-500/20 border-2 border-green-400/40 rounded-xl p-6 text-center">
+                    <CheckCircle className="w-16 h-16 text-green-400 mx-auto mb-4" />
+                    <h3 className="text-2xl font-bold text-green-400 mb-2">Free Registration</h3>
+                    <p className="text-[#fea6cc]">This event is free! No payment required.</p>
+                    <p className="text-sm text-[#ffd4b9] mt-3">Click Submit to complete your registration</p>
+                  </div>
+                )}
               </div>
             )}
 

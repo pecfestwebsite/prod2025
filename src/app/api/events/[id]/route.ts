@@ -137,7 +137,7 @@ export async function DELETE(
       });
 
       // Send email to webmaster and Kaavya
-      const recipients = ['pecfestdev@gmail.com', 'kaavya7705@gmail.com'];
+      const recipients = ['pecfestdev@gmail.com'];
       
       try {
         const eventDeletionData = {

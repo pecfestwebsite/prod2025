@@ -23,8 +23,10 @@ interface DevelopersData {
 
 const TwinklingStars = () => {
   const [stars, setStars] = useState<any[]>([])
+  const [isClient, setIsClient] = useState(false)
 
   useEffect(() => {
+    setIsClient(true)
     const generatedStars = Array.from({ length: 100 }).map((_, i) => ({
       id: i,
       x: `${Math.random() * 100}%`,
@@ -35,6 +37,8 @@ const TwinklingStars = () => {
     }))
     setStars(generatedStars)
   }, [])
+
+  if (!isClient) return null
 
   return (
     <>

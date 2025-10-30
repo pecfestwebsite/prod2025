@@ -47,10 +47,18 @@ interface Registration {
   dateTime: string;
 }
 
+interface TeamMember {
+  userId: string;
+  feesPaid: string;
+  verified: boolean;
+  dateTime: string;
+}
+
 export default function ProfilePage() {
   const [user, setUser] = useState<UserData | null>(null);
   const [registrations, setRegistrations] = useState<Registration[]>([]);
   const [teamCounts, setTeamCounts] = useState<{ [key: string]: number }>({});
+  const [teamMembers, setTeamMembers] = useState<{ [key: string]: TeamMember[] }>({});
   const [loading, setLoading] = useState(true);
   const [copiedTeamId, setCopiedTeamId] = useState<string>('');
   const [hasFetched, setHasFetched] = useState(false);
@@ -122,7 +130,7 @@ export default function ProfilePage() {
 
   const loadTeamCounts = async (token: string, userRegistrations: Registration[], teamIds: string[]) => {
     try {
-      // Fetch team counts in smaller batches to avoid overwhelming the server
+      // Fetch team counts and member details in smaller batches to avoid overwhelming the server
       const batchSize = 5;
       for (let i = 0; i < teamIds.length; i += batchSize) {
         const batch = teamIds.slice(i, i + batchSize);
@@ -135,9 +143,19 @@ export default function ProfilePage() {
               },
             });
             const data = await response.json();
-            return { teamId: teamId as string, count: data.total || 0 };
+            const members = data.registrations || [];
+            return { 
+              teamId: teamId as string, 
+              count: data.total || 0,
+              members: members.map((m: Registration) => ({
+                userId: m.userId,
+                feesPaid: m.feesPaid,
+                verified: m.verified,
+                dateTime: m.dateTime
+              }))
+            };
           }
-          return { teamId: teamId as string, count: 0 };
+          return { teamId: teamId as string, count: 0, members: [] };
         });
         
         const batchResults = await Promise.all(teamCountPromises);
@@ -145,6 +163,13 @@ export default function ProfilePage() {
           const updated = { ...prev };
           batchResults.forEach((result: { teamId: string; count: number }) => {
             updated[result.teamId] = result.count;
+          });
+          return updated;
+        });
+        setTeamMembers(prev => {
+          const updated = { ...prev };
+          batchResults.forEach((result: { teamId: string; members: TeamMember[] }) => {
+            updated[result.teamId] = result.members;
           });
           return updated;
         });
@@ -195,6 +220,21 @@ export default function ProfilePage() {
         body { font-family: 'Scheherazade New', serif; background-color: #010101; }
         .font-display { font-family: 'Protest Guerrilla', sans-serif; }
         .font-arabian { font-family: 'Scheherazade New', serif; }
+        
+        .custom-scrollbar::-webkit-scrollbar {
+          width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+          background: rgba(1, 1, 1, 0.3);
+          border-radius: 10px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+          background: linear-gradient(180deg, #b53da1, #ed6ab8);
+          border-radius: 10px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+          background: linear-gradient(180deg, #ed6ab8, #fea6cc);
+        }
       `}</style>
       
       <main className="min-h-screen bg-gradient-to-b from-[#140655] via-[#4321a9] to-[#2a0a56] text-white">
@@ -317,6 +357,10 @@ export default function ProfilePage() {
                     {registrations.map((registration) => {
                       const teamMemberCount = registration.teamId ? teamCounts[registration.teamId] || 0 : 0;
                       const hasTeam = !!registration.teamId;
+                      const members = registration.teamId ? teamMembers[registration.teamId] || [] : [];
+                      
+                      // Determine if user is team leader: team leader has feesPaid (payment receipt)
+                      const isTeamLeader = hasTeam && registration.feesPaid && registration.feesPaid !== '' && registration.feesPaid !== '0';
 
                       return (
                         <motion.div
@@ -327,7 +371,15 @@ export default function ProfilePage() {
                         >
                           <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
                             <div className="flex-1">
-                              <h3 className="text-xl font-bold text-white mb-2">{registration.eventId}</h3>
+                              <div className="flex items-center gap-3 mb-2">
+                                <h3 className="text-xl font-bold text-white">{registration.eventId}</h3>
+                                {isTeamLeader && (
+                                  <span className="px-3 py-1 bg-gradient-to-r from-[#b53da1] to-[#ed6ab8] text-white text-xs font-bold rounded-full flex items-center gap-1 shadow-lg">
+                                    <Users className="w-3 h-3" />
+                                    TEAM LEADER
+                                  </span>
+                                )}
+                              </div>
                               <div className="flex flex-wrap gap-2 mb-3">
                                 {registration.verified ? (
                                   <span className="px-3 py-1 bg-green-500/20 border border-green-500/50 text-green-400 text-sm rounded-full flex items-center gap-1">
@@ -352,13 +404,18 @@ export default function ProfilePage() {
 
                             {/* Team Info */}
                             {hasTeam && (
-                              <div className="bg-gradient-to-r from-[#b53da1]/20 to-[#ed6ab8]/20 border border-[#b53da1]/40 rounded-xl p-4 min-w-[250px]">
+                              <div className="bg-gradient-to-r from-[#b53da1]/20 to-[#ed6ab8]/20 border border-[#b53da1]/40 rounded-xl p-4 min-w-[280px]">
                                 <div className="flex items-center gap-2 mb-3">
                                   <Users className="w-5 h-5 text-[#fea6cc]" />
                                   <span className="text-[#ffd4b9] font-semibold">Team Details</span>
+                                  {isTeamLeader && (
+                                    <span className="ml-auto text-xs px-2 py-0.5 bg-[#ed6ab8]/30 text-[#ffd4b9] rounded-full">
+                                      Leader
+                                    </span>
+                                  )}
                                 </div>
                                 
-                                <div className="space-y-2">
+                                <div className="space-y-3">
                                   <div>
                                     <p className="text-xs text-[#fea6cc]/60 mb-1">Team ID</p>
                                     <div className="flex items-center gap-2">
@@ -379,11 +436,59 @@ export default function ProfilePage() {
                                   </div>
 
                                   <div className="flex items-center justify-between pt-2 border-t border-[#b53da1]/30">
-                                    <span className="text-sm text-[#fea6cc]">Team Members</span>
-                                    <span className="text-lg font-bold text-white">
+                                    <span className="text-sm text-[#fea6cc]">Total Members</span>
+                                    <span className="text-2xl font-bold text-white">
                                       {teamMemberCount}
                                     </span>
                                   </div>
+
+                                  {/* Team Members List */}
+                                  {members.length > 0 && (
+                                    <div className="pt-2 border-t border-[#b53da1]/30">
+                                      <p className="text-xs text-[#fea6cc]/60 mb-2">Team Members</p>
+                                      <div className="space-y-1.5 max-h-[200px] overflow-y-auto pr-2 custom-scrollbar">
+                                        {members.map((member, idx) => {
+                                          const isMemberLeader = member.feesPaid && member.feesPaid !== '' && member.feesPaid !== '0';
+                                          const isCurrentUser = member.userId === user?.email;
+                                          
+                                          return (
+                                            <div 
+                                              key={idx} 
+                                              className={`flex items-center justify-between p-2 rounded-lg ${
+                                                isCurrentUser 
+                                                  ? 'bg-[#4321a9]/40 border border-[#ed6ab8]/50' 
+                                                  : 'bg-[#010101]/30'
+                                              }`}
+                                            >
+                                              <div className="flex items-center gap-2 flex-1 min-w-0">
+                                                <User className="w-3 h-3 text-[#fea6cc] flex-shrink-0" />
+                                                <span className="text-xs text-white font-mono truncate">
+                                                  {member.userId}
+                                                </span>
+                                                {isCurrentUser && (
+                                                  <span className="text-[10px] px-1.5 py-0.5 bg-[#ed6ab8]/40 text-white rounded-full flex-shrink-0">
+                                                    You
+                                                  </span>
+                                                )}
+                                              </div>
+                                              <div className="flex items-center gap-1 ml-2 flex-shrink-0">
+                                                {isMemberLeader && (
+                                                  <span className="text-[10px] px-1.5 py-0.5 bg-gradient-to-r from-[#b53da1] to-[#ed6ab8] text-white rounded-full font-bold">
+                                                    LEADER
+                                                  </span>
+                                                )}
+                                                {member.verified ? (
+                                                  <CheckCircle className="w-3 h-3 text-green-400" />
+                                                ) : (
+                                                  <Loader2 className="w-3 h-3 text-yellow-400" />
+                                                )}
+                                              </div>
+                                            </div>
+                                          );
+                                        })}
+                                      </div>
+                                    </div>
+                                  )}
                                 </div>
                               </div>
                             )}

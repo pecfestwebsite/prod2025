@@ -6,6 +6,11 @@ export interface IRegistration {
   teamId: string;
   verified: boolean;
   feesPaid?: string; // Firebase Storage URL (empty for free events)
+  discount: number; // Discount amount in rupees, default 0
+  accommodationRequired: boolean; // Whether accommodation is needed
+  accommodationMembers: number; // Number of members needing accommodation
+  accommodationFees: number; // Total accommodation fees (members * 1500)
+  totalFees: number; // Total fees (event fees + accommodation fees - discount)
   dateTime: Date;
 }
 
@@ -36,6 +41,37 @@ const RegistrationSchema = new Schema<IRegistration>(
       type: String,
       default: '',
       // This will store Firebase Storage URL of payment receipt
+    },
+    discount: {
+      type: Number,
+      required: false,
+      default: 0,
+      min: [0, 'Discount cannot be negative'],
+    },
+    accommodationRequired: {
+      type: Boolean,
+      required: false,
+      default: false,
+    },
+    accommodationMembers: {
+      type: Number,
+      required: false,
+      default: 0,
+      min: [0, 'Members cannot be negative'],
+    },
+    accommodationFees: {
+      type: Number,
+      required: false,
+      default: 0,
+      min: [0, 'Accommodation fees cannot be negative'],
+      // Calculated as: accommodationMembers * 1500
+    },
+    totalFees: {
+      type: Number,
+      required: false,
+      default: 0,
+      min: [0, 'Total fees cannot be negative'],
+      // Calculated as: (eventFees + accommodationFees - discount)
     },
     dateTime: {
       type: Date,

@@ -1,10 +1,11 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Edit2, Trash2, ChevronUp, ChevronDown } from 'lucide-react';
+import { Edit2, Trash2, ChevronUp, ChevronDown, Percent } from 'lucide-react';
 import EditEventModal from '@/components/EditEventModal';
 import DeleteEventModal from '@/components/DeleteEventModal';
-import { getAdminUser, filterEventsByAccessLevel, canDeleteEvent, canEditEvent, canDeleteEventByAdmin, canEditEventByAdmin } from '@/lib/accessControl';
+import CreateDiscountModal from '@/components/CreateDiscountModal';
+import { getAdminUser, filterEventsByAccessLevel, canDeleteEvent, canEditEvent, canDeleteEventByAdmin, canEditEventByAdmin, canManageDiscounts } from '@/lib/accessControl';
 
 interface Event {
   _id: string;
@@ -52,6 +53,8 @@ export default function ViewEventsPage() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showTableCard, setShowTableCard] = useState(true);
   const [adminUser, setAdminUser] = useState<AdminUser | null>(null);
+  const [showDiscountModal, setShowDiscountModal] = useState(false);
+  const [selectedEventForDiscount, setSelectedEventForDiscount] = useState<Event | null>(null);
 
   // Fetch events
   useEffect(() => {
@@ -125,6 +128,11 @@ export default function ViewEventsPage() {
   const handleDelete = (event: Event) => {
     setDeletingEvent(event);
     setShowDeleteModal(true);
+  };
+
+  const handleCreateDiscount = (event: Event) => {
+    setSelectedEventForDiscount(event);
+    setShowDiscountModal(true);
   };
 
   const handleSortChange = (field: SortField) => {
@@ -377,6 +385,15 @@ export default function ViewEventsPage() {
                       </td>
                       <td className="px-4 sm:px-6 py-4">
                         <div className="flex justify-center gap-2">
+                          {canManageDiscounts(adminUser?.accesslevel || 0) && (
+                            <button
+                              onClick={() => handleCreateDiscount(event)}
+                              className="p-2 rounded-lg bg-gradient-to-r from-green-600 to-green-500 text-white transition-all duration-300 hover:shadow-lg hover:shadow-green-500/50 hover:scale-105 active:scale-95 border border-green-400/30"
+                              title="Create Discount"
+                            >
+                              <Percent size={16} />
+                            </button>
+                          )}
                           {(canEditEvent(adminUser?.accesslevel || 3) && canEditEventByAdmin(event, adminUser)) && (
                             <button
                               onClick={() => handleEdit(event)}
@@ -421,6 +438,19 @@ export default function ViewEventsPage() {
           event={deletingEvent}
           onClose={() => setShowDeleteModal(false)}
           onDelete={onEventDeleted}
+        />
+      )}
+
+      {/* Create Discount Modal */}
+      {showDiscountModal && selectedEventForDiscount && (
+        <CreateDiscountModal
+          event={selectedEventForDiscount}
+          isOpen={showDiscountModal}
+          onClose={() => setShowDiscountModal(false)}
+          onSuccess={() => {
+            setShowDiscountModal(false);
+            setSelectedEventForDiscount(null);
+          }}
         />
       )}
     </div>

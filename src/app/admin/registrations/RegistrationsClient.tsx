@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { ChevronUp, ChevronDown, Eye, Check, X, Loader, AlertCircle } from 'lucide-react';
-import { getAdminUser, canVerifyRegistrations, filterRegistrationsByAccessLevel } from '@/lib/accessControl';
+import { ChevronUp, ChevronDown, Eye, Check, X, Loader, AlertCircle, Trash2 } from 'lucide-react';
+import { getAdminUser, canVerifyRegistrations, filterRegistrationsByAccessLevel, canDeleteRegistrations } from '@/lib/accessControl';
 import ImageModal from '@/components/ImageModal';
 
 interface RegistrationWithEvent {
@@ -16,6 +16,9 @@ interface RegistrationWithEvent {
   dateTime: string;
   createdAt: string;
   societyName?: string;
+  discount?: number;
+  accommodationMembers?: number;
+  totalFees?: number;
 }
 
 interface RegistrationsClientProps {
@@ -32,7 +35,7 @@ interface AdminUser {
   verified: boolean;
 }
 
-type SortField = 'eventName' | 'userId' | 'dateTime' | 'verified' | 'teamSize';
+type SortField = 'eventName' | 'eventId' | 'userId' | 'teamId' | 'dateTime' | 'verified' | 'discount' | 'accommodationMembers' | 'totalFees' | 'teamSize';
 type SortOrder = 'asc' | 'desc';
 
 const STORAGE_KEY = 'registration_action_count';
@@ -113,6 +116,8 @@ export default function RegistrationsClient({ registrations }: RegistrationsClie
   const [actionCounts, setActionCounts] = useState<{ [key: string]: number }>({});
   const [warningRegistrations, setWarningRegistrations] = useState<Set<string>>(new Set());
   const [showWarningModal, setShowWarningModal] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
   useEffect(() => {
     const admin = getAdminUser();
@@ -200,9 +205,17 @@ export default function RegistrationsClient({ registrations }: RegistrationsClie
           aValue = a.eventName;
           bValue = b.eventName;
           break;
+        case 'eventId':
+          aValue = a.eventId;
+          bValue = b.eventId;
+          break;
         case 'userId':
           aValue = a.userId;
           bValue = b.userId;
+          break;
+        case 'teamId':
+          aValue = a.teamId;
+          bValue = b.teamId;
           break;
         case 'dateTime':
           aValue = new Date(a.dateTime).getTime();
@@ -211,6 +224,18 @@ export default function RegistrationsClient({ registrations }: RegistrationsClie
         case 'verified':
           aValue = a.verified ? 1 : 0;
           bValue = b.verified ? 1 : 0;
+          break;
+        case 'discount':
+          aValue = a.discount || 0;
+          bValue = b.discount || 0;
+          break;
+        case 'accommodationMembers':
+          aValue = a.accommodationMembers || 0;
+          bValue = b.accommodationMembers || 0;
+          break;
+        case 'totalFees':
+          aValue = a.totalFees || 0;
+          bValue = b.totalFees || 0;
           break;
         case 'teamSize':
           // Sort by whether teamId exists and alphabetically
@@ -293,6 +318,48 @@ export default function RegistrationsClient({ registrations }: RegistrationsClie
       console.error('Error verifying registration:', error);
     } finally {
       setVerifyingId(null);
+    }
+  };
+
+  const handleDelete = async (registrationId: string) => {
+    // Show confirmation dialog
+    const confirmed = window.confirm('Are you sure you want to delete this registration? This action cannot be undone.');
+    if (!confirmed) return;
+
+    setDeletingId(registrationId);
+    try {
+      const token = localStorage.getItem('adminToken') || localStorage.getItem('token');
+      if (!token) {
+        console.error('No admin token found');
+        alert('Session expired. Please login again.');
+        setDeletingId(null);
+        return;
+      }
+
+      const response = await fetch(`/api/registrations/${registrationId}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        // Remove the registration from the local list
+        setLocalRegistrations((prev) =>
+          prev.filter((reg) => reg._id !== registrationId)
+        );
+        alert('Registration deleted successfully!');
+      } else {
+        const errorData = await response.json();
+        alert(`Failed to delete registration: ${errorData.error || 'Unknown error'}`);
+      }
+    } catch (error) {
+      console.error('Error deleting registration:', error);
+      alert('An error occurred while deleting the registration.');
+    } finally {
+      setDeletingId(null);
+      setDeleteConfirmId(null);
     }
   };
 
@@ -381,6 +448,28 @@ export default function RegistrationsClient({ registrations }: RegistrationsClie
                 </p>
               </div>
 
+              {/* Discount */}
+              {registration.discount ? (
+                <div className="border-b border-purple-500/20 pb-3">
+                  <p className="text-xs text-slate-400 uppercase font-semibold mb-1">💰 Discount</p>
+                  <p className="font-bold text-emerald-400 text-sm">₹{registration.discount}</p>
+                </div>
+              ) : null}
+
+              {/* Accommodation */}
+              {registration.accommodationMembers ? (
+                <div className="border-b border-purple-500/20 pb-3">
+                  <p className="text-xs text-slate-400 uppercase font-semibold mb-1">🏨 Accommodation</p>
+                  <p className="font-bold text-white text-sm">{registration.accommodationMembers} members</p>
+                </div>
+              ) : null}
+
+              {/* Total Fees */}
+              <div className="border-b border-purple-500/20 pb-3">
+                <p className="text-xs text-slate-400 uppercase font-semibold mb-1">💵 Total Fees</p>
+                <p className="font-bold text-emerald-300 text-sm">₹{registration.totalFees || 0}</p>
+              </div>
+
               {/* Status and Actions */}
               <div className="flex items-center justify-between gap-2 pt-2">
                 <div>
@@ -443,6 +532,31 @@ export default function RegistrationsClient({ registrations }: RegistrationsClie
                   )}
                 </div>
               )}
+
+              {/* Delete Button - Webmaster Only */}
+              {canDeleteRegistrations(adminUser?.accesslevel || 0) && (
+                <button
+                  onClick={() => handleDelete(registration._id)}
+                  disabled={deletingId === registration._id}
+                  className={`w-full py-2 rounded-lg border-2 font-bold transition-all text-sm flex items-center justify-center gap-2 ${
+                    deletingId === registration._id
+                      ? 'bg-gray-900/50 border-gray-400/50 text-gray-300 cursor-not-allowed'
+                      : 'bg-red-900/50 hover:bg-red-900/80 border-red-400/50 text-red-300'
+                  } disabled:opacity-50`}
+                >
+                  {deletingId === registration._id ? (
+                    <>
+                      <Loader size={16} className="animate-spin" />
+                      Deleting...
+                    </>
+                  ) : (
+                    <>
+                      <Trash2 size={16} />
+                      Delete Registration
+                    </>
+                  )}
+                </button>
+              )}
             </div>
           ))
         ) : (
@@ -452,62 +566,80 @@ export default function RegistrationsClient({ registrations }: RegistrationsClie
         )}
       </div>
 
-      {/* Desktop View - Optimized Table */}
+      {/* Desktop View - Optimized Compact Table */}
       <div className="hidden md:block rounded-2xl border-2 border-slate-400/25 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-slate-800/50 border-b-2 border-purple-500/20">
-                <th className="px-3 py-3 text-left">
+                <th className="px-2 py-3 text-left">
                   <button
-                    onClick={() => handleSort('eventName')}
+                    onClick={() => handleSort('eventId')}
                     className="flex items-center gap-1 text-white font-bold hover:text-slate-300 transition-colors uppercase tracking-wider text-xs"
                   >
-                    🎭 Event
-                    <SortIcon field="eventName" />
+                    Event ID
+                    <SortIcon field="eventId" />
                   </button>
                 </th>
-                <th className="px-3 py-3 text-left">
+                <th className="px-2 py-3 text-left">
                   <button
                     onClick={() => handleSort('userId')}
                     className="flex items-center gap-1 text-white font-bold hover:text-slate-300 transition-colors uppercase tracking-wider text-xs"
                   >
-                    👤 User
+                    User ID
                     <SortIcon field="userId" />
                   </button>
                 </th>
-                <th className="px-3 py-3 text-center">
+                <th className="px-2 py-3 text-center">
                   <button
-                    onClick={() => handleSort('teamSize')}
+                    onClick={() => handleSort('teamId')}
                     className="flex items-center gap-1 text-white font-bold hover:text-slate-300 transition-colors uppercase tracking-wider text-xs mx-auto"
                   >
-                    👥 Team
-                    <SortIcon field="teamSize" />
+                    Team ID
+                    <SortIcon field="teamId" />
                   </button>
                 </th>
-                <th className="px-3 py-3 text-left">
+                <th className="px-2 py-3 text-center text-white font-bold uppercase tracking-wider text-xs">
+                  Receipt
+                </th>
+                <th className="px-2 py-3 text-center">
                   <button
-                    onClick={() => handleSort('dateTime')}
-                    className="flex items-center gap-1 text-white font-bold hover:text-slate-300 transition-colors uppercase tracking-wider text-xs"
+                    onClick={() => handleSort('discount')}
+                    className="flex items-center gap-1 text-white font-bold hover:text-slate-300 transition-colors uppercase tracking-wider text-xs mx-auto"
                   >
-                    📅 Date
-                    <SortIcon field="dateTime" />
+                    Discount
+                    <SortIcon field="discount" />
                   </button>
                 </th>
-                <th className="px-3 py-3 text-center">
+                <th className="px-2 py-3 text-center">
+                  <button
+                    onClick={() => handleSort('accommodationMembers')}
+                    className="flex items-center gap-1 text-white font-bold hover:text-slate-300 transition-colors uppercase tracking-wider text-xs mx-auto"
+                  >
+                    Accom.
+                    <SortIcon field="accommodationMembers" />
+                  </button>
+                </th>
+                <th className="px-2 py-3 text-center">
+                  <button
+                    onClick={() => handleSort('totalFees')}
+                    className="flex items-center gap-1 text-white font-bold hover:text-slate-300 transition-colors uppercase tracking-wider text-xs mx-auto"
+                  >
+                    Total Fees
+                    <SortIcon field="totalFees" />
+                  </button>
+                </th>
+                <th className="px-2 py-3 text-center">
                   <button
                     onClick={() => handleSort('verified')}
                     className="flex items-center gap-1 text-white font-bold hover:text-slate-300 transition-colors uppercase tracking-wider text-xs mx-auto"
                   >
-                    ✓ Status
+                    Status
                     <SortIcon field="verified" />
                   </button>
                 </th>
-                <th className="px-3 py-3 text-center text-white font-bold uppercase tracking-wider text-xs">
-                  📸 Receipt
-                </th>
-                <th className="px-3 py-3 text-center text-white font-bold uppercase tracking-wider text-xs">
-                  ⚙️ Actions
+                <th className="px-2 py-3 text-center text-white font-bold uppercase tracking-wider text-xs">
+                  Actions
                 </th>
               </tr>
             </thead>
@@ -518,62 +650,72 @@ export default function RegistrationsClient({ registrations }: RegistrationsClie
                     key={registration._id}
                     className="bg-slate-800/30 hover:bg-slate-700/30 transition-colors duration-300 border-b border-purple-500/10"
                   >
-                    {/* Event Name */}
-                    <td className="px-3 py-3">
-                      <div>
-                        <p className="font-bold text-white text-xs line-clamp-2">{registration.eventName}</p>
-                        <p className="text-xs text-slate-400 mt-0.5">{registration.eventId}</p>
-                      </div>
+                    {/* Event ID */}
+                    <td className="px-2 py-3">
+                      <p className="font-semibold text-white text-xs truncate">{registration.eventId}</p>
                     </td>
 
                     {/* User ID */}
-                    <td className="px-3 py-3">
+                    <td className="px-2 py-3">
                       <p className="font-semibold text-white text-xs truncate">{registration.userId}</p>
                     </td>
 
                     {/* Team ID */}
-                    <td className="px-3 py-3 text-center">
+                    <td className="px-2 py-3 text-center">
                       <button
                         onClick={() => setSelectedTeamId(registration.teamId)}
                         className="inline text-xs font-semibold text-slate-200 bg-slate-700/50 hover:bg-slate-700/80 px-2 py-1 rounded cursor-pointer transition-all hover:text-purple-300"
                         title="Click to see full Team ID"
                       >
-                        {registration.teamId ? registration.teamId.substring(0, 8) + '...' : '-'}
+                        {registration.teamId ? registration.teamId.substring(0, 6) + '...' : '-'}
                       </button>
                     </td>
 
-                    {/* Date/Time */}
-                    <td className="px-3 py-3">
-                      <div className="text-xs">
-                        <p className="font-semibold text-white">
-                          {new Date(registration.dateTime).toLocaleDateString('en-US', {
-                            year: '2-digit',
-                            month: 'short',
-                            day: 'numeric',
-                          })}
-                        </p>
-                        <p className="text-slate-400">
-                          {new Date(registration.dateTime).toLocaleTimeString('en-US', {
-                            hour: '2-digit',
-                            minute: '2-digit',
-                          })}
-                        </p>
-                      </div>
+                    {/* Receipt */}
+                    <td className="px-2 py-3 text-center">
+                      <button
+                        onClick={() => setSelectedImage(registration.feesPaid)}
+                        className="inline-flex items-center justify-center bg-purple-900/50 hover:bg-purple-900/80 px-2 py-1 rounded border border-purple-500/50 text-purple-300 text-xs transition-all"
+                        title="View receipt"
+                      >
+                        <Eye size={12} />
+                      </button>
+                    </td>
+
+                    {/* Discount */}
+                    <td className="px-2 py-3 text-center">
+                      <p className="font-semibold text-white text-xs">
+                        {registration.discount ? `₹${registration.discount}` : '-'}
+                      </p>
+                    </td>
+
+                    {/* Accommodation Members */}
+                    <td className="px-2 py-3 text-center">
+                      <p className="font-semibold text-white text-xs">
+                        {registration.accommodationMembers ? `${registration.accommodationMembers}` : '-'}
+                      </p>
+                    </td>
+
+                    {/* Total Fees */}
+                    <td className="px-2 py-3 text-center">
+                      <p className="font-bold text-emerald-300 text-xs">
+                        ₹{registration.totalFees || 0}
+                      </p>
                     </td>
 
                     {/* Verification Status */}
-                    <td className="px-3 py-3 text-center">
+                    <td className="px-2 py-3 text-center">
                       {canVerifyRegistrations(adminUser?.accesslevel || 0) && (
                         <>
                           {registration.verified ? (
                             <div className="inline-flex items-center gap-1 bg-emerald-900/50 px-2 py-1 rounded border border-emerald-400/50">
-                              <Check size={14} className="text-emerald-400" />
-                              <span className="font-bold text-emerald-300 text-xs">Blessed</span>
+                              <Check size={12} className="text-emerald-400" />
+                              <span className="font-bold text-emerald-300 text-xs">✓</span>
                             </div>
                           ) : (
                             <div className="inline-flex items-center gap-1 bg-orange-900/50 px-2 py-1 rounded border border-orange-400/50">
-                              <X size={14} className="text-orange-400" />
-                              <span className="font-bold text-orange-300 text-xs">Pending</span>
+                              <X size={12} className="text-orange-400" />
+                              <span className="font-bold text-orange-300 text-xs">⏳</span>
                             </div>
                           )}
                         </>
@@ -583,60 +725,61 @@ export default function RegistrationsClient({ registrations }: RegistrationsClie
                       )}
                     </td>
 
-                    {/* Receipt Image */}
-                    <td className="px-3 py-3 text-center">
-                      <button
-                        onClick={() => setSelectedImage(registration.feesPaid)}
-                        className="inline-flex items-center gap-1 bg-purple-900/50 hover:bg-purple-900/80 px-2 py-1 rounded border border-purple-500/50 text-purple-300 text-xs transition-all"
-                      >
-                        <Eye size={14} />
-                        View
-                      </button>
-                    </td>
-
                     {/* Actions */}
-                    <td className="px-3 py-3 text-center">
-                      {canVerifyRegistrations(adminUser?.accesslevel || 0) && (
-                        <div className="flex items-center justify-center gap-2">
+                    <td className="px-2 py-3 text-center">
+                      <div className="flex items-center justify-center gap-1 flex-wrap">
+                        {canVerifyRegistrations(adminUser?.accesslevel || 0) && (
+                          <>
+                            <button
+                              onClick={() => handleVerify(registration._id, registration.verified)}
+                              disabled={verifyingId === registration._id || isActionDisabled(registration._id)}
+                              title={isActionDisabled(registration._id) ? 'Action limit reached' : ''}
+                              className={`inline-flex items-center justify-center px-2 py-1 rounded border text-xs font-bold transition-all ${
+                                isActionDisabled(registration._id)
+                                  ? 'bg-gray-900/50 hover:bg-gray-900/50 border-gray-400/50 text-gray-300 cursor-not-allowed'
+                                  : registration.verified
+                                  ? 'bg-red-900/50 hover:bg-red-900/80 border-red-400/50 text-red-300'
+                                  : 'bg-emerald-900/50 hover:bg-emerald-900/80 border-emerald-400/50 text-emerald-300'
+                              } disabled:opacity-50`}
+                            >
+                              {verifyingId === registration._id ? (
+                                <Loader size={10} className="animate-spin" />
+                              ) : registration.verified ? (
+                                <X size={10} />
+                              ) : (
+                                <Check size={10} />
+                              )}
+                            </button>
+                            <span className={`text-xs font-semibold px-1 rounded text-center min-w-6 ${warningRegistrations.has(registration._id) ? 'bg-yellow-900/30 text-yellow-400' : 'bg-slate-800/50 text-slate-400'}`}>
+                              {getActionCountDisplay(registration._id)}
+                            </span>
+                          </>
+                        )}
+                        {canDeleteRegistrations(adminUser?.accesslevel || 0) && (
                           <button
-                            onClick={() => handleVerify(registration._id, registration.verified)}
-                            disabled={verifyingId === registration._id || isActionDisabled(registration._id)}
-                            title={isActionDisabled(registration._id) ? 'Action limit reached for this registration' : ''}
-                            className={`inline-flex items-center gap-1 px-2 py-1 rounded border text-xs font-bold transition-all ${
-                              isActionDisabled(registration._id)
+                            onClick={() => handleDelete(registration._id)}
+                            disabled={deletingId === registration._id}
+                            title="Delete registration (Webmaster only)"
+                            className={`inline-flex items-center justify-center px-2 py-1 rounded border text-xs font-bold transition-all ${
+                              deletingId === registration._id
                                 ? 'bg-gray-900/50 hover:bg-gray-900/50 border-gray-400/50 text-gray-300 cursor-not-allowed'
-                                : registration.verified
-                                ? 'bg-red-900/50 hover:bg-red-900/80 border-red-400/50 text-red-300'
-                                : 'bg-emerald-900/50 hover:bg-emerald-900/80 border-emerald-400/50 text-emerald-300'
+                                : 'bg-red-900/50 hover:bg-red-900/80 border-red-400/50 text-red-300'
                             } disabled:opacity-50`}
                           >
-                            {verifyingId === registration._id ? (
-                              <Loader size={12} className="animate-spin" />
-                            ) : isActionDisabled(registration._id) ? (
-                              <>
-                                <X size={12} /> Limit
-                              </>
-                            ) : registration.verified ? (
-                              <>
-                                <X size={12} /> Unverify
-                              </>
+                            {deletingId === registration._id ? (
+                              <Loader size={10} className="animate-spin" />
                             ) : (
-                              <>
-                                <Check size={12} /> Verify
-                              </>
+                              <Trash2 size={10} />
                             )}
                           </button>
-                          <span className={`text-xs font-semibold px-2 py-1 rounded border ${warningRegistrations.has(registration._id) ? 'bg-yellow-900/30 border-yellow-500/50 text-yellow-400' : 'bg-slate-800/50 border-slate-500/30 text-slate-400'}`}>
-                            {getActionCountDisplay(registration._id)}
-                          </span>
-                        </div>
-                      )}
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td colSpan={7} className="px-4 py-8 text-center">
+                  <td colSpan={9} className="px-4 py-8 text-center">
                     <p className="text-white font-semibold">No registrations found</p>
                   </td>
                 </tr>

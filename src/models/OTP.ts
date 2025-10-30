@@ -15,7 +15,6 @@ const OTPSchema = new Schema<IOTP>(
       type: String,
       required: true,
       unique: true,
-      index: true,
       lowercase: true,
       trim: true,
     },
@@ -33,7 +32,6 @@ const OTPSchema = new Schema<IOTP>(
     expiresAt: {
       type: Date,
       required: true,
-      index: true,
     },
     attempts: {
       type: Number,

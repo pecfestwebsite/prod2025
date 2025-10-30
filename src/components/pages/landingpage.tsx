@@ -144,7 +144,7 @@ const TwinklingStars = () => {
 
 const Countdown = () => {
     const calculateTimeLeft = () => {
-        const targetDate = new Date('2025-11-21T09:00:00+05:30').getTime();
+        const targetDate = new Date('2025-11-21T00:00:00+05:30').getTime();
         const now = new Date().getTime();
         const difference = targetDate - now;
         let timeLeft = { days: 0, hours: 0, minutes: 0, seconds: 0 };
@@ -200,6 +200,45 @@ const Countdown = () => {
         </div>
     );
 };
+
+function AboutSection() {
+    return (
+        <section id="about" className="relative py-20 sm:py-32 px-4 overflow-hidden bg-gradient-to-b from-transparent to-[#010101]/80">
+            <div className="absolute top-0 left-0 w-1/2 h-1/2 bg-gradient-radial from-purple-900/30 to-transparent blur-3xl"></div>
+            <div className="absolute bottom-0 right-0 w-1/2 h-1/2 bg-gradient-radial from-blue-900/30 to-transparent blur-3xl"></div>
+            
+            <div className="relative z-20 max-w-4xl mx-auto text-center">
+                <motion.h2 
+                    className="font-display text-5xl md:text-6xl gradient-title drop-shadow-[0_4px_10px_rgba(181,61,161,0.3)]"
+                    initial={{ opacity: 0, y: -20 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true, amount: 0.8 }}
+                    transition={{ duration: 0.7 }}
+                >
+                    About Us
+                </motion.h2>
+                <motion.p 
+                    className="font-sans text-lg sm:text-xl text-[#ffd4b9] mt-8 leading-relaxed max-w-3xl mx-auto"
+                    initial={{ opacity: 0 }}
+                    whileInView={{ opacity: 1 }}
+                    viewport={{ once: true, amount: 0.5 }}
+                    transition={{ duration: 0.7, delay: 0.2 }}
+                >
+                    Dive into PECFEST 2025! Step into a neon-infused world where innovation meets artistic expression. PECFEST 2025 is your ticket to an electrifying experience that blends cutting-edge tech with vibrant culture. Join over 50,000 creators and dreamers as we shatter conventions. Get inspired by visionary talks, lose yourself in mind-blowing performances, and connect with a diverse community that thrives on passion. Embrace the future where tradition meets innovation, and creativity knows no limits.
+                </motion.p>
+                <motion.p 
+                    className="font-aladin text-3xl text-[#fea6cc] mt-8"
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    whileInView={{ opacity: 1, scale: 1 }}
+                    viewport={{ once: true, amount: 0.8 }}
+                    transition={{ duration: 0.5, delay: 0.4, type: 'spring', stiffness: 100 }}
+                >
+                    Are you ready to ride the wave of inspiration?
+                </motion.p>
+            </div>
+        </section>
+    );
+}
 
 export default function LandingPage() {
     const { user, loading } = useAuth();
@@ -260,7 +299,7 @@ export default function LandingPage() {
 
                 <div className="relative z-20">
 
-                    <section id="about" className="min-h-screen flex flex-col items-center justify-center text-center p-4">
+                    <section id="home" className="min-h-screen flex flex-col items-center justify-center text-center p-4">
                         <header className="flex flex-col items-center pt-20">
                             <motion.h1
                                 className="font-display text-8xl md:text-9xl gradient-title drop-shadow-[0_4px_10px_rgba(181,61,161,0.3)] flex flex-col items-center leading-[0.8]"
@@ -294,6 +333,8 @@ export default function LandingPage() {
                             )}
                         </motion.div>
                     </section>
+
+                    <AboutSection />
 
                 </div>
 

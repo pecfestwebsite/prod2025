@@ -93,12 +93,23 @@ export async function POST(request: NextRequest) {
     }
     const feesPaid = event.regFees === 0 ? 0 : body.feesPaid;
 
+    // Calculate total fees: event fees + accommodation fees - discount
+    const eventFees = event.regFees || 0;
+    const accommodationFees = body.accommodationFees || 0;
+    const discount = body.discount || 0;
+    const totalFees = Math.max(0, eventFees + accommodationFees - discount);
+
     const registrationData = {
       eventId: body.eventId.trim(),
       userId: userId,
       teamId: body.teamId ? body.teamId.trim() : '',
       verified: body.verified ?? false,
       feesPaid,
+      discount: discount,
+      accommodationRequired: body.accommodationRequired || false,
+      accommodationMembers: body.accommodationMembers || 0,
+      accommodationFees: accommodationFees,
+      totalFees: totalFees,
       dateTime: body.dateTime ? new Date(body.dateTime) : new Date(),
     };
 

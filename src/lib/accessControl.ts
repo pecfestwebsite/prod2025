@@ -47,10 +47,24 @@ export function canDeleteEvent(accessLevel: number): boolean {
 }
 
 /**
+ * Check if user can create/manage discounts
+ */
+export function canManageDiscounts(accessLevel: number): boolean {
+  return accessLevel === 2 || accessLevel === 3;
+}
+
+/**
  * Check if user can verify registrations
  */
 export function canVerifyRegistrations(accessLevel: number): boolean {
   return accessLevel === 2 || accessLevel === 3;
+}
+
+/**
+ * Check if user can delete registrations (Webmaster only)
+ */
+export function canDeleteRegistrations(accessLevel: number): boolean {
+  return accessLevel === 3;
 }
 
 /**

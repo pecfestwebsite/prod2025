@@ -15,6 +15,9 @@ interface RegistrationWithEvent {
   feesPaid: string;
   dateTime: string;
   createdAt: string;
+  discount?: number;
+  accommodationMembers?: number;
+  totalFees?: number;
 }
 
 async function getRegistrations(): Promise<RegistrationWithEvent[]> {
@@ -49,6 +52,9 @@ async function getRegistrations(): Promise<RegistrationWithEvent[]> {
         feesPaid: reg.feesPaid,
         dateTime: reg.dateTime.toISOString(),
         createdAt: reg.createdAt.toISOString(),
+        discount: reg.discount || 0,
+        accommodationMembers: reg.accommodationMembers || 0,
+        totalFees: reg.totalFees || 0,
       };
     });
   } catch (error) {

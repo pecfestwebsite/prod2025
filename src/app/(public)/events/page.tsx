@@ -10,8 +10,10 @@ import { useAuth } from '@/lib/hooks/useAuth';
 
 const TwinklingStars = () => {
   const [stars, setStars] = useState<any[]>([]);
+  const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
+    setIsClient(true);
     const generatedStars = Array.from({ length: 400 }).map((_, i) => ({
       id: i,
       x: `${Math.random() * 100}%`,
@@ -22,6 +24,8 @@ const TwinklingStars = () => {
     }));
     setStars(generatedStars);
   }, []);
+
+  if (!isClient) return null;
 
   return (
     <>
@@ -788,8 +792,8 @@ export default function EventsPage() {
         </div>
 
         {/* Floating Search Bar */}
-        <div className="sticky top-0 z-30 py-4 bg-blue-800/10 backdrop-blur-lg shadow-lg" ref={filterMenuRef}>
-          <div className="max-w-4xl mx-auto px-4 flex items-center gap-4">
+        <div className="sticky top-20 z-30 py-4 bg-blue-800/10 backdrop-blur-lg shadow-lg" ref={filterMenuRef}>
+          <div className="max-w-4xl mx-auto px-4 md:px-6 flex items-center gap-2 md:gap-4">
             
 
             {/* Search Bar */}
