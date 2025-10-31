@@ -14,7 +14,7 @@ export async function POST(request: NextRequest) {
   try {
     // Verify JWT token - check Authorization header first, then cookies
     let token = request.headers.get('authorization')?.replace('Bearer ', '');
-    
+
     if (!token) {
       token = request.cookies.get('adminToken')?.value;
     }
@@ -28,9 +28,9 @@ export async function POST(request: NextRequest) {
 
     const userSecret = process.env.JWT_USER_SECRET || 'your-user-secret-key-change-in-production';
     const adminSecret = process.env.JWT_SECRET || 'your-admin-secret-key-change-in-production';
-    
+
     let decoded;
-    
+
     // Try to verify with user secret first
     try {
       decoded = jwt.verify(token, userSecret) as {
@@ -83,6 +83,24 @@ export async function POST(request: NextRequest) {
         { status: 404 }
       );
     }
+
+    // Check if user is already registered for this event
+    const existingRegistration = await Registration.findOne({
+      eventId: body.eventId,
+      userId: userId,
+    });
+
+    if (existingRegistration) {
+      return NextResponse.json(
+        {
+          error: 'You are already registered for this event',
+          alreadyRegistered: true,
+          registration: existingRegistration,
+        },
+        { status: 409 } // 409 Conflict
+      );
+    }
+
     if (event.regFees > 0) {
       if (body.feesPaid === undefined || body.feesPaid === null) {
         return NextResponse.json(
@@ -117,7 +135,7 @@ export async function POST(request: NextRequest) {
 
     // Fetch user details for sending email
     const user = await User.findOne({ email: userId });
-    
+
     // Send confirmation email to the user
     try {
       const emailData = {
@@ -146,6 +164,10 @@ export async function POST(request: NextRequest) {
           timeZone: 'Asia/Kolkata',
         }),
         eventLocation: event.location,
+        accommodationRequired: body.accommodationRequired || false,
+        accommodationMembers: body.accommodationMembers || 0,
+        accommodationFees: accommodationFees,
+        receiptUrl: typeof feesPaid === 'string' ? feesPaid : undefined,
       };
 
       // Send email asynchronously (don't wait for it to complete)
@@ -180,7 +202,7 @@ export async function GET(request: NextRequest) {
   try {
     // Verify JWT token - check Authorization header first, then cookies
     let token = request.headers.get('authorization')?.replace('Bearer ', '');
-    
+
     if (!token) {
       token = request.cookies.get('adminToken')?.value;
     }
@@ -194,10 +216,10 @@ export async function GET(request: NextRequest) {
 
     const userSecret = process.env.JWT_USER_SECRET || 'your-user-secret-key-change-in-production';
     const adminSecret = process.env.JWT_SECRET || 'your-admin-secret-key-change-in-production';
-    
+
     let decoded;
     let isAdmin = false;
-    
+
     // Try to verify with admin secret first
     try {
       decoded = jwt.verify(token, adminSecret) as {
@@ -248,23 +270,47 @@ export async function GET(request: NextRequest) {
 
     // If admin, allow seeing all registrations or filtered by optional params
     // If user, only allow seeing their own registrations
+
     if (!isAdmin) {
       // Regular users can only see their own registrations
-      // If userId is requested, ensure it matches the authenticated user (by userId or email)
-      if (userId && userId !== decoded.userId && userId !== decoded.email) {
-        return NextResponse.json(
-          { error: 'Cannot view other user\'s registrations' },
-          { status: 403 }
-        );
+      // 🚀 FIX IMPLEMENTED: Skip the userId filter if teamId is present for validation
+      if (teamId) {
+        // Do nothing. Query will rely on eventId and teamId to find the team record.
+      } else {
+        // If userId is requested, ensure it matches the authenticated user (by userId or email)
+        if (userId && userId !== decoded.userId && userId !== decoded.email) {
+          return NextResponse.json(
+            { error: 'Cannot view other user\'s registrations' },
+            { status: 403 }
+          );
+        }
+        // If NO teamId, apply userId filter for security
+        query.userId = userId || decoded.email;
       }
-      // If no userId specified, default to current user's registrations (using email)
-      query.userId = userId || decoded.email;
     } else {
       // Admin can filter by userId if provided, otherwise see all
       if (userId) {
         query.userId = userId;
       }
     }
+
+    // if (!isAdmin) {
+    //   // Regular users can only see their own registrations
+    //   // If userId is requested, ensure it matches the authenticated user (by userId or email)
+    //   if (userId && userId !== decoded.userId && userId !== decoded.email) {
+    //     return NextResponse.json(
+    //       { error: 'Cannot view other user\'s registrations' },
+    //       { status: 403 }
+    //     );
+    //   }
+    //   // If no userId specified, default to current user's registrations (using email)
+    //   query.userId = userId || decoded.email;
+    // } else {
+    //   // Admin can filter by userId if provided, otherwise see all
+    //   if (userId) {
+    //     query.userId = userId;
+    //   }
+    // }
 
     if (eventId) {
       query.eventId = eventId;

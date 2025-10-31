@@ -34,7 +34,7 @@ const ParallaxDesert = () => {
     const layer3X = useTransform(mouseX, (v) => v * -0.06);
 
     return (
-        <div className="absolute inset-0 z-0 overflow-hidden bg-gradient-to-b from-[#010101] via-[#140655] to-[#2a0a56]"> 
+        <div className="fixed inset-0 z-0 overflow-hidden bg-gradient-to-b from-[#010101] via-[#140655] to-[#2a0a56]"> 
             <TwinklingStars />
             
             <motion.div 

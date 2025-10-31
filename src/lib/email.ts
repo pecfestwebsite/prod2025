@@ -4,6 +4,11 @@ interface EmailOptions {
   to: string;
   subject: string;
   html: string;
+  attachments?: Array<{
+    filename: string;
+    path?: string;
+    href?: string;
+  }>;
 }
 
 interface RegistrationEmailData {
@@ -906,6 +911,10 @@ interface RegistrationConfirmationData {
   registrationDate: string;
   eventDateTime: string;
   eventLocation?: string;
+  accommodationRequired?: boolean;
+  accommodationMembers?: number;
+  accommodationFees?: number;
+  receiptUrl?: string;
 }
 
 // Generate HTML template for initial registration confirmation
@@ -1255,6 +1264,33 @@ const generateRegistrationConfirmationTemplate = (data: RegistrationConfirmation
             </div>
             ` : ''}
 
+            ${data.accommodationRequired ? `
+            <!-- ACCOMMODATION DETAILS SECTION -->
+            <div class="section">
+              <div class="section-title">🏨 Accommodation Details</div>
+              <div class="highlight-box">
+                <h3>✅ Accommodation Booked</h3>
+                <div class="info-grid" style="margin-top: 15px;">
+                  <div class="info-row">
+                    <div class="info-label">Number of Members:</div>
+                    <div class="info-value" style="font-weight: 700; color: #b53da1;">${data.accommodationMembers || 0}</div>
+                  </div>
+                  <div class="info-row">
+                    <div class="info-label">Accommodation Fees:</div>
+                    <div class="info-value" style="font-weight: 700; color: #b53da1;">₹${data.accommodationFees || 0}</div>
+                  </div>
+                  <div class="info-row">
+                    <div class="info-label">Status:</div>
+                    <div class="info-value" style="color: #f59e0b; font-weight: 600;">⏳ Pending Confirmation</div>
+                  </div>
+                </div>
+                <p style="margin-top: 15px; color: #2a0a56; font-size: 13px;">
+                  <strong>Note:</strong> Your accommodation request is being processed. You will receive further details about check-in procedures and room allocation once your registration is verified.
+                </p>
+              </div>
+            </div>
+            ` : ''}
+
             <div class="divider"></div>
 
             <!-- WHAT'S NEXT SECTION -->
@@ -1306,11 +1342,23 @@ export const sendRegistrationConfirmationEmail = async (
     const subject = `Registration Confirmed - ${data.eventName} | Pecfest 2025`;
     const html = generateRegistrationConfirmationTemplate(data);
 
-    return await sendEmail({
+    const emailOptions: EmailOptions = {
       to: data.userEmail,
       subject,
       html,
-    });
+    };
+
+    // Add receipt attachment for team leaders only
+    if (data.isLeader && data.receiptUrl) {
+      emailOptions.attachments = [
+        {
+          filename: 'payment-receipt.jpg',
+          href: data.receiptUrl,
+        },
+      ];
+    }
+
+    return await sendEmail(emailOptions);
   } catch (error) {
     console.error('Error sending registration confirmation email:', error);
     return false;

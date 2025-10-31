@@ -37,7 +37,7 @@ export default function MagicLamp() {
   return (
     <>
       {/* Audio element */}
-      <audio ref={audioRef} src="/ReelAudio-80274.mp3" />
+      <audio ref={audioRef} src="/ReelAudio-80274.mp3" crossOrigin="anonymous" />
 
       {/* Magic Lamp Container */}
       <div className="fixed bottom-4 right-4 z-50 cursor-pointer">

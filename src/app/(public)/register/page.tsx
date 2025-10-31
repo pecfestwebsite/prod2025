@@ -135,6 +135,8 @@ export default function RegisterPage() {
       // Store JWT token in localStorage
       if (verifyData.token) {
         localStorage.setItem('token', verifyData.token);
+        const event = new Event('tokenChanged');
+        window.dispatchEvent(event);
       }
 
       // OTP is valid - check if this is an existing user or new registration
@@ -239,6 +241,7 @@ export default function RegisterPage() {
       if (!response.ok) {
         throw new Error(data.error || 'Registration failed');
       }
+      await refreshAuth();
 
       setSuccess('Registration successful! Redirecting...');
       // Redirect to home page after a brief delay

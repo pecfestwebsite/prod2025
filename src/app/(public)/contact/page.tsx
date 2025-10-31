@@ -180,6 +180,21 @@ export default function ContactPage() {
                 .font-display { font-family: 'Protest Guerrilla', sans-serif; }
                 .font-aladin { font-family: 'Aladin', cursive; }
                 .font-arabian { font-family: 'Scheherazade New', serif; }
+                
+                @supports (background-clip: text) {
+                  .gradient-title {
+                    color: white;
+                    background: linear-gradient(to right, #fea6cc, #ffd4b9, #fea7a0);
+                    background-clip: text;
+                    -webkit-background-clip: text;
+                    -webkit-text-fill-color: transparent;
+                  }
+                }
+                @supports not (background-clip: text) {
+                  .gradient-title {
+                    color: #fea6cc;
+                  }
+                }
             `}</style>
             
             <main className="relative w-full bg-[#010101] overflow-x-hidden text-white">
@@ -202,7 +217,7 @@ export default function ContactPage() {
                             transition={{ duration: 0.5, ease: 'easeOut' }}
                         >
                             <motion.h1
-                                className="font-aladin text-6xl md:text-7xl text-center text-transparent bg-clip-text bg-gradient-to-r from-[#fea6cc] via-[#ffd4b9] to-[#fea7a0] mb-10"
+                                className="font-aladin text-6xl md:text-7xl text-center gradient-title mb-10"
                                 initial={{ opacity: 0, y: -30 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ duration: 0.7, ease: 'easeOut' }}

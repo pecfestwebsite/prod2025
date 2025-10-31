@@ -4,10 +4,11 @@ import { SpeedInsights } from "@vercel/speed-insights/next"
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
-      <body>
+    <html lang="en" className="dark">
+      <body className="dark:bg-gray-900">
         {children}
         <MagicLamp />
+        <SpeedInsights />
       </body>
     </html>
   );

@@ -49,6 +49,8 @@ export default function EventRegistrationForm({ event, onClose, onSuccess }: Reg
   const [accommodationRequired, setAccommodationRequired] = useState(false);
   const [accommodationMembers, setAccommodationMembers] = useState<number>(0);
   const [accommodationError, setAccommodationError] = useState('');
+  const [existingRegistration, setExistingRegistration] = useState<any>(null);
+  const [isCheckingRegistration, setIsCheckingRegistration] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const maxTeamMembers = event.maxTeamMembers || 1;
@@ -92,6 +94,40 @@ export default function EventRegistrationForm({ event, onClose, onSuccess }: Reg
     };
     checkAuth();
   }, []);
+
+  // Check if user is already registered for this event
+  useEffect(() => {
+    const checkExistingRegistration = async () => {
+      if (!currentUser || !event.eventId) return;
+
+      setIsCheckingRegistration(true);
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) return;
+
+        const response = await fetch(
+          `/api/registrations?eventId=${event.eventId}&userId=${currentUser}`,
+          {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+            },
+          }
+        );
+
+        const data = await response.json();
+        if (response.ok && data.registrations && data.registrations.length > 0) {
+          // User is already registered
+          setExistingRegistration(data.registrations[0]);
+        }
+      } catch (err) {
+        console.error('Error checking existing registration:', err);
+      } finally {
+        setIsCheckingRegistration(false);
+      }
+    };
+
+    checkExistingRegistration();
+  }, [currentUser, event.eventId]);
 
   // Generate Team ID when user selects leader role
   useEffect(() => {
@@ -537,10 +573,12 @@ export default function EventRegistrationForm({ event, onClose, onSuccess }: Reg
           </button>
 
           {/* Auth Check Loading */}
-          {isCheckingAuth ? (
+          {isCheckingAuth || isCheckingRegistration ? (
             <div className="p-12 flex flex-col items-center justify-center">
               <Loader2 className="w-12 h-12 text-[#fea6cc] animate-spin mb-4" />
-              <p className="text-[#ffd4b9]">Checking authentication...</p>
+              <p className="text-[#ffd4b9]">
+                {isCheckingAuth ? 'Checking authentication...' : 'Checking registration status...'}
+              </p>
             </div>
           ) : !currentUser ? (
             <div className="p-12 text-center">
@@ -554,6 +592,119 @@ export default function EventRegistrationForm({ event, onClose, onSuccess }: Reg
                 Go to Login
               </Link>
             </div>
+          ) : existingRegistration ? (
+            /* Already Registered Status View */
+            <>
+              <div className="p-6 pb-4 border-b border-[#b53da1]/30">
+                <h2 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#fea6cc] via-[#ffd4b9] to-[#fea7a0] font-arabian">
+                  Already Registered
+                </h2>
+                <p className="text-[#fea6cc]/80 mt-2 font-medium">{event.eventName}</p>
+              </div>
+
+              <div className="p-8">
+                <div className="bg-gradient-to-br from-[#10b981]/20 to-[#059669]/20 border-2 border-[#10b981]/50 rounded-2xl p-6 mb-6">
+                  <div className="flex items-center gap-3 mb-4">
+                    <CheckCircle className="w-12 h-12 text-green-400" />
+                    <div>
+                      <h3 className="text-xl font-bold text-white">Registration Complete</h3>
+                      <p className="text-[#ffd4b9] text-sm">You have already registered for this event</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Registration Details */}
+                <div className="space-y-4 mb-6">
+                  <div className="bg-[#010101]/30 border border-[#b53da1]/30 rounded-xl p-4">
+                    <h4 className="text-[#fea6cc] font-semibold mb-3 flex items-center gap-2">
+                      <AlertCircle className="w-5 h-5" />
+                      Registration Status
+                    </h4>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-[#ffd4b9]/70">Verification Status:</span>
+                        <span className={`font-semibold ${existingRegistration.verified ? 'text-green-400' : 'text-yellow-400'}`}>
+                          {existingRegistration.verified ? '✓ Verified' : '⏳ Pending Verification'}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-[#ffd4b9]/70">Registration Date:</span>
+                        <span className="text-white font-medium">
+                          {new Date(existingRegistration.dateTime).toLocaleDateString('en-US', {
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric',
+                          })}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-[#ffd4b9]/70">Total Fees:</span>
+                        <span className="text-white font-bold">₹{existingRegistration.totalFees || event.regFees}</span>
+                      </div>
+                      {existingRegistration.teamId && (
+                        <div className="flex justify-between items-center">
+                          <span className="text-[#ffd4b9]/70">Team ID:</span>
+                          <div className="flex items-center gap-2">
+                            <span className="text-white font-mono text-xs bg-[#010101]/50 px-2 py-1 rounded">
+                              {existingRegistration.teamId}
+                            </span>
+                            <button
+                              onClick={() => {
+                                navigator.clipboard.writeText(existingRegistration.teamId);
+                                setTeamIdCopied(true);
+                                setTimeout(() => setTeamIdCopied(false), 2000);
+                              }}
+                              className="p-1.5 bg-[#b53da1]/40 hover:bg-[#b53da1]/60 rounded transition-all"
+                            >
+                              <Copy className="w-3.5 h-3.5 text-white" />
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                      {existingRegistration.accommodationRequired && (
+                        <>
+                          <div className="flex justify-between">
+                            <span className="text-[#ffd4b9]/70">Accommodation:</span>
+                            <span className="text-white font-medium">
+                              ✓ Booked ({existingRegistration.accommodationMembers} members)
+                            </span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-[#ffd4b9]/70">Accommodation Fees:</span>
+                            <span className="text-white font-bold">₹{existingRegistration.accommodationFees}</span>
+                          </div>
+                        </>
+                      )}
+                      {existingRegistration.discount > 0 && (
+                        <div className="flex justify-between">
+                          <span className="text-[#ffd4b9]/70">Discount Applied:</span>
+                          <span className="text-green-400 font-bold">-₹{existingRegistration.discount}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {!existingRegistration.verified && (
+                    <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-4">
+                      <p className="text-yellow-200 text-sm flex items-start gap-2">
+                        <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
+                        <span>
+                          Your registration is pending verification by our admin team. You will receive a confirmation email once verified.
+                          {event.regFees > 0 && ' Please ensure your payment receipt has been submitted correctly.'}
+                        </span>
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                <button
+                  onClick={onClose}
+                  className="w-full bg-gradient-to-r from-[#b53da1] to-[#ed6ab8] text-white font-bold py-3 px-6 rounded-xl hover:from-[#ed6ab8] hover:to-[#b53da1] transition-all duration-300 transform hover:scale-105"
+                >
+                  Close
+                </button>
+              </div>
+            </>
           ) : (
             <>
               {/* Header */}

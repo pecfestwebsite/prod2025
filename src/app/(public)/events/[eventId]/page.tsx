@@ -3,9 +3,9 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Home, Calendar, MapPin, Users, IndianRupee, ArrowLeft, ExternalLink, Phone, Mail } from 'lucide-react';
-import { IEvent } from '@/models/Event';
+import { IEvent } from '@/models/Event'; 
 import Link from 'next/link';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import EventRegistrationForm from '@/components/EventRegistrationForm';
 
 const TwinklingStars = () => {
@@ -76,6 +76,7 @@ const FloatingLantern = ({ duration, size, x, y, delay }: { duration: number, si
 
 export default function EventDescriptionPage() {
   const params = useParams();
+  const router = useRouter();
   const eventId = params?.eventId as string;
   const [event, setEvent] = useState<IEvent | null>(null);
   const [loading, setLoading] = useState(true);
@@ -169,13 +170,28 @@ export default function EventDescriptionPage() {
     <>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Protest+Guerrilla&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Aladin&family=Inter:wght@400;700&display=swap');
         @import url('https://fonts.googleapis.com/css2?family=Scheherazade+New:wght@400;700&display=swap');
-        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&display=swap');
 
-        body { font-family: 'Scheherazade New', serif; background-color: #010101; }
+        body { font-family: 'Inter', sans-serif; background-color: #010101; }
         .font-display { font-family: 'Protest Guerrilla', sans-serif; }
+        .font-aladin { font-family: 'Aladin', cursive; }
         .font-arabian { font-family: 'Scheherazade New', serif; }
-        .font-elegant { font-family: 'Playfair Display', serif; }
+        
+        @supports (background-clip: text) {
+          .gradient-title {
+            color: white;
+            background: linear-gradient(to right, #fea6cc, #ffd4b9, #fea7a0);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+          }
+        }
+        @supports not (background-clip: text) {
+          .gradient-title {
+            color: #fea6cc;
+          }
+        }
       `}</style>
 
       <main className="min-h-screen bg-blue-800/5 text-white relative">
@@ -186,61 +202,81 @@ export default function EventDescriptionPage() {
         <FloatingLantern duration={17} size={28} x="80%" y="8%" delay={0.5} />
         <FloatingLantern duration={14} size={27} x="95%" y="18%" delay={1.8} />
 
-        {/* Navigation Bar */}
-        <div className="sticky top-0 z-30 py-4 bg-blue-800/10 backdrop-blur-lg shadow-lg">
-          <div className="max-w-6xl mx-auto px-4 flex items-center gap-4">
-            <Link href="/events" className="flex items-center justify-center gap-2 px-4 py-3 bg-blue-900/40 border-2 border-purple-500/50 rounded-full text-white font-medium hover:border-purple-400/80 transition-all">
-              <ArrowLeft size={16} />
-              <span>Back</span>
-            </Link>
-            <Link href="/" className="flex items-center justify-center gap-2 px-4 py-3 bg-blue-900/40 border-2 border-purple-500/50 rounded-full text-white font-medium hover:border-purple-400/80 transition-all">
-              <Home size={16} />
-              <span className="hidden md:inline">Home</span>
-            </Link>
-          </div>
-        </div>
-
         {/* Event Details Container */}
-        <div className="max-w-6xl mx-auto px-4 py-12 relative z-10">
+        <div className="max-w-6xl mx-auto px-4 py-12 pt-24 relative z-10">
           <motion.div
             initial={{ opacity: 0, y: 50 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
           >
-            <div className={`relative bg-gradient-to-br ${getCategoryColor(event.category)} backdrop-blur-lg rounded-3xl p-8 border-2 shadow-2xl`}>
-              {/* Category Badge */}
-              <div className="absolute top-6 right-6 z-10">
-                <div className="bg-gradient-to-r from-[#b53da1]/20 to-[#ed6ab8]/20 backdrop-blur-sm rounded-full p-4 border border-[#b53da1]/40">
-                  <span className="text-4xl">{getCategoryIcon(event.category)}</span>
+            <div className={`relative bg-gradient-to-br ${getCategoryColor(event.category)} backdrop-blur-lg rounded-3xl p-6 md:p-8 border-2 shadow-2xl`}>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 md:gap-12 items-center">
+                {/* Left Column: Image */}
+                <motion.div
+                  className="relative w-full aspect-square rounded-2xl overflow-hidden border-2 border-[#b53da1]/30 mb-8 md:mb-0"
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: 0.2, duration: 0.5 }}
+                >
+                  {event.image && (
+                    <img
+                      src={event.image}
+                      alt={event.eventName}
+                      className="w-full h-full object-contain"
+                    />
+                  )}
+                  <div className="absolute top-4 right-4 z-10 bg-gradient-to-r from-[#b53da1]/20 to-[#ed6ab8]/20 backdrop-blur-sm rounded-full p-4 border border-[#b53da1]/40">
+                    <span className="text-4xl">{getCategoryIcon(event.category)}</span>
+                  </div>
+                </motion.div>
+
+
+                {/* Right Column: Details & Actions */}
+                <div className="flex flex-col text-center md:text-left">
+                  <motion.h1 
+                    className="text-5xl md:text-6xl font-bold gradient-title mb-4 font-display drop-shadow-[0_4px_10px_rgba(237,106,184,0.3)]"
+                    initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3, duration: 0.5 }}
+                  >
+                    {event.eventName}
+                  </motion.h1>
+
+                  <motion.p 
+                    className="text-2xl text-[#fea6cc] mb-8 font-arabian"
+                    initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4, duration: 0.5 }}
+                  >
+                    Organized by {event.societyName}
+                    {event.additionalClub && event.additionalClub !== 'None' && (
+                      <span> & {event.additionalClub}</span>
+                    )}
+                  </motion.p>
+
+                  {/* Action Buttons */}
+                  <motion.div className="flex flex-col sm:flex-row gap-4" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5, duration: 0.5 }}>
+                    <button
+                      onClick={() => setShowRegistrationForm(true)}
+                      className="flex-1 bg-gradient-to-r from-[#fea6cc] to-[#ffd4b9] text-[#010101] font-bold py-4 px-8 rounded-2xl hover:from-[#ffd4b9] hover:to-[#fea7a0] transition-all duration-300 transform hover:scale-105 font-arabian text-xl shadow-lg hover:shadow-xl"
+                    >
+                      Register Now
+                    </button>
+
+                    {event.pdfLink && event.pdfLink !== '/' && (
+                      <a
+                        href={event.pdfLink}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center justify-center gap-2 bg-gradient-to-r from-[#2a0a56]/80 to-[#4321a9]/80 border-2 border-[#b53da1]/50 text-[#ffd4b9] py-4 px-8 rounded-2xl hover:bg-gradient-to-r hover:from-[#b53da1]/40 hover:to-[#ed6ab8]/40 hover:border-[#fea6cc] transition-all duration-300 shadow-lg hover:shadow-xl font-arabian text-xl font-bold"
+                      >
+                        <ExternalLink className="w-5 h-5" />
+                        <span>View Details PDF</span>
+                      </a>
+                    )}
+                  </motion.div>
                 </div>
               </div>
 
-              {/* Event Image */}
-              {event.image && (
-                <div className="rounded-2xl overflow-hidden border-2 border-[#b53da1]/30 mb-8 w-full">
-                  <img
-                    src={event.image}
-                    alt={event.eventName}
-                    className="w-full h-auto object-contain"
-                  />
-                </div>
-              )}
-
-              {/* Event Title */}
-              <h1 className="text-5xl md:text-6xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#ffd4b9] via-[#fea6cc] to-[#ed6ab8] mb-4 font-display text-center drop-shadow-[0_4px_10px_rgba(237,106,184,0.3)]">
-                {event.eventName}
-              </h1>
-
-              {/* Society Name */}
-              <p className="text-2xl text-[#fea6cc] text-center mb-8 font-arabian">
-                Organized by {event.societyName}
-                {event.additionalClub && event.additionalClub !== 'None' && (
-                  <span> & {event.additionalClub}</span>
-                )}
-              </p>
-
               {/* Event Details Grid */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-12 mb-8">
                 {/* Date & Time */}
                 <div className="bg-black/20 rounded-2xl p-6 border border-[#b53da1]/30">
                   <div className="flex items-center gap-3 mb-2">
@@ -290,36 +326,6 @@ export default function EventDescriptionPage() {
                 <p className="text-white font-arabian text-lg leading-relaxed whitespace-pre-wrap">
                   {event.briefDescription}
                 </p>
-              </div>
-
-              {/* Contact Info */}
-              <div className="bg-black/20 rounded-2xl p-6 border border-[#b53da1]/30 mb-8">
-                <h3 className="text-2xl font-bold text-[#ffd4b9] mb-4 font-elegant">Contact Information</h3>
-                <p className="text-white font-arabian text-lg whitespace-pre-wrap">
-                  {event.contactInfo}
-                </p>
-              </div>
-
-              {/* Action Buttons */}
-              <div className="flex flex-col sm:flex-row gap-4">
-                <button
-                  onClick={() => setShowRegistrationForm(true)}
-                  className="flex-1 bg-gradient-to-r from-[#fea6cc] to-[#ffd4b9] text-[#010101] font-bold py-4 px-8 rounded-2xl hover:from-[#ffd4b9] hover:to-[#fea7a0] transition-all duration-300 transform hover:scale-105 font-arabian text-xl shadow-lg hover:shadow-xl"
-                >
-                  Register Now
-                </button>
-
-                {event.pdfLink && (
-                  <a
-                    href={event.pdfLink}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center justify-center gap-2 bg-gradient-to-r from-[#2a0a56]/80 to-[#4321a9]/80 border-2 border-[#b53da1]/50 text-[#ffd4b9] py-4 px-8 rounded-2xl hover:bg-gradient-to-r hover:from-[#b53da1]/40 hover:to-[#ed6ab8]/40 hover:border-[#fea6cc] transition-all duration-300 shadow-lg hover:shadow-xl font-arabian text-xl font-bold"
-                  >
-                    <ExternalLink className="w-5 h-5" />
-                    <span>View Details PDF</span>
-                  </a>
-                )}
               </div>
             </div>
           </motion.div>

@@ -4,6 +4,8 @@ import Registration from '@/models/Registration';
 import Event from '@/models/Event';
 import RegistrationsClient from './RegistrationsClient';
 
+export const dynamic = 'force-dynamic';
+
 interface RegistrationWithEvent {
   _id: string;
   eventId: string;

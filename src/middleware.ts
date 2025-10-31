@@ -29,10 +29,13 @@ export function middleware(request: NextRequest) {
 
   // Client routes protection
   const sessionCookie = request.cookies.get('session')?.value;
-  const publicClientRoutes = ['/', '/register', '/register', '/events', '/brochure'];
+  const publicClientRoutes = ['/', '/register', '/events', '/brochure'];
+
+  // Check if the current path is a public route or a sub-path of a public route (like /events/some-id)
+  const isPublicClientRoute = publicClientRoutes.some(route => pathname.startsWith(route));
 
   // If user is not logged in and trying to access protected routes
-  if (!sessionCookie && !publicClientRoutes.includes(pathname)) {
+  if (!sessionCookie && !isPublicClientRoute) {
     return NextResponse.redirect(new URL('/', request.url));
   }
 
@@ -40,5 +43,7 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/admin/:path*', '/events/:path*', '/brochure/:path*'],
+  matcher: [
+    '/((?!api|_next/static|_next/image|favicon.ico).*)', // Run on all routes except static files and API
+  ],
 };
