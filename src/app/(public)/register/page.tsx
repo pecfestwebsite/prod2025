@@ -122,7 +122,6 @@ export default function RegisterPage() {
       if (verifyResponse.status === 429) {
         // Rate limit or lockout response
         setError(verifyData.error);
-        setIsResendBlocked(true);
         return;
       }
       
@@ -132,28 +131,35 @@ export default function RegisterPage() {
         return;
       }
 
-      // Store JWT token in localStorage
-      if (verifyData.token) {
-        localStorage.setItem('token', verifyData.token);
-        const event = new Event('tokenChanged');
-        window.dispatchEvent(event);
-      }
-
       // OTP is valid - check if this is an existing user or new registration
-      // The verify-otp endpoint creates/updates the user, so check the response
       const userData = verifyData.user;
       
-      // If user has complete profile data, they're an existing user
+      // Check if user has complete profile data
       if (userData.name && userData.college && userData.studentId && userData.phoneNumber && userData.branch) {
+        // ✅ EXISTING USER: Login is complete, set token and redirect.
+        if (verifyData.token) {
+          localStorage.setItem('token', verifyData.token);
+          const event = new Event('tokenChanged');
+          window.dispatchEvent(event); // Triggers the useAuth hook and subsequent redirect
+        }
+
         setUserExists(true);
         setSuccess('Login successful! Redirecting...');
-        // Redirect to home page after a brief delay
-        setTimeout(() => {
-          router.push('/');
-        }, 800);
       } else {
-        // New user - need to complete registration
+        // 📝 NEW USER: Need to complete registration.
+        // Store token but DO NOT dispatch 'tokenChanged' to prevent premature redirect.
+        if (verifyData.token) {
+          localStorage.setItem('token', verifyData.token);
+        }
+
         setUserExists(false);
+        // Pre-fill fields if any data is present (e.g., if the user was partially registered)
+        if(userData.name) setName(userData.name);
+        if(userData.college) setCollege(userData.college);
+        if(userData.studentId) setStudentId(userData.studentId);
+        if(userData.phoneNumber) setPhoneNumber(userData.phoneNumber);
+        if(userData.branch) setBranch(userData.branch);
+
         setSuccess('Email verified! Please complete your registration.');
         setStep('details');
       }
@@ -219,7 +225,7 @@ export default function RegisterPage() {
         return;
       }
 
-      // Update user profile with the missing fields
+      // 1. Update user profile with the missing fields
       const response = await fetch('/api/auth/update-profile', {
         method: 'POST',
         headers: { 
@@ -241,13 +247,13 @@ export default function RegisterPage() {
       if (!response.ok) {
         throw new Error(data.error || 'Registration failed');
       }
-      await refreshAuth();
+      
+      // 2. Notify useAuth that registration is complete.
+      const event = new Event('tokenChanged');
+      window.dispatchEvent(event);
+      
+      // setSuccess('Registration Complete! Redirecting...'); // Removed for immediate redirection via useEffect.
 
-      setSuccess('Registration successful! Redirecting...');
-      // Redirect to home page after a brief delay
-      setTimeout(() => {
-        router.push('/');
-      }, 800);
     } catch (err: any) {
       setError(err.message || 'Registration failed');
     } finally {
@@ -255,9 +261,11 @@ export default function RegisterPage() {
     }
   };
 
-  // Redirect to home if already logged in
+  // Redirect to home if already logged in (This handles the final redirect instantly)
   useEffect(() => {
     if (!authLoading && user) {
+      // NOTE: For a production app, you might want a short delay or a check 
+      // to ensure all API calls are complete before pushing.
       router.push('/');
     }
   }, [user, authLoading, router]);
@@ -668,8 +676,4 @@ export default function RegisterPage() {
       <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-black/20 to-transparent pointer-events-none" />
     </div>
   );
-}
-
-function setIsResendBlocked(arg0: boolean) {
-  throw new Error('Function not implemented.');
 }

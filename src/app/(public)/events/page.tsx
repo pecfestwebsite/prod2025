@@ -749,15 +749,6 @@ export default function EventsPage() {
             color: #ffd4b9;
           }
         }
-        /* Force dark mode colors and prevent inversion */
-        html, body {
-          background-color: #140655 !important;
-          color: white !important;
-          color-scheme: dark !important;
-        }
-        * {
-          color-scheme: dark !important;
-        }
       `}</style>
       
       <main className="min-h-screen bg-blue-800/5 text-white relative">
@@ -801,7 +792,7 @@ export default function EventsPage() {
         </div>
 
         {/* Floating Search Bar */}
-        <div className="sticky top-20 mx-100 rounded-full z-30 py-4 bg-blue-800/10 backdrop-blur-lg shadow-lg" ref={filterMenuRef}>
+        <div className="sticky top-20 mx-4 md:mx-auto max-w-4xl rounded-full z-30 py-4 bg-blue-800/10 backdrop-blur-lg shadow-lg" ref={filterMenuRef}>
           <div className="max-w-4xl mx-auto px-4 md:px-6 flex items-center gap-2 md:gap-4">
             
 
@@ -813,7 +804,7 @@ export default function EventsPage() {
                 placeholder="Search events..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-12 pr-4 py-3 bg-blue-900/40 border-2 border-purple-500/50 rounded-full text-white placeholder-slate-400 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/30 font-medium transition-all"
+                className="w-full pl-12 pr-4 py-3 bg-blue-900/40 border-2 border-purple-500/50 rounded-full text-white placeholder:text-slate-400 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/30 font-medium transition-all"
               />
             </div>
             <div className="relative">
@@ -955,11 +946,11 @@ export default function EventsPage() {
                               Register Now
                             </button>
                             
-                            <Link href={`/events/${event.eventId}`}>
-                              <motion.div className="flex items-center justify-center bg-gradient-to-r from-[#2a0a56]/80 to-[#4321a9]/80 border-2 border-[#b53da1]/50 text-[#ffd4b9] p-3 rounded-2xl hover:bg-gradient-to-r hover:from-[#b53da1]/40 hover:to-[#ed6ab8]/40 hover:border-[#fea6cc] transition-all duration-300 shadow-lg hover:shadow-xl cursor-pointer">
+                            <motion.div whileHover={{ y: -2, scale: 1.05 }}>
+                              <Link href={`/events/${event.eventId}`} className="flex items-center justify-center bg-gradient-to-r from-[#2a0a56]/80 to-[#4321a9]/80 border-2 border-[#b53da1]/50 text-[#ffd4b9] p-3 rounded-2xl hover:bg-gradient-to-r hover:from-[#b53da1]/40 hover:to-[#ed6ab8]/40 hover:border-[#fea6cc] transition-all duration-300 shadow-lg hover:shadow-xl">
                                 <ExternalLink className="w-5 h-5" />
-                              </motion.div>
-                            </Link>
+                              </Link>
+                            </motion.div>
                           </div>
                         </div>
                       </div>
