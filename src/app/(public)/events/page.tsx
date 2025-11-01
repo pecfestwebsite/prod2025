@@ -210,14 +210,14 @@ const AlphabetIndex = ({ onLetterSelect, activeLetter }: { onLetterSelect: (lett
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
         onPointerLeave={handlePointerLeave}
-        className="fixed right-0 top-1/2 -translate-y-1/2 z-50 flex flex-col items-center justify-center bg-black/20 backdrop-blur-sm rounded-l-full py-2 px-2 cursor-pointer touch-none"
+        className="fixed right-0 top-1/2 -translate-y-1/2 z-50 flex flex-col items-center justify-center bg-black/20 backdrop-blur-sm rounded-l-full py-2 px-1 sm:px-2 cursor-pointer touch-none"
         style={{ height: 'calc(100vh - 200px)', maxHeight: '520px' }}
       >
         {alphabet.map(letter => (
           <div
             key={letter}
             data-letter={letter}
-            className={`flex-1 flex items-center justify-center text-base font-bold transition-all duration-200 ${
+            className={`flex-1 flex items-center justify-center text-xs sm:text-base font-bold transition-all duration-200 ${
               activeLetter === letter ? 'text-[#ffd4b9] scale-150' : 'text-purple-300/70 hover:text-white'
             }`}
           >
@@ -755,8 +755,8 @@ export default function EventsPage() {
         <AnimatedBackground />
 
         {/* 4 Lanterns - 2 on each side */}
-        <FloatingLantern duration={18} size={50} x="25%" y="5%" delay={0} />    {/* Leftmost, long */}
-        <FloatingLantern duration={15} size={28} x="5%" y="15%" delay={1.2} /> {/* Inner left, short */}
+        <FloatingLantern duration={18} size={50} x="15%" y="5%" delay={0} />    {/* Leftmost, long */}
+        <FloatingLantern duration={15} size={28} x="2%" y="15%" delay={1.2} /> {/* Inner left, short */}
         <FloatingLantern duration={17} size={28} x="80%" y="8%" delay={0.5} />  {/* Rightmost, long */}
         <FloatingLantern duration={14} size={27} x="95%" y="18%" delay={1.8} />  {/* Inner right, short */}
 
@@ -775,7 +775,7 @@ export default function EventsPage() {
                 <div className="w-32 h-1 bg-gradient-to-r from-transparent via-[#fea6cc] to-transparent"></div>
               </div>
               
-              <h1 className="font-display text-7xl py-2 md:text-9xl gradient-title drop-shadow-[0_8px_20px_rgba(237,106,184,0.4)] mb-6 tracking-wider">
+              <h1 className="font-display text-6xl sm:text-7xl md:text-9xl py-2 gradient-title drop-shadow-[0_8px_20px_rgba(237,106,184,0.4)] mb-6 tracking-wider">
                 EVENTS
               </h1>
               
@@ -792,7 +792,7 @@ export default function EventsPage() {
         </div>
 
         {/* Floating Search Bar */}
-        <div className="sticky top-20 mx-4 md:mx-auto max-w-4xl rounded-full z-30 py-4 bg-blue-800/10 backdrop-blur-lg shadow-lg" ref={filterMenuRef}>
+        <div className="sticky top-20 mx-2 sm:mx-4 md:mx-auto max-w-4xl rounded-full z-30 py-2 sm:py-4 bg-blue-800/10 backdrop-blur-lg shadow-lg" ref={filterMenuRef}>
           <div className="max-w-4xl mx-auto px-4 md:px-6 flex items-center gap-2 md:gap-4">
             
 
@@ -804,7 +804,7 @@ export default function EventsPage() {
                 placeholder="Search events..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-12 pr-4 py-3 bg-blue-900/40 border-2 border-purple-500/50 rounded-full text-white placeholder:text-slate-400 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/30 font-medium transition-all"
+                className="w-full pl-12 pr-4 py-2.5 sm:py-3 bg-blue-900/40 border-2 border-purple-500/50 rounded-full text-white placeholder:text-slate-400 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/30 font-medium transition-all"
               />
             </div>
             <div className="relative">
@@ -871,9 +871,9 @@ export default function EventsPage() {
               animate={{ opacity: 1 }}
               className="text-center py-20"
             >
-              <div className="text-8xl mb-6 animate-pulse">📜</div>
-              <h3 className="text-3xl font-bold text-[#ffd4b9] mb-4 font-display">No Events Found</h3>
-              <p className="text-xl text-[#fea6cc] font-arabian mb-2">Try adjusting your search or filter criteria</p>
+              <div className="text-6xl sm:text-8xl mb-6 animate-pulse">📜</div>
+              <h3 className="text-2xl sm:text-3xl font-bold text-[#ffd4b9] mb-4 font-display">No Events Found</h3>
+              <p className="text-lg sm:text-xl text-[#fea6cc] font-arabian mb-2">Try adjusting your search or filter criteria</p>
             </motion.div>
           ) : filteredEvents.length === 0 && !loading && events.length > 0 ? (
             <motion.div
@@ -881,9 +881,9 @@ export default function EventsPage() {
               animate={{ opacity: 1 }}
               className="text-center py-20"
             >
-              <div className="text-8xl mb-6 animate-pulse">🔍</div>
-              <h3 className="text-3xl font-bold text-[#ffd4b9] mb-4 font-display">No Matching Events</h3>
-              <p className="text-xl text-[#fea6cc] font-arabian mb-2">Try a different search term or adjust your filters</p>
+              <div className="text-6xl sm:text-8xl mb-6 animate-pulse">🔍</div>
+              <h3 className="text-2xl sm:text-3xl font-bold text-[#ffd4b9] mb-4 font-display">No Matching Events</h3>
+              <p className="text-lg sm:text-xl text-[#fea6cc] font-arabian mb-2">Try a different search term or adjust your filters</p>
             </motion.div>
           ) : null}
           

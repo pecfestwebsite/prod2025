@@ -48,6 +48,8 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { email, name, college, studentId, phoneNumber, referralCode, branch } = body || {};
 
+    console.log('Received update request:', { email, name, college, studentId, phoneNumber, referralCode, branch });
+
     // Validate required fields
     if (!email || !name || !college || !studentId || !phoneNumber || !branch) {
       return NextResponse.json(
@@ -68,21 +70,30 @@ export async function POST(request: NextRequest) {
 
     await dbConnect();
 
+    // Prepare update object
+    const updateData: any = {
+      name,
+      college,
+      studentId,
+      phoneNumber,
+      branch,
+    };
+
+    // Only include referralCode if it has a value
+    if (referralCode && referralCode.trim() !== '') {
+      updateData.referralCode = referralCode;
+    }
+
+    console.log('Updating user with data:', updateData);
+
     // Update user with profile information
     const user = await User.findOneAndUpdate(
       { email: normalizedEmail },
-      {
-        $set: {
-          name,
-          college,
-          studentId,
-          phoneNumber,
-          referralCode: referralCode || undefined,
-          branch,
-        },
-      },
-      { new: true }
+      { $set: updateData },
+      { new: true, runValidators: true }
     );
+
+    console.log('User after update:', user);
 
     if (!user) {
       return NextResponse.json(

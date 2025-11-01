@@ -2,7 +2,7 @@ import { Suspense } from 'react';
 import dbConnect from '@/lib/dbConnect';
 import Event from '@/models/Event';
 import CalendarClient from './CalendarClient';
-
+export const dynamic = 'force-dynamic';
 export interface IEvent {
   _id: string;
   eventId: string;

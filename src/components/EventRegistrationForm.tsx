@@ -1211,6 +1211,25 @@ export default function EventRegistrationForm({ event, onClose, onSuccess }: Reg
                       )}
                     </div>
 
+                    <div className="flex flex-col items-center gap-4">
+                      <div className="flex flex-col items-center">
+                        <div className="bg-white p-4 rounded-lg shadow-lg">
+                          <img
+                            src="/qr-code.jpg"
+                            alt="Payment QR Code"
+                            className="w-48 h-48 object-contain"
+                            onError={(e) => {
+                              // Fallback to placeholder if QR image not found
+                              (e.target as HTMLImageElement).src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTkyIiBoZWlnaHQ9IjE5MiIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTkyIiBoZWlnaHQ9IjE5MiIgZmlsbD0iI2YwZjBmMCIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTgiIGZpbGw9IiM2NjY2NjYiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj5RUiBDb2RlPC90ZXh0Pjwvc3ZnPg==';
+                            }}
+                          />
+                        </div>
+                        <p className="text-sm text-white text-center mt-3 font-mono">
+                           UPI ID:pecchdfest@sbi
+                        </p>
+                      </div>
+                    </div>
+
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div className="bg-[#2a0a56]/40 rounded-lg p-3">
                         <p className="text-xs text-[#fea6cc]/60 mb-1">Name of the payee:</p>

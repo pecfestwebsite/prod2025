@@ -142,6 +142,7 @@ export default function AdminNavbar() {
       items: [
         { label: 'Users', href: '/admin/users', icon: User },
         { label: 'Registrations', href: '/admin/registrations', icon: Users },
+        { label: 'Event Registrations', href: '/admin/eventregistrations', icon: Users },
         { label: 'Discounts', href: '/admin/discounts', icon: Percent },
         { label: 'Clearance', href: '/admin/clearance', icon: FileText },
       ],
