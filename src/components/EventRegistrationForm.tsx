@@ -586,7 +586,7 @@ export default function EventRegistrationForm({ event, onClose, onSuccess }: Reg
               <h3 className="text-2xl font-bold text-white mb-4">Login Required</h3>
               <p className="text-[#fea6cc] mb-6">You must be logged in to register for events.</p>
               <Link
-                href="/register"
+                href={`/register?redirect=${encodeURIComponent(`/events/${event.eventId}`)}`}
                 className="inline-block bg-gradient-to-r from-[#b53da1] to-[#ed6ab8] text-white font-bold py-3 px-8 rounded-xl hover:from-[#ed6ab8] hover:to-[#b53da1] transition-all duration-300 transform hover:scale-105"
               >
                 Go to Login

@@ -219,13 +219,11 @@ export default function EventDescriptionPage() {
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ delay: 0.2, duration: 0.5 }}
                 >
-                  {event.image && (
-                    <img
-                      src={event.image}
-                      alt={event.eventName}
-                      className="w-full h-full object-contain"
-                    />
-                  )}
+                  <img
+                    src={event.image?.includes('PECFEST_2024') ? '/vyom.png' : (event.image || '/vyom.png')}
+                    alt={event.eventName}
+                    className="w-full h-full object-contain" 
+                  />
                   <div className="absolute top-4 right-4 z-10 bg-gradient-to-r from-[#b53da1]/20 to-[#ed6ab8]/20 backdrop-blur-sm rounded-full p-4 border border-[#b53da1]/40">
                     <span className="text-4xl">{getCategoryIcon(event.category)}</span>
                   </div>

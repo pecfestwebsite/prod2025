@@ -22,13 +22,18 @@ interface RegistrationWithEvent {
   totalFees?: number;
 }
 
-async function getRegistrations(): Promise<RegistrationWithEvent[]> {
+async function getRegistrations(): Promise<{ registrations: RegistrationWithEvent[]; total: number }> {
   try {
     await dbConnect();
 
-    // Fetch all registrations with their related event data
+    // Get total count
+    const total = await Registration.countDocuments({});
+
+    // Fetch only first page (10 items) for initial load
+    const pageSize = 10;
     const registrations = await Registration.find({})
       .sort({ createdAt: -1 })
+      .limit(pageSize)
       .lean();
 
     // Get all unique event IDs
@@ -41,7 +46,7 @@ async function getRegistrations(): Promise<RegistrationWithEvent[]> {
     const eventMap = new Map(events.map((event: any) => [event.eventId, { eventName: event.eventName, societyName: event.societyName }]));
 
     // Combine registration data with event names and society names
-    return registrations.map((reg: any) => {
+    const processedRegistrations = registrations.map((reg: any) => {
       const eventData = eventMap.get(reg.eventId) || { eventName: 'Unknown Event', societyName: 'Unknown Society' };
       return {
         _id: reg._id.toString(),
@@ -59,9 +64,10 @@ async function getRegistrations(): Promise<RegistrationWithEvent[]> {
         totalFees: reg.totalFees || 0,
       };
     });
+    return { registrations: processedRegistrations, total };
   } catch (error) {
     console.error('Error fetching registrations:', error);
-    return [];
+    return { registrations: [], total: 0 };
   }
 }
 
@@ -80,7 +86,8 @@ function LoadingState() {
 }
 
 export default async function RegistrationsPage() {
-  const registrations = await getRegistrations();
+  const data = await getRegistrations();
+  const { registrations, total } = data;
 
   return (
     <div className="min-h-screen py-8 px-4 sm:px-6 lg:px-8 relative overflow-hidden" style={{ backgroundColor: '#140655' }}>
@@ -104,27 +111,27 @@ export default async function RegistrationsPage() {
         {/* Header Section */}
         <div className="mb-8 text-center">
           <div className="flex items-center justify-center gap-2 sm:gap-4 mb-4 flex-wrap">
-            <span className="text-4xl sm:text-5xl filter brightness-0 invert">🌙</span>
+            <span className="text-4xl sm:text-5xl filter ">💳</span>
             <h1 className="text-3xl sm:text-5xl font-bold text-white drop-shadow-lg" style={{ fontFamily: "'Protest Guerrilla', sans-serif" }}>
-              Tales of Registration
+              Payments
             </h1>
-            <span className="text-4xl sm:text-5xl filter brightness-0 invert">⭐</span>
+            <span className="text-4xl sm:text-5xl filter ">💰</span>
           </div>
           <p className="mt-3 text-lg text-slate-300 font-medium italic">
-            ✨ Chronicles of the Event Seekers ✨
+            ✨ Monitor Event Payment Status ✨
           </p>
 
           {/* Stats Cards */}
           <div className="mt-8 flex items-center justify-center gap-4 sm:gap-6 flex-wrap">
             <div className="bg-gradient-to-br from-purple-900 to-indigo-900 px-6 sm:px-8 py-3 sm:py-4 rounded-2xl shadow-2xl border-2 border-purple-500/50 backdrop-blur-sm transform hover:scale-105 transition-all duration-300 hover:shadow-purple-500/30">
               <div className="flex items-center gap-3">
-                <span className="text-2xl sm:text-3xl filter brightness-0 invert">📜</span>
+                <span className="text-2xl sm:text-3xl filter brightness-0 invert">�</span>
                 <div>
                   <div className="text-xs sm:text-sm text-slate-300 font-semibold uppercase tracking-wider">
-                    Total Scrolls
+                    Total Payments
                   </div>
                   <div className="text-2xl sm:text-3xl font-bold text-white mt-1">
-                    {registrations.length}
+                    {total}
                   </div>
                 </div>
               </div>
@@ -135,10 +142,10 @@ export default async function RegistrationsPage() {
                 <span className="text-2xl sm:text-3xl filter brightness-0 invert">✓</span>
                 <div>
                   <div className="text-xs sm:text-sm text-slate-300 font-semibold uppercase tracking-wider">
-                    Blessed
+                    Verified
                   </div>
                   <div className="text-2xl sm:text-3xl font-bold text-white mt-1">
-                    {registrations.filter((r) => r.verified).length}
+                    {registrations.filter((r: RegistrationWithEvent) => r.verified).length}
                   </div>
                 </div>
               </div>
@@ -149,10 +156,10 @@ export default async function RegistrationsPage() {
                 <span className="text-2xl sm:text-3xl filter brightness-0 invert">⏳</span>
                 <div>
                   <div className="text-xs sm:text-sm text-slate-300 font-semibold uppercase tracking-wider">
-                    Awaiting
+                    Pending
                   </div>
                   <div className="text-2xl sm:text-3xl font-bold text-white mt-1">
-                    {registrations.filter((r) => !r.verified).length}
+                    {registrations.filter((r: RegistrationWithEvent) => !r.verified).length}
                   </div>
                 </div>
               </div>
@@ -167,7 +174,7 @@ export default async function RegistrationsPage() {
 
           <div className="p-2 sm:p-6">
             <Suspense fallback={<LoadingState />}>
-              <RegistrationsClient registrations={registrations} />
+              <RegistrationsClient registrations={registrations} total={total} />
             </Suspense>
           </div>
 
@@ -178,7 +185,7 @@ export default async function RegistrationsPage() {
         {/* Footer decoration */}
         <div className="mt-8 text-center">
           <p className="text-slate-400/70 text-sm italic">
-            ✧ May your journey through these records be enlightening ✧
+            ✧ Keep track of all event payments and their status ✧
           </p>
         </div>
       </div>

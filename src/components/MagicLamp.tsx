@@ -48,7 +48,7 @@ export default function MagicLamp() {
             className="relative w-24 h-24 animate-pulse"
           >
             <Image
-              src="/aladdin lamp Sticker by M.A.C.gif"
+              src="/aladdinlampStickerMAC.gif"
               alt="Magic Lamp"
               width={96}
               height={96}

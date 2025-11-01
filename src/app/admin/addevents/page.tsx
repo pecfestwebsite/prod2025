@@ -355,7 +355,7 @@ export default function AddEventsPage() {
       setIsLoading(true);
       try {
         // Set default image if no image is provided
-        const defaultPecfestLogo = 'https://pec.ac.in/sites/default/files/styles/event/public/headline/images/PECFEST_2024-10.jpg?itok=UJX4d-Bv';
+        const defaultPecfestLogo = '/vyom.png';
         
         let imageUrl = defaultPecfestLogo;
         

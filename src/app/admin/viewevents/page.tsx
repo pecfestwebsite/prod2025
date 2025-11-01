@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { Edit2, Trash2, ChevronUp, ChevronDown, Percent } from 'lucide-react';
 import EditEventModal from '@/components/EditEventModal';
 import DeleteEventModal from '@/components/DeleteEventModal';
@@ -40,6 +41,7 @@ type SortField = 'eventName' | 'category' | 'societyName' | 'regFees' | 'dateTim
 type SortOrder = 'asc' | 'desc';
 
 export default function ViewEventsPage() {
+  const router = useRouter();
   const [events, setEvents] = useState<Event[]>([]);
   const [filteredEvents, setFilteredEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
@@ -133,6 +135,15 @@ export default function ViewEventsPage() {
   const handleCreateDiscount = (event: Event) => {
     setSelectedEventForDiscount(event);
     setShowDiscountModal(true);
+  };
+
+  const handleViewRegistrations = (event: Event) => {
+    // Navigate to event registrations page and pass event data
+    const eventData = encodeURIComponent(JSON.stringify({
+      eventId: event.eventId,
+      eventName: event.eventName,
+    }));
+    router.push(`/admin/eventregistrations?event=${eventData}`);
   };
 
   const handleSortChange = (field: SortField) => {
@@ -327,10 +338,18 @@ export default function ViewEventsPage() {
                       }`}
                     >
                       <td className="px-4 sm:px-6 py-4">
-                        <div className="font-semibold text-white line-clamp-2">{event.eventName}</div>
-                        <div className="text-xs text-slate-400 mt-1">
-                          ID: {event.eventId}
-                        </div>
+                        <button
+                          onClick={() => handleViewRegistrations(event)}
+                          className="text-left hover:text-purple-300 transition-colors cursor-pointer group"
+                          title="Click to view registrations for this event"
+                        >
+                          <div className="font-semibold text-white line-clamp-2 group-hover:text-purple-300 transition-colors">
+                            {event.eventName}
+                          </div>
+                          <div className="text-xs text-slate-400 mt-1">
+                            ID: {event.eventId}
+                          </div>
+                        </button>
                         <div className="sm:hidden mt-2 space-y-1 text-xs">
                           <span className={`inline-block px-2 py-1 rounded text-xs font-semibold ${
                             event.category === 'technical'

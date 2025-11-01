@@ -263,8 +263,21 @@ export async function GET(request: NextRequest) {
     const userId = searchParams.get('userId');
     const teamId = searchParams.get('teamId');
     const verified = searchParams.get('verified');
-    const page = parseInt(searchParams.get('page') || '1');
+    const search = searchParams.get('search'); // New search parameter
     const limit = parseInt(searchParams.get('limit') || '10');
+    
+    // Support both 'page' parameter and direct 'skip' parameter
+    const skipParam = searchParams.get('skip');
+    let skip = 0;
+    let page = 1;
+    
+    if (skipParam) {
+      skip = parseInt(skipParam);
+      page = Math.floor(skip / limit) + 1; // Calculate page number from skip
+    } else {
+      page = parseInt(searchParams.get('page') || '1');
+      skip = (page - 1) * limit;
+    }
 
     let query: any = {};
 
@@ -324,8 +337,17 @@ export async function GET(request: NextRequest) {
       query.verified = verified === 'true';
     }
 
-    const skip = (page - 1) * limit;
+    // Add search functionality - search in userId, eventId, and eventName
+    if (search) {
+      const searchRegex = new RegExp(search, 'i'); // Case-insensitive search
+      query.$or = [
+        { userId: searchRegex },
+        { eventId: searchRegex },
+        { eventName: searchRegex }
+      ];
+    }
 
+    // Use the skip value directly (either from 'skip' param or calculated from 'page')
     // Fetch registrations with pagination
     const registrations = await Registration.find(query)
       .sort({ dateTime: -1 })
@@ -333,12 +355,27 @@ export async function GET(request: NextRequest) {
       .limit(limit)
       .lean();
 
+    // Get all unique event IDs to fetch event details
+    const eventIds = [...new Set(registrations.map((reg: any) => reg.eventId))];
+    const events = await Event.find({ eventId: { $in: eventIds } }).lean();
+    const eventMap = new Map(events.map((event: any) => [event.eventId, { eventName: event.eventName, societyName: event.societyName }]));
+
+    // Combine registration data with event details
+    const enrichedRegistrations = registrations.map((reg: any) => {
+      const eventData = eventMap.get(reg.eventId) || { eventName: 'Unknown Event', societyName: 'Unknown Society' };
+      return {
+        ...reg,
+        eventName: eventData.eventName,
+        societyName: eventData.societyName,
+      };
+    });
+
     // Get total count for pagination
     const total = await Registration.countDocuments(query);
 
     return NextResponse.json(
       {
-        registrations,
+        registrations: enrichedRegistrations,
         total, // Add total at root level for easy access
         pagination: {
           total,

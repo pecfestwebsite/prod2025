@@ -1,12 +1,14 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/lib/hooks/useAuth';
 import styles from './register.module.css'; // Import CSS module
 
 export default function RegisterPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirectUrl = searchParams.get('redirect');
   const { user, loading: authLoading, refreshAuth } = useAuth();
   const [email, setEmail] = useState('');
   const [otp, setOtp] = useState('');
@@ -93,7 +95,7 @@ export default function RegisterPage() {
         throw new Error(data.error || 'Failed to send OTP');
       }
 
-      setSuccess('Code sent to your email! ✨');
+      setSuccess('Code sent to your email! ');
       setStep('otp');
       setResendTimer(60); // Set 60 second cooldown
     } catch (err: any) {
@@ -136,7 +138,7 @@ export default function RegisterPage() {
       
       // Check if user has complete profile data
       if (userData.name && userData.college && userData.studentId && userData.phoneNumber && userData.branch) {
-        // ✅ EXISTING USER: Login is complete, set token and redirect.
+        // EXISTING USER: Login is complete, set token and redirect.
         if (verifyData.token) {
           localStorage.setItem('token', verifyData.token);
           const event = new Event('tokenChanged');
@@ -146,7 +148,7 @@ export default function RegisterPage() {
         setUserExists(true);
         setSuccess('Login successful! Redirecting...');
       } else {
-        // 📝 NEW USER: Need to complete registration.
+        // NEW USER: Need to complete registration.
         // Store token but DO NOT dispatch 'tokenChanged' to prevent premature redirect.
         if (verifyData.token) {
           localStorage.setItem('token', verifyData.token);
@@ -266,9 +268,10 @@ export default function RegisterPage() {
     if (!authLoading && user) {
       // NOTE: For a production app, you might want a short delay or a check 
       // to ensure all API calls are complete before pushing.
-      router.push('/');
+      const destination = redirectUrl || '/';
+      router.push(destination);
     }
-  }, [user, authLoading, router]);
+  }, [user, authLoading, router, redirectUrl]);
 
   // Show loading state while checking auth
   if (authLoading) {

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
+import { useSearchParams } from 'next/navigation';
 import {
   Search,
   X,
@@ -11,6 +12,7 @@ import {
   Download,
   Users,
 } from 'lucide-react';
+import { getAdminUser } from '@/lib/accessControl';
 
 interface EventOption {
   eventId: string;
@@ -39,6 +41,7 @@ interface RegistrationWithDetails {
 }
 
 export default function EventRegistrationsClient() {
+  const searchParams = useSearchParams();
   const [availableEvents, setAvailableEvents] = useState<EventOption[]>([]);
   const [searchInput, setSearchInput] = useState<string>('');
   const [selectedEventId, setSelectedEventId] = useState<string>('');
@@ -48,6 +51,7 @@ export default function EventRegistrationsClient() {
   const [loadingRegistrations, setLoadingRegistrations] = useState<boolean>(false);
   const [expandedTeams, setExpandedTeams] = useState<Set<string>>(new Set());
   const [loadingEvents, setLoadingEvents] = useState<boolean>(true);
+  const [adminUser, setAdminUser] = useState<any>(null);
 
   // Fetch available events on mount
   useEffect(() => {
@@ -81,6 +85,28 @@ export default function EventRegistrationsClient() {
     };
     fetchEvents();
   }, []);
+
+  // Get admin user from localStorage on mount
+  useEffect(() => {
+    const admin = getAdminUser();
+    setAdminUser(admin);
+  }, []);
+
+  // Handle query parameter from view events page
+  useEffect(() => {
+    const eventParam = searchParams.get('event');
+    if (eventParam) {
+      try {
+        const eventData = JSON.parse(decodeURIComponent(eventParam));
+        if (eventData.eventId && eventData.eventName) {
+          setSelectedEventId(eventData.eventId);
+          setSearchInput(eventData.eventName);
+        }
+      } catch (error) {
+        console.error('Error parsing event parameter:', error);
+      }
+    }
+  }, [searchParams]);
 
   // Filter events based on search input
   useEffect(() => {
@@ -139,6 +165,55 @@ export default function EventRegistrationsClient() {
     }
   };
 
+  // Auto-search when event is selected from query parameter (from view events page)
+  useEffect(() => {
+    const autoSearch = async () => {
+      if (!selectedEventId || availableEvents.length === 0) return;
+      
+      setLoadingRegistrations(true);
+      try {
+        const res = await fetch(`/api/registrations?eventId=${selectedEventId}&limit=1000`);
+        const data = await res.json();
+        
+        let regsList: RegistrationWithDetails[] = [];
+        if (data?.registrations && Array.isArray(data.registrations)) {
+          const eventData = selectedEvent;
+          
+          regsList = data.registrations.map((reg: any) => ({
+            _id: reg._id?.toString() || '',
+            userId: reg.userId || '',
+            eventId: reg.eventId || '',
+            teamId: reg.teamId || undefined,
+            verified: reg.verified || false,
+            feesPaid: reg.feesPaid || undefined,
+            discount: reg.discount || 0,
+            accommodationRequired: reg.accommodationRequired || false,
+            accommodationMembers: reg.accommodationMembers || 0,
+            accommodationFees: reg.accommodationFees || 0,
+            totalFees: reg.totalFees || 0,
+            dateTime: reg.dateTime || '',
+            eventName: eventData?.eventName || '',
+            isTeamEvent: eventData?.isTeamEvent || false,
+          }));
+        }
+        
+        setEventRegistrations(regsList);
+        setShowDropdown(false);
+      } catch (error) {
+        console.error('Error in auto-search:', error);
+        setEventRegistrations([]);
+      } finally {
+        setLoadingRegistrations(false);
+      }
+    };
+
+    // Only auto-search if we came from view events page (have selectedEventId from query param)
+    const eventParam = searchParams.get('event');
+    if (eventParam && selectedEventId && availableEvents.length > 0 && eventRegistrations.length === 0) {
+      autoSearch();
+    }
+  }, [selectedEventId, availableEvents.length, searchParams]);
+
   // Get selected event details
   const selectedEvent = (Array.isArray(availableEvents) ? availableEvents : []).find(
     (e) => e.eventId === selectedEventId
@@ -179,25 +254,31 @@ export default function EventRegistrationsClient() {
   // Export to CSV
   const exportToCSV = () => {
     let csv =
-      'User ID,Role,Event Name,Team ID,Accommodation Members,Accommodation Fees,Total Fees,Discount,Verification Status,Receipt Paid\n';
+      'Team Number,User ID,Role,Event Name,Team ID,Accommodation Members,Accommodation Fees,Total Fees,Discount,Verification Status,Receipt Paid\n';
+
+    let teamNumber = 1;
 
     // Add team registrations - leader first, then members grouped together
     groupedData.teams.forEach((members, teamId) => {
-      const teamLeader = members[0];
-      const otherMembers = members.slice(1);
+      // Team leader is the one with feesPaid value (non-empty)
+      const teamLeader = members.find((m) => m.feesPaid) || members[0];
+      const otherMembers = members.filter((m) => m !== teamLeader);
       
       // Add team leader
-      csv += `"${teamLeader.userId}","Team Leader","${teamLeader.eventName}","${teamId}","${teamLeader.accommodationMembers}","${teamLeader.accommodationFees}","${teamLeader.totalFees}","${teamLeader.discount}","${teamLeader.verified ? 'Verified' : 'Pending'}","${teamLeader.feesPaid ? 'Yes' : 'No'}"\n`;
+      csv += `"${teamNumber}","${teamLeader.userId}","Team Leader","${teamLeader.eventName}","${teamId}","${teamLeader.accommodationMembers}","${teamLeader.accommodationFees}","${teamLeader.totalFees}","${teamLeader.discount}","${teamLeader.verified ? 'Verified' : 'Pending'}","${teamLeader.feesPaid ? 'Yes' : 'No'}"\n`;
       
-      // Add team members right after the leader
+      // Add team members right after the leader - same team number
       otherMembers.forEach((member) => {
-        csv += `"${member.userId}","Team Member","${member.eventName}","${teamId}","—","—","—","${member.discount}","${member.verified ? 'Verified' : 'Pending'}","${member.feesPaid ? 'Yes' : 'No'}"\n`;
+        csv += `"${teamNumber}","${member.userId}","Team Member","${member.eventName}","${teamId}","—","—","—","${member.discount}","${member.verified ? 'Verified' : 'Pending'}","${member.feesPaid ? 'Yes' : 'No'}"\n`;
       });
+      
+      teamNumber++;
     });
 
     // Add individual registrations
     groupedData.individuals.forEach((reg) => {
-      csv += `"${reg.userId}","Individual","${reg.eventName}","N/A","${reg.accommodationMembers}","${reg.accommodationFees}","${reg.totalFees}","${reg.discount}","${reg.verified ? 'Verified' : 'Pending'}","${reg.feesPaid ? 'Yes' : 'No'}"\n`;
+      csv += `"${teamNumber}","${reg.userId}","Individual","${reg.eventName}","N/A","${reg.accommodationMembers}","${reg.accommodationFees}","${reg.totalFees}","${reg.discount}","${reg.verified ? 'Verified' : 'Pending'}","${reg.feesPaid ? 'Yes' : 'No'}"\n`;
+      teamNumber++;
     });
 
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
@@ -345,16 +426,18 @@ export default function EventRegistrationsClient() {
         </div>
       ) : (
         <div className="space-y-6">
-          {/* Export Button */}
-          <div className="flex justify-end">
-            <button
-              onClick={exportToCSV}
-              className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold flex items-center gap-2 transition transform hover:scale-105"
-            >
-              <Download className="w-5 h-5" />
-              Export to CSV
-            </button>
-          </div>
+          {/* Export Button - Webmaster Only */}
+          {adminUser?.accesslevel === 3 && (
+            <div className="flex justify-end">
+              <button
+                onClick={exportToCSV}
+                className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold flex items-center gap-2 transition transform hover:scale-105"
+              >
+                <Download className="w-5 h-5" />
+                Export to CSV
+              </button>
+            </div>
+          )}
 
           {/* Table for registrations */}
           <div className="overflow-x-auto border-2 border-purple-500/30 rounded-lg">
@@ -385,9 +468,9 @@ export default function EventRegistrationsClient() {
                 {/* Team Registrations */}
                 {selectedEvent?.isTeamEvent &&
                   Array.from(groupedData.teams.entries()).map(([teamId, members]) => {
-                    // Team leader is the first member (or we can find by feesPaid status)
-                    const teamLeader = members[0];
-                    const otherMembers = members.slice(1);
+                    // Team leader is the one with feesPaid value (non-empty)
+                    const teamLeader = members.find((m) => m.feesPaid) || members[0];
+                    const otherMembers = members.filter((m) => m !== teamLeader);
                     
                     return (
                       <React.Fragment key={teamId}>

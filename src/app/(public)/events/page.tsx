@@ -918,15 +918,13 @@ export default function EventsPage() {
                         </div>
 
                         {/* Event Image */}
-                        {event.image && (
-                          <div className="rounded-2xl overflow-hidden border-2 border-[#b53da1]/30 aspect-square bg-black/20 flex items-center justify-center">
-                            <img
-                              src={event.image}
-                              alt={event.eventName}
-                              className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-500"
-                            />
-                          </div>
-                        )}
+                        <div className="rounded-2xl overflow-hidden border-2 border-[#b53da1]/30 aspect-square bg-black/20 flex items-center justify-center">
+                          <img
+                            src={event.image?.includes('PECFEST_2024') ? '/vyom.png' : (event.image || '/vyom.png')}
+                            alt={event.eventName}
+                            className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-500"
+                          />
+                        </div>
 
                         {/* Event Name & Actions */}
                         <div className="flex-1 flex flex-col mt-4">

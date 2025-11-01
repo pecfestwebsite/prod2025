@@ -23,6 +23,7 @@ interface RegistrationWithEvent {
 
 interface RegistrationsClientProps {
   registrations: RegistrationWithEvent[];
+  total: number;
 }
 
 interface AdminUser {
@@ -41,6 +42,7 @@ type SortOrder = 'asc' | 'desc';
 const STORAGE_KEY = 'registration_action_count';
 const SESSION_KEY = 'admin_session_token';
 const MAX_ACTIONS_PER_REGISTRATION = 2;
+const PAGE_SIZE = 10;
 
 // Helper functions for localStorage management
 const getSessionToken = (): string | null => {
@@ -103,7 +105,7 @@ const clearActionCounts = (): void => {
   }
 };
 
-export default function RegistrationsClient({ registrations }: RegistrationsClientProps) {
+export default function RegistrationsClient({ registrations, total }: RegistrationsClientProps) {
   const [sortField, setSortField] = useState<SortField>('dateTime');
   const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
   const [searchTerm, setSearchTerm] = useState('');
@@ -118,6 +120,10 @@ export default function RegistrationsClient({ registrations }: RegistrationsClie
   const [showWarningModal, setShowWarningModal] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [totalRecords, setTotalRecords] = useState(total);
+  const [hasSearched, setHasSearched] = useState(false);
 
   useEffect(() => {
     const admin = getAdminUser();
@@ -381,19 +387,128 @@ export default function RegistrationsClient({ registrations }: RegistrationsClie
     return `${count}/${MAX_ACTIONS_PER_REGISTRATION}`;
   };
 
+  const loadPage = async (pageNumber: number, searchQuery?: string) => {
+    setLoadingMore(true);
+    try {
+      const skip = (pageNumber - 1) * PAGE_SIZE;
+      
+      let url = `/api/registrations?skip=${skip}&limit=${PAGE_SIZE}`;
+      if (searchQuery) {
+        url += `&search=${encodeURIComponent(searchQuery)}`;
+      }
+      
+      console.log(`Loading page ${pageNumber}, skip=${skip}, limit=${PAGE_SIZE}, search=${searchQuery || 'none'}`);
+      
+      const response = await fetch(url, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('adminToken') || localStorage.getItem('token') || ''}`
+        }
+      });
+      
+      if (!response.ok) {
+        console.error('API Error:', response.status, response.statusText);
+        const errorData = await response.json();
+        console.error('Error details:', errorData);
+        alert(`Failed to load page: ${errorData.error || 'Unknown error'}`);
+        return;
+      }
+      
+      const data = await response.json();
+      console.log('Fetched data:', data);
+      
+      if (data.registrations && Array.isArray(data.registrations)) {
+        const newRegistrations = data.registrations.map((reg: any) => ({
+          _id: reg._id?.toString() || '',
+          eventId: reg.eventId || '',
+          eventName: reg.eventName || 'Unknown Event',
+          societyName: reg.societyName || 'Unknown Society',
+          userId: reg.userId || '',
+          teamId: reg.teamId || '',
+          verified: reg.verified || false,
+          feesPaid: reg.feesPaid || '',
+          dateTime: reg.dateTime || '',
+          createdAt: reg.createdAt || '',
+          discount: reg.discount || 0,
+          accommodationMembers: reg.accommodationMembers || 0,
+          totalFees: reg.totalFees || 0,
+        }));
+        
+        setLocalRegistrations(newRegistrations);
+        setTotalRecords(data.total || 0);
+        setCurrentPage(pageNumber);
+        console.log(`Successfully loaded ${newRegistrations.length} registrations for page ${pageNumber}`);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      } else {
+        console.log('No registrations found for this page');
+        setLocalRegistrations([]);
+      }
+    } catch (error) {
+      console.error('Error loading page:', error);
+      alert('Failed to load page');
+    } finally {
+      setLoadingMore(false);
+    }
+  };
+
+  const nextPage = () => {
+    const totalPages = Math.ceil(totalRecords / PAGE_SIZE);
+    if (currentPage < totalPages) {
+      loadPage(currentPage + 1, hasSearched ? searchTerm : undefined);
+    }
+  };
+
+  const prevPage = () => {
+    if (currentPage > 1) {
+      loadPage(currentPage - 1, hasSearched ? searchTerm : undefined);
+    }
+  };
+
+  const handleSearch = async () => {
+    if (!searchTerm.trim()) {
+      alert('Please enter a search term');
+      return;
+    }
+    setCurrentPage(1);
+    setHasSearched(true);
+    await loadPage(1, searchTerm);
+  };
+
+  const handleClearSearch = () => {
+    setSearchTerm('');
+    setHasSearched(false);
+    setCurrentPage(1);
+    loadPage(1);
+  };
+
   return (
     <div className="space-y-6 p-4 md:p-6">
       {/* Floating Search and Filter Bar */}
       <div className="sticky top-0 z-50 bg-gradient-to-b from-slate-900/95 via-slate-900/90 to-slate-900/70 backdrop-blur-md border-b-2 border-purple-500/30 rounded-b-lg md:rounded-b-2xl px-4 md:px-6 py-4 md:py-5 space-y-3 md:space-y-4 shadow-lg -mx-4 md:-mx-6">
         <div className="flex flex-col sm:flex-row gap-2 md:gap-3">
-          <div className="flex-1">
+          <div className="flex-1 flex gap-2">
             <input
               type="text"
               placeholder="🔍 Search by User ID, Event Name, or Event ID..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full px-3 md:px-4 py-2 md:py-3 bg-slate-800/50 hover:bg-slate-800/70 border-2 border-purple-500/40 rounded-lg md:rounded-xl text-white placeholder-slate-400 focus:outline-none focus:border-purple-500/80 focus:bg-slate-800/80 focus:ring-2 focus:ring-purple-500/30 font-medium transition-all text-xs md:text-base shadow-md"
+              onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+              className="flex-1 px-3 md:px-4 py-2 md:py-3 bg-slate-800/50 hover:bg-slate-800/70 border-2 border-purple-500/40 rounded-lg md:rounded-xl text-white placeholder-slate-400 focus:outline-none focus:border-purple-500/80 focus:bg-slate-800/80 focus:ring-2 focus:ring-purple-500/30 font-medium transition-all text-xs md:text-base shadow-md"
             />
+            <button
+              onClick={handleSearch}
+              disabled={loadingMore}
+              className="px-4 md:px-6 py-2 md:py-3 bg-purple-600 hover:bg-purple-700 disabled:bg-purple-600/50 text-white font-semibold rounded-lg md:rounded-xl transition-all text-xs md:text-base whitespace-nowrap"
+            >
+              Search
+            </button>
+            {hasSearched && (
+              <button
+                onClick={handleClearSearch}
+                className="px-4 md:px-6 py-2 md:py-3 bg-slate-600 hover:bg-slate-700 text-white font-semibold rounded-lg md:rounded-xl transition-all text-xs md:text-base whitespace-nowrap"
+              >
+                Clear
+              </button>
+            )}
           </div>
           <select
             value={filterVerified}
@@ -409,16 +524,17 @@ export default function RegistrationsClient({ registrations }: RegistrationsClie
         {/* Results Info */}
         <div className="flex items-center justify-between px-3 md:px-4 py-2 bg-slate-800/40 border border-purple-500/20 rounded-lg">
           <p className="text-xs md:text-sm text-slate-300 font-medium">
-            📊 Showing <span className="font-bold text-white">{filteredAndSortedRegistrations.length}</span> of{' '}
-            <span className="font-bold text-white">{localRegistrations.length}</span> registrations
+            📊 Showing <span className="font-bold text-white">{localRegistrations.length}</span> of{' '}
+            <span className="font-bold text-white">{totalRecords}</span> payments
+            {hasSearched && <span className="text-yellow-400 ml-2">(Search Results)</span>}
           </p>
         </div>
       </div>
 
       {/* Mobile View - Cards */}
       <div className="md:hidden space-y-3">
-        {filteredAndSortedRegistrations.length > 0 ? (
-          filteredAndSortedRegistrations.map((registration) => (
+        {localRegistrations.length > 0 ? (
+          localRegistrations.map((registration) => (
             <div
               key={registration._id}
               className="bg-slate-800/40 border-2 border-purple-500/30 rounded-xl p-4 space-y-3"
@@ -644,8 +760,8 @@ export default function RegistrationsClient({ registrations }: RegistrationsClie
               </tr>
             </thead>
             <tbody className="divide-y divide-purple-500/10">
-              {filteredAndSortedRegistrations.length > 0 ? (
-                filteredAndSortedRegistrations.map((registration) => (
+              {localRegistrations.length > 0 ? (
+                localRegistrations.map((registration) => (
                   <tr
                     key={registration._id}
                     className="bg-slate-800/30 hover:bg-slate-700/30 transition-colors duration-300 border-b border-purple-500/10"
@@ -786,6 +902,43 @@ export default function RegistrationsClient({ registrations }: RegistrationsClie
               )}
             </tbody>
           </table>
+        </div>
+
+        {/* Pagination Control */}
+        <div className="flex items-center justify-between mt-8 px-4 py-6 bg-slate-800/40 border-2 border-purple-500/30 rounded-xl">
+          <button
+            onClick={prevPage}
+            disabled={currentPage === 1 || loadingMore}
+            className="px-6 py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-purple-600/50 text-white font-semibold rounded-lg transition-all flex items-center gap-2"
+          >
+            ← Previous
+          </button>
+          
+          <div className="text-center space-y-1">
+            <div className="text-sm text-slate-400">
+              Page <span className="font-semibold text-white">{currentPage}</span> of <span className="font-semibold text-white">{Math.ceil(totalRecords / PAGE_SIZE)}</span>
+            </div>
+            <div className="text-xs text-slate-400">
+              Showing <span className="font-semibold text-white">{localRegistrations.length}</span> of <span className="font-semibold text-white">{totalRecords}</span> payments
+            </div>
+          </div>
+          
+          <button
+            onClick={nextPage}
+            disabled={currentPage >= Math.ceil(totalRecords / PAGE_SIZE) || loadingMore}
+            className="px-6 py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-purple-600/50 text-white font-semibold rounded-lg transition-all flex items-center gap-2"
+          >
+            {loadingMore ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                Loading...
+              </>
+            ) : (
+              <>
+                Next →
+              </>
+            )}
+          </button>
         </div>
       </div>
 

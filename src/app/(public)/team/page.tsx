@@ -510,9 +510,17 @@ export default function Page() {
       const currentCards = currentSection.querySelectorAll('.team-card-wrapper');
       const nextCards = nextSection.querySelectorAll('.team-card-wrapper');
 
-      gsap.set([sections, images], { zIndex: 0, autoAlpha: 0 });
-      gsap.set([sections[currentIndex], images[index]], { zIndex: 1, autoAlpha: 1 });
-      gsap.set([sections[index], images[currentIndex]], { zIndex: 2, autoAlpha: 1 });
+      // Set z-index and visibility for sections
+      gsap.set(sections, { zIndex: 0, autoAlpha: 0 });
+      gsap.set(sections[currentIndex], { zIndex: 1, autoAlpha: 1 });
+      gsap.set(sections[index], { zIndex: 2, autoAlpha: 1 });
+      
+      // Only animate images if they exist
+      if (images.length > 0) {
+        gsap.set(images, { zIndex: 0, autoAlpha: 0 });
+        if (images[index]) gsap.set(images[index], { zIndex: 1, autoAlpha: 1 });
+        if (images[currentIndex]) gsap.set(images[currentIndex], { zIndex: 2, autoAlpha: 1 });
+      }
 
       tl.set(count, { textContent: `${index + 1}` }, 0.32)
         .fromTo(
@@ -568,26 +576,38 @@ export default function Page() {
             ease: 'power2.out'
           },
           0.4
-        )
-        .fromTo(
+        );
+
+      // Only animate images if they exist
+      if (images.length > 0 && images[index]) {
+        tl.fromTo(
           images[index],
           { xPercent: 125 * direction, scaleX: 1.5, scaleY: 1.3 },
           { xPercent: 0, scaleX: 1, scaleY: 1, duration: 1 },
           0
-        )
-        .fromTo(
+        );
+      }
+      
+      if (images.length > 0 && images[currentIndex]) {
+        tl.fromTo(
           images[currentIndex],
           { xPercent: 0, scaleX: 1, scaleY: 1 },
           { xPercent: -125 * direction, scaleX: 1.5, scaleY: 1.3 },
           0
-        )
-        .fromTo(
+        );
+      }
+      
+      // Only animate slide images if they exist
+      if (slideImages.length > 0 && slideImages[index]) {
+        tl.fromTo(
           slideImages[index],
           { scale: 2 },
           { scale: 1 },
           0
-        )
-        .timeScale(0.8);
+        );
+      }
+      
+      tl.timeScale(0.8);
 
       currentIndex = index;
     }
