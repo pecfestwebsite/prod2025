@@ -21,6 +21,7 @@ export default function EventRegistrationForm({ event, onClose, onSuccess }: Reg
   const [success, setSuccess] = useState(false);
   const [currentUser, setCurrentUser] = useState<string | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [studentId, setStudentId] = useState<string | null>(null);
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const [userRole, setUserRole] = useState<'leader' | 'member'>('leader');
   const [teamId, setTeamId] = useState<string>('');
@@ -53,6 +54,10 @@ export default function EventRegistrationForm({ event, onClose, onSuccess }: Reg
   const [isCheckingRegistration, setIsCheckingRegistration] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isMobile, setIsMobile] = useState(false);
+  const [isPecStudent, setIsPecStudent] = useState(true);
+  const [nonPecCount, setNonPecCount] = useState(0);
+  const [isCheckingNonPecCount, setIsCheckingNonPecCount] = useState(false);
+  const [nonPecLimitReached, setNonPecLimitReached] = useState(false);
 
   const maxTeamMembers = event.maxTeamMembers || 1;
   const isTeamEvent = event.isTeamEvent || false;
@@ -84,6 +89,7 @@ export default function EventRegistrationForm({ event, onClose, onSuccess }: Reg
           if (data.user?.email && data.user?.userId) {
             setCurrentUser(data.user.email);
             setCurrentUserId(data.user.userId);
+            setStudentId(data.user.studentId || null);
           } else {
             setError('You must be logged in to register for events');
           }
@@ -130,6 +136,32 @@ export default function EventRegistrationForm({ event, onClose, onSuccess }: Reg
 
     checkExistingRegistration();
   }, [currentUser, event.eventId]);
+
+  // Check non-PEC registration count for mini marathon
+  useEffect(() => {
+    const checkNonPecCount = async () => {
+      if (event.eventId !== 'mini_marathon_none') return;
+
+      setIsCheckingNonPecCount(true);
+      try {
+        const response = await fetch(
+          `/api/non-pec-mini-marathon?eventId=${event.eventId}`
+        );
+
+        const data = await response.json();
+        if (response.ok) {
+          setNonPecCount(data.count);
+          setNonPecLimitReached(!data.canRegister);
+        }
+      } catch (err) {
+        console.error('Error checking non-PEC count:', err);
+      } finally {
+        setIsCheckingNonPecCount(false);
+      }
+    };
+
+    checkNonPecCount();
+  }, [event.eventId]);
 
   // Generate Team ID when user selects leader role
   useEffect(() => {
@@ -391,6 +423,46 @@ export default function EventRegistrationForm({ event, onClose, onSuccess }: Reg
       if (!currentUser) {
         setError('You must be logged in to register');
         setIsSubmitting(false);
+        return;
+      }
+
+      // Handle non-PEC student registration for mini marathon
+      if (event.eventId === 'mini_marathon_none' && !isPecStudent) {
+        if (nonPecLimitReached) {
+          setError('Registration limit reached. Maximum 100 non-PEC students can register for mini marathon.');
+          setIsSubmitting(false);
+          return;
+        }
+
+        const token = localStorage.getItem('token');
+        if (!token) {
+          setError('Session expired. Please login again.');
+          setIsSubmitting(false);
+          return;
+        }
+
+        const response = await fetch('/api/non-pec-mini-marathon', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            eventId: event.eventId,
+          }),
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || 'Registration failed');
+        }
+
+        setSuccess(true);
+        setTimeout(() => {
+          onSuccess?.();
+          onClose();
+        }, 2000);
         return;
       }
 
@@ -817,6 +889,95 @@ export default function EventRegistrationForm({ event, onClose, onSuccess }: Reg
 
           {/* Form */}
           <form onSubmit={handleSubmit} className="p-6 space-y-6">
+            {/* PEC/Non-PEC Toggle for Mini Marathon */}
+            {event.eventId === 'mini_marathon_none' && (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between mb-4">
+                  <label className="text-[#ffd4b9] text-sm font-medium">
+                    Student Type:
+                  </label>
+                  <div className="flex items-center gap-2 bg-[#010101]/40 rounded-full p-1 border border-[#b53da1]/30">
+                    <button
+                      type="button"
+                      onClick={() => setIsPecStudent(true)}
+                      className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all duration-300 ${
+                        isPecStudent
+                          ? 'bg-gradient-to-r from-[#b53da1] to-[#ed6ab8] text-white shadow-lg'
+                          : 'text-[#fea6cc]/60 hover:text-[#fea6cc]'
+                      }`}
+                    >
+                      🎓 PEC Student
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setIsPecStudent(false)}
+                      className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all duration-300 ${
+                        !isPecStudent
+                          ? 'bg-gradient-to-r from-[#b53da1] to-[#ed6ab8] text-white shadow-lg'
+                          : 'text-[#fea6cc]/60 hover:text-[#fea6cc]'
+                      }`}
+                    >
+                      🏫 Non-PEC Student
+                    </button>
+                  </div>
+                </div>
+
+                {/* PEC Student ID Display */}
+                {isPecStudent && studentId && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="p-4 rounded-xl border-2 bg-blue-500/10 border-blue-500/50"
+                  >
+                    <div className="flex items-start gap-3">
+                      <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5 text-blue-400" />
+                      <div className="space-y-1 flex-1">
+                        <p className="font-semibold text-blue-400">
+                          This is your Student ID
+                        </p>
+                        <div className="bg-[#010101]/40 rounded-lg p-3 mt-2">
+                          <p className="text-white font-mono text-lg font-bold">{studentId}</p>
+                        </div>
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+
+                {/* Non-PEC Registration Info */}
+                {!isPecStudent && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className={`p-4 rounded-xl border-2 ${
+                      nonPecLimitReached
+                        ? 'bg-red-500/10 border-red-500/50'
+                        : 'bg-green-500/10 border-green-500/50'
+                    }`}
+                  >
+                    <div className="flex items-start gap-3">
+                      <AlertCircle className={`w-5 h-5 flex-shrink-0 mt-0.5 ${
+                        nonPecLimitReached ? 'text-red-400' : 'text-green-400'
+                      }`} />
+                      <div className="space-y-1">
+                        <p className={`font-semibold ${
+                          nonPecLimitReached ? 'text-red-400' : 'text-green-400'
+                        }`}>
+                          {nonPecLimitReached 
+                            ? '❌ Registration Limit Reached' 
+                            : '✅ Non-PEC Registration Available'}
+                        </p>
+                        <p className="text-sm text-[#fea6cc]">
+                          {nonPecLimitReached
+                            ? 'Registration limit has been reached. Please contact the event organizers for further assistance.'
+                            : 'You can proceed with registration as a non-PEC student.'}
+                        </p>
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+              </div>
+            )}
+
             {/* Role Selection for Team Events - Subtle Toggle */}
             {isTeamEvent && (
               <div className="flex items-center justify-between mb-4">
