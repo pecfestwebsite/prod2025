@@ -48,10 +48,17 @@ export async function PUT(
     const { id } = await params;
     const body = await request.json();
 
+    // Calculate endDateTime if not provided (default to 1 hour after dateTime)
+    const updateData = { ...body };
+    if (body.dateTime && !body.endDateTime) {
+      const startDate = new Date(body.dateTime);
+      updateData.endDateTime = new Date(startDate.getTime() + 60 * 60 * 1000); // Add 1 hour
+    }
+
     // Find and update event
     const updatedEvent = await Event.findOneAndUpdate(
       { eventId: id },
-      body,
+      updateData,
       { new: true, runValidators: true }
     );
 

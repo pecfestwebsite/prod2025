@@ -14,14 +14,11 @@ interface FormData {
   eventName: string;
   regFees: number | '';
   dateTime: string;
+  endDateTime: string;
   location: string;
   briefDescription: string;
   pdfLink: string;
   image: string;
-  mapCoordinates: {
-    latitude: number | '';
-    longitude: number | '';
-  };
   contactInfo: string;
   isTeamEvent: boolean;
   minTeamMembers: number;
@@ -56,7 +53,7 @@ const CLUBS_SOCS = [
 
 // List of clubs (before SOCS section in the array)
 const CLUBS = [
-  'Dramatics', 'SAASC', 'APC', 'ELC', 'Music',
+  'MegaShows', 'Dramatics', 'SAASC', 'APC', 'ELC', 'Music',
   'HEB', 'PDC', 'PEB', 'Rotaract', 'SCC',
   'CIM', 'EIC', 'WEC', 'EEB', "NCC", "NSS", "Sports"
 ];
@@ -90,7 +87,7 @@ const steps = [
   { id: 1, title: 'Basic Info', description: 'Club/Society & Category' },
   { id: 2, title: 'Event Details', description: 'Name & Date' },
   { id: 3, title: 'Registration', description: 'Fees & Team Settings' },
-  { id: 4, title: 'Location', description: 'Address & Coordinates' },
+  { id: 4, title: 'Location', description: 'Address' },
   { id: 5, title: 'Media', description: 'Image & PDF' },
   { id: 6, title: 'Review', description: 'Summary & Confirm' },
 ];
@@ -106,11 +103,11 @@ export default function AddEventsPage() {
     eventName: '',
     regFees: '',
     dateTime: '',
+    endDateTime: '',
     location: '',
     briefDescription: '',
     pdfLink: '',
     image: '',
-    mapCoordinates: { latitude: '', longitude: '' },
     contactInfo: '',
     isTeamEvent: false,
     minTeamMembers: 1,
@@ -134,7 +131,25 @@ export default function AddEventsPage() {
       const savedFormData = localStorage.getItem('eventFormData');
       if (savedFormData) {
         const parsedData = JSON.parse(savedFormData);
-        setFormData(parsedData);
+        // Ensure all required fields exist with defaults
+        const mergedData: FormData = {
+          category: parsedData.category ?? 'technical',
+          societyName: parsedData.societyName ?? '',
+          additionalClub: parsedData.additionalClub ?? 'None',
+          eventName: parsedData.eventName ?? '',
+          regFees: parsedData.regFees ?? '',
+          dateTime: parsedData.dateTime ?? '',
+          endDateTime: parsedData.endDateTime ?? '',
+          location: parsedData.location ?? '',
+          briefDescription: parsedData.briefDescription ?? '',
+          pdfLink: parsedData.pdfLink ?? '',
+          image: parsedData.image ?? '',
+          contactInfo: parsedData.contactInfo ?? '',
+          isTeamEvent: parsedData.isTeamEvent ?? false,
+          minTeamMembers: parsedData.minTeamMembers ?? 1,
+          maxTeamMembers: parsedData.maxTeamMembers ?? 1,
+        };
+        setFormData(mergedData);
         
         // Load image preview if it exists
         const savedImagePreview = localStorage.getItem('eventFormImagePreview');
@@ -196,12 +211,20 @@ export default function AddEventsPage() {
     switch (step) {
       case 1:
         if (!formData.category) newErrors.category = 'Category is required';
-        if (!formData.contactInfo.trim()) newErrors.contactInfo = 'Contact info is required';
+        // contactInfo is now optional
         break;
       case 2:
         if (!formData.eventName.trim()) newErrors.eventName = 'Event name is required';
         if (!formData.societyName.trim()) newErrors.societyName = 'Society name is required';
-        if (!formData.dateTime.trim()) newErrors.dateTime = 'Date & time is required';
+        if (!formData.dateTime.trim()) newErrors.dateTime = 'Start date & time is required';
+        // endDateTime is now optional - if not provided, it will be set to dateTime + 1 hour
+        if (formData.dateTime && formData.endDateTime) {
+          const startDate = new Date(formData.dateTime);
+          const endDate = new Date(formData.endDateTime);
+          if (endDate <= startDate) {
+            newErrors.endDateTime = 'End time must be after start time';
+          }
+        }
         break;
       case 3:
         if (formData.regFees === '') newErrors.regFees = 'Registration fees is required';
@@ -220,8 +243,7 @@ export default function AddEventsPage() {
       case 6:
         if (!formData.briefDescription.trim())
           newErrors.briefDescription = 'Brief description is required';
-        if (!formData.contactInfo.trim())
-          newErrors.contactInfo = 'Contact info is required';
+        // contactInfo is now optional
         break;
     }
 
@@ -234,16 +256,7 @@ export default function AddEventsPage() {
   ) => {
     const { name, value } = e.target;
 
-    if (name.includes('mapCoordinates')) {
-      const field = name.split('.')[1];
-      setFormData((prev) => ({
-        ...prev,
-        mapCoordinates: {
-          ...prev.mapCoordinates,
-          [field]: value ? parseFloat(value) : '',
-        },
-      }));
-    } else if (name === 'regFees' || name === 'minTeamMembers' || name === 'maxTeamMembers') {
+    if (name === 'regFees' || name === 'minTeamMembers' || name === 'maxTeamMembers') {
       setFormData((prev) => ({
         ...prev,
         [name]: value === '' ? 0 : parseFloat(value),
@@ -355,7 +368,7 @@ export default function AddEventsPage() {
       setIsLoading(true);
       try {
         // Set default image if no image is provided
-        const defaultPecfestLogo = '/vyom.png';
+        const defaultPecfestLogo = '/final.png';
         
         let imageUrl = defaultPecfestLogo;
         
@@ -379,6 +392,25 @@ export default function AddEventsPage() {
           ...formData,
           image: imageUrl,
           regFees: typeof formData.regFees === 'string' ? 0 : formData.regFees,
+          dateTime: formData.dateTime,
+          // If endDateTime is not provided, calculate it as dateTime + 1 hour
+          endDateTime: formData.endDateTime || (() => {
+            // Parse datetime-local string format (YYYY-MM-DDTHH:mm)
+            const [datePart, timePart] = formData.dateTime.split('T');
+            const [hours, minutes] = timePart.split(':');
+            let newHours = parseInt(hours) + 1;
+            let newDate = datePart;
+            
+            // Handle day overflow
+            if (newHours >= 24) {
+              newHours = newHours % 24;
+              const date = new Date(datePart);
+              date.setDate(date.getDate() + 1);
+              newDate = date.toISOString().split('T')[0];
+            }
+            
+            return `${newDate}T${String(newHours).padStart(2, '0')}:${minutes}`;
+          })(),
         };
 
         console.log('📤 Submitting event data:', submitData);
@@ -481,11 +513,11 @@ export default function AddEventsPage() {
                   eventName: '',
                   regFees: '',
                   dateTime: '',
+                  endDateTime: '',
                   location: '',
                   briefDescription: '',
                   pdfLink: '',
                   image: '',
-                  mapCoordinates: { latitude: '', longitude: '' },
                   contactInfo: '',
                   isTeamEvent: false,
                   minTeamMembers: 1,
@@ -678,6 +710,9 @@ export default function AddEventsPage() {
               </div>
 
               <div>
+                <label className="block text-sm font-semibold text-white mb-2">
+                  Contact Info <span className="text-slate-400 text-xs">(Phone or Email - Optional)</span>
+                </label>
                 <input
                   type="text"
                   name="contactInfo"
@@ -733,7 +768,7 @@ export default function AddEventsPage() {
 
               <div>
                 <label className="block text-sm font-semibold text-white mb-2">
-                  Date & Time <span className="text-red-400">*</span>
+                  Start Date & Time <span className="text-red-400">*</span>
                 </label>
                 <input
                   type="datetime-local"
@@ -749,6 +784,28 @@ export default function AddEventsPage() {
                 {errors.dateTime && (
                   <p className="text-red-400 text-sm mt-1 flex items-center gap-1 font-medium">
                     <AlertCircle size={16} /> {errors.dateTime}
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-white mb-2">
+                  End Date & Time <span className="text-slate-400 text-xs">(Optional - defaults to 1 hour after start time)</span>
+                </label>
+                <input
+                  type="datetime-local"
+                  name="endDateTime"
+                  value={formData.endDateTime}
+                  onChange={handleInputChange}
+                  className={`w-full px-4 py-3 border-2 rounded-xl focus:outline-none focus:border-slate-300 hover:border-slate-300 transition-all bg-purple-900/50 font-medium text-slate-100 ${
+                    errors.endDateTime
+                      ? 'border-red-500 bg-red-900/30'
+                      : 'border-purple-500/50'
+                  }`}
+                />
+                {errors.endDateTime && (
+                  <p className="text-red-400 text-sm mt-1 flex items-center gap-1 font-medium">
+                    <AlertCircle size={16} /> {errors.endDateTime}
                   </p>
                 )}
               </div>
@@ -973,39 +1030,6 @@ export default function AddEventsPage() {
                   </p>
                 )}
               </div>
-
-              <div>
-                <p className="text-sm font-semibold text-white mb-4 flex items-center gap-2">
-                  <span>🗺️</span> Map Coordinates (Optional)
-                </p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs text-white font-semibold mb-1">Latitude</label>
-                    <input
-                      type="number"
-                      name="mapCoordinates.latitude"
-                      value={formData.mapCoordinates.latitude}
-                      onChange={handleInputChange}
-                      placeholder="e.g., 28.5355"
-                      step="0.0001"
-                      className="w-full px-4 py-3 border-2 border-purple-500/50 rounded-xl focus:outline-none focus:border-slate-300 hover:border-slate-300 transition-all bg-purple-900/50 font-medium text-slate-100 placeholder-purple-300"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs text-white font-semibold mb-1">Longitude</label>
-                    <input
-                      type="number"
-                      name="mapCoordinates.longitude"
-                      value={formData.mapCoordinates.longitude}
-                      onChange={handleInputChange}
-                      placeholder="e.g., 77.1670"
-                      step="0.0001"
-                      className="w-full px-4 py-3 border-2 border-purple-500/50 rounded-xl focus:outline-none focus:border-slate-300 hover:border-slate-300 transition-all bg-purple-900/50 font-medium text-slate-100 placeholder-purple-300"
-                    />
-                  </div>
-                </div>
-              </div>
             </div>
           )}
 
@@ -1174,9 +1198,15 @@ export default function AddEventsPage() {
                     <p className="text-sm font-bold text-slate-100 mt-1">{formData.maxTeamMembers}</p>
                   </div>
                   <div className="bg-purple-900/50 rounded-xl p-4 col-span-full border-2 border-purple-500/40">
-                    <p className="text-xs text-slate-400 font-bold">Date & Time</p>
+                    <p className="text-xs text-slate-400 font-bold">Start Date & Time</p>
                     <p className="text-sm font-bold text-slate-100 mt-1">
                       {new Date(formData.dateTime).toLocaleString() || 'Not set'}
+                    </p>
+                  </div>
+                  <div className="bg-purple-900/50 rounded-xl p-4 col-span-full border-2 border-purple-500/40">
+                    <p className="text-xs text-slate-400 font-bold">End Date & Time</p>
+                    <p className="text-sm font-bold text-slate-100 mt-1">
+                      {new Date(formData.endDateTime).toLocaleString() || 'Not set'}
                     </p>
                   </div>
                   <div className="bg-purple-900/50 rounded-xl p-4 col-span-full border-2 border-purple-500/40">

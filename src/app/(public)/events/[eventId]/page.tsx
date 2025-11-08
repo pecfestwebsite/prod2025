@@ -107,8 +107,10 @@ export default function EventDescriptionPage() {
     fetchEventDetails();
   }, [eventId]);
 
-  const formatDate = (date: Date | string) => {
+  const formatDate = (date: Date | string | undefined) => {
+    if (!date) return 'Date TBA';
     const dateObj = typeof date === 'string' ? new Date(date) : date;
+    if (isNaN(dateObj.getTime())) return 'Invalid Date';
     return dateObj.toLocaleDateString('en-US', {
       weekday: 'long',
       year: 'numeric',
@@ -220,7 +222,7 @@ export default function EventDescriptionPage() {
                   transition={{ delay: 0.2, duration: 0.5 }}
                 >
                   <img
-                    src={event.image?.includes('PECFEST_2024') ? '/vyom.png' : (event.image || '/vyom.png')}
+                    src={event.image?.includes('PECFEST_2024') ? '/final.png' : (event.image || '/final.png')}
                     alt={event.eventName}
                     className="w-full h-full object-contain" 
                   />
@@ -281,7 +283,9 @@ export default function EventDescriptionPage() {
                     <Calendar className="w-6 h-6 text-[#ffd4b9]" />
                     <h3 className="text-xl font-bold text-[#ffd4b9] font-elegant">Date & Time</h3>
                   </div>
-                  <p className="text-white font-arabian text-lg">{formatDate(event.dateTime)}</p>
+                  <p className="text-white font-arabian text-lg">
+                    {formatDate(event.dateTime)} - {formatDate(event.endDateTime)}
+                  </p>
                 </div>
 
                 {/* Location */}

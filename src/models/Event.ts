@@ -9,6 +9,7 @@ export interface IEvent {
   eventName: string;
   regFees: number;
   dateTime: Date;
+  endDateTime: Date;
   location: string;
   briefDescription: string;
   pdfLink?: string;
@@ -17,7 +18,7 @@ export interface IEvent {
     latitude: number;
     longitude: number;
   };
-  contactInfo: string;
+  contactInfo?: string;
   isTeamEvent: boolean;
   minTeamMembers: number;
   maxTeamMembers: number;
@@ -63,7 +64,11 @@ const EventSchema = new Schema<IEvent>(
     },
     dateTime: {
       type: Date,
-      required: [true, 'Date and time is required'],
+      required: [true, 'Start date and time is required'],
+    },
+    endDateTime: {
+      type: Date,
+      required: [true, 'End date and time is required'],
     },
     location: {
       type: String,
@@ -105,7 +110,7 @@ const EventSchema = new Schema<IEvent>(
     },
     contactInfo: {
       type: String,
-      required: [true, 'Contact info is required'],
+      default: '',
       trim: true,
     },
     isTeamEvent: {
@@ -135,6 +140,7 @@ const EventSchema = new Schema<IEvent>(
   },
   {
     timestamps: true, // Adds createdAt and updatedAt fields
+    strict: true, // Only allow fields in schema
   }
 );
 
@@ -142,6 +148,7 @@ const EventSchema = new Schema<IEvent>(
 // Note: eventId already has unique index from field definition
 EventSchema.index({ category: 1 });
 EventSchema.index({ dateTime: 1 });
+EventSchema.index({ endDateTime: 1 });
 
 // Helper function to generate eventId
 function generateEventId(eventName: string, societyName: string, additionalClub?: string): string {
@@ -179,13 +186,44 @@ function generateEventId(eventName: string, societyName: string, additionalClub?
 }
 
 // IMPORTANT: Only the validate hook should generate eventId, not save
-EventSchema.pre('validate', function (this: mongoose.Document & IEvent, next) {
+EventSchema.pre('validate', function (this: any, next) {
   console.log('🔍 validate hook - isNew:', this.isNew, 'eventId:', this.eventId);
+  
+  // Ensure dateTime and endDateTime are set
+  if (!this.dateTime && this.dateTime) {
+    this.dateTime = this.dateTime;
+  }
+  if (!this.endDateTime && this.dateTime) {
+    this.endDateTime = new Date((this.dateTime || new Date()).getTime() + 3600000);
+  }
+  
+  // Remove old dateTime field
+  if (this.dateTime) {
+    this.dateTime = undefined;
+  }
   
   if (this.isNew && !this.eventId) {
     this.eventId = generateEventId(this.eventName, this.societyName, this.additionalClub);
     console.log('✅ validate hook - Generated eventId:', this.eventId);
   }
+  next();
+});
+
+// Clean up old dateTime field if it exists and ensure new fields are set
+EventSchema.pre('save', function (this: any, next) {
+  // Ensure dateTime and endDateTime are set
+  if (!this.dateTime && this.dateTime) {
+    this.dateTime = this.dateTime;
+  }
+  if (!this.endDateTime && this.dateTime) {
+    this.endDateTime = new Date(this.dateTime.getTime() + 3600000); // Add 1 hour
+  }
+  
+  // Remove old dateTime field to avoid validation issues
+  if (this.dateTime) {
+    this.dateTime = undefined;
+  }
+  
   next();
 });
 

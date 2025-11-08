@@ -1,4 +1,5 @@
 import nodemailer from 'nodemailer';
+import { getSMTPConfig, getSMTPStatus } from './smtpRotation';
 
 interface EmailOptions {
   to: string;
@@ -28,23 +29,24 @@ interface RegistrationEmailData {
   timestamp: string;
 }
 
-// Initialize Nodemailer transporter
+// Initialize Nodemailer transporter with SMTP rotation
 const createTransporter = () => {
-  const emailService = process.env.EMAIL_SERVICE || 'gmail';
-  const emailUser = process.env.EMAIL_USER;
-  let emailPassword = process.env.EMAIL_PASSWORD;
-
-  if (!emailUser || !emailPassword) {
-    console.error('Email credentials not configured.');
-    return null;
-  }
-
-  // Remove spaces and quotes from email password
-  emailPassword = emailPassword
-    .replace(/^["']|["']$/g, '')
-    .replace(/\s/g, '');
+  const emailService = process.env.EMAIL_SERVICE || 'custom';
 
   if (emailService === 'gmail') {
+    // Legacy gmail service - will be removed
+    const emailUser = process.env.EMAIL_USER;
+    let emailPassword = process.env.EMAIL_PASSWORD;
+
+    if (!emailUser || !emailPassword) {
+      console.error('Email credentials not configured.');
+      return null;
+    }
+
+    emailPassword = emailPassword
+      .replace(/^["']|["']$/g, '')
+      .replace(/\s/g, '');
+
     return nodemailer.createTransport({
       service: 'gmail',
       auth: {
@@ -52,20 +54,30 @@ const createTransporter = () => {
         pass: emailPassword,
       },
     });
-  } else if (emailService === 'custom') {
-    // For custom SMTP server
-    return nodemailer.createTransport({
-      host: process.env.SMTP_HOST,
-      port: parseInt(process.env.SMTP_PORT || '587'),
-      secure: process.env.SMTP_SECURE === 'true', // true for 465, false for other ports
-      auth: {
-        user: emailUser,
-        pass: emailPassword,
-      },
-    });
-  }
+  } else {
+    // Use rotating SMTP accounts
+    try {
+      const smtpConfig = getSMTPConfig();
+      const status = getSMTPStatus();
 
-  return null;
+      console.log(
+        `📧 Using SMTP Account ${smtpConfig.accountNumber} (${smtpConfig.user}) - Emails used: ${smtpConfig.emailsUsedInCurrentAccount}/100`
+      );
+
+      return nodemailer.createTransport({
+        host: process.env.SMTP_HOST || 'smtp.gmail.com',
+        port: parseInt(process.env.SMTP_PORT || '587'),
+        secure: false, // true for 465, false for other ports
+        auth: {
+          user: smtpConfig.user,
+          pass: smtpConfig.pass,
+        },
+      });
+    } catch (error) {
+      console.error('Failed to get SMTP configuration:', error);
+      return null;
+    }
+  }
 };
 
 // Send email using transporter
@@ -78,13 +90,28 @@ export const sendEmail = async (options: EmailOptions): Promise<boolean> => {
       return false;
     }
 
+    // Use rotating FROM address if using SMTP rotation
+    let fromAddress = process.env.EMAIL_FROM || process.env.EMAIL_USER;
+    const emailService = process.env.EMAIL_SERVICE || 'custom';
+    
+    if (emailService === 'custom' || emailService !== 'gmail') {
+      try {
+        const smtpConfig = getSMTPConfig();
+        // Get the current SMTP config again to ensure we use the same account's FROM
+        const currentAccountNumber = Math.floor((smtpConfig.totalEmailsCount - 1) / 100) % 10 + 1;
+        fromAddress = process.env[`SMTP_${currentAccountNumber}_FROM`] || smtpConfig.from;
+      } catch (error) {
+        console.warn('Could not get rotating FROM address, using default', error);
+      }
+    }
+
     const mailOptions = {
-      from: process.env.EMAIL_FROM || process.env.EMAIL_USER,
+      from: fromAddress,
       ...options,
     };
     
     await transporter.sendMail(mailOptions);
-    console.log(`Email sent to ${options.to}`);
+    console.log(`✅ Email sent to ${options.to}`);
     return true;
   } catch (error) {
     console.error('Error sending email:', error);
@@ -909,7 +936,8 @@ interface RegistrationConfirmationData {
   regFees: number;
   feesPaid: boolean;
   registrationDate: string;
-  eventDateTime: string;
+  eventdateTime: string;
+  eventEndDateTime: string;
   eventLocation?: string;
   accommodationRequired?: boolean;
   accommodationMembers?: number;
@@ -1190,8 +1218,12 @@ const generateRegistrationConfirmationTemplate = (data: RegistrationConfirmation
                   <div class="info-value">${escapeHtml(data.registrationDate)}</div>
                 </div>
                 <div class="info-row">
-                  <div class="info-label">Event Date & Time:</div>
-                  <div class="info-value">${escapeHtml(data.eventDateTime)}</div>
+                  <div class="info-label">Event Start:</div>
+                  <div class="info-value">${escapeHtml(data.eventdateTime)}</div>
+                </div>
+                <div class="info-row">
+                  <div class="info-label">Event End:</div>
+                  <div class="info-value">${escapeHtml(data.eventEndDateTime)}</div>
                 </div>
                 ${data.eventLocation ? `
                 <div class="info-row">
@@ -1300,7 +1332,7 @@ const generateRegistrationConfirmationTemplate = (data: RegistrationConfirmation
                 <div style="padding: 10px 0;">
                   ${isFreeBadge ? `
                   <p style="margin: 8px 0; color: #047857; font-weight: 600;">✅ You're all set! Your registration is complete.</p>
-                  <p style="margin: 8px 0;">📅 Mark your calendar for ${escapeHtml(data.eventDateTime)}</p>
+                  <p style="margin: 8px 0;">📅 Mark your calendar: ${escapeHtml(data.eventdateTime)} to ${escapeHtml(data.eventEndDateTime)}</p>
                   <p style="margin: 8px 0;">📍 Location: ${escapeHtml(data.eventLocation || 'TBA')}</p>
                   <p style="margin: 8px 0;">🎊 Get ready for an amazing experience at Pecfest 2025!</p>
                   ` : `

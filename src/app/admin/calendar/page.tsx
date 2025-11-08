@@ -12,6 +12,7 @@ export interface IEvent {
   eventName: string;
   regFees: number;
   dateTime: string;
+  endDateTime: string;
   location: string;
   briefDescription: string;
   pdfLink: string;
@@ -27,27 +28,49 @@ async function getEvents(): Promise<IEvent[]> {
     await dbConnect();
     
     const events = await Event.find({})
-      .sort({ dateTime: 1 }) // Sort by date/time ascending
+      .sort({ dateTime: 1 }) // Sort by start date/time ascending
       .lean() as any[];
     
-    return events.map(event => ({
-      _id: event._id.toString(),
-      eventId: event.eventId,
-      category: event.category,
-      societyName: event.societyName,
-      additionalClub: event.additionalClub,
-      eventName: event.eventName,
-      regFees: event.regFees,
-      dateTime: event.dateTime.toISOString(),
-      location: event.location,
-      briefDescription: event.briefDescription,
-      pdfLink: event.pdfLink,
-      image: event.image,
-      contactInfo: event.contactInfo,
-      isTeamEvent: event.isTeamEvent,
-      minTeamMembers: event.minTeamMembers,
-      maxTeamMembers: event.maxTeamMembers,
-    }));
+    const mappedEvents: IEvent[] = [];
+    
+    for (const event of events) {
+      try {
+        // Handle both old (dateTime) and new (dateTime/endDateTime) formats
+        const startDT = event.dateTime || event.dateTime;
+        const endDT = event.endDateTime || event.dateTime;
+        
+        // Only include events that have proper datetime fields
+        if (!startDT || !endDT) {
+          console.warn('Skipping event without proper datetime fields:', event.eventId);
+          continue;
+        }
+
+        mappedEvents.push({
+          _id: event._id.toString(),
+          eventId: event.eventId,
+          category: event.category,
+          societyName: event.societyName,
+          additionalClub: event.additionalClub,
+          eventName: event.eventName,
+          regFees: event.regFees,
+          dateTime: new Date(startDT).toISOString(),
+          endDateTime: new Date(endDT).toISOString(),
+          location: event.location,
+          briefDescription: event.briefDescription,
+          pdfLink: event.pdfLink,
+          image: event.image,
+          contactInfo: event.contactInfo,
+          isTeamEvent: event.isTeamEvent,
+          minTeamMembers: event.minTeamMembers,
+          maxTeamMembers: event.maxTeamMembers,
+        });
+      } catch (mapError) {
+        console.error('Error mapping event:', event.eventId, mapError);
+        continue;
+      }
+    }
+    
+    return mappedEvents;
   } catch (error) {
     console.error('Error fetching events:', error);
     return [];

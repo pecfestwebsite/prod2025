@@ -52,6 +52,7 @@ export default function EventRegistrationForm({ event, onClose, onSuccess }: Reg
   const [existingRegistration, setExistingRegistration] = useState<any>(null);
   const [isCheckingRegistration, setIsCheckingRegistration] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isMobile, setIsMobile] = useState(false);
 
   const maxTeamMembers = event.maxTeamMembers || 1;
   const isTeamEvent = event.isTeamEvent || false;
@@ -65,26 +66,27 @@ export default function EventRegistrationForm({ event, onClose, onSuccess }: Reg
 
   // Check if user is logged in
   useEffect(() => {
+    // This check runs only on the client, after the component has mounted.
+    setIsMobile(/iPhone|iPad|iPod|Android/i.test(navigator.userAgent));
+
     const checkAuth = async () => {
       try {
         const token = localStorage.getItem('token');
         if (!token) {
           setError('You must be logged in to register for events');
-          setIsCheckingAuth(false);
-          return;
-        }
-
-        const response = await fetch('/api/auth/me', {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-          },
-        });
-        const data = await response.json();
-        if (data.user?.email && data.user?.userId) {
-          setCurrentUser(data.user.email);
-          setCurrentUserId(data.user.userId);
         } else {
-          setError('You must be logged in to register for events');
+          const response = await fetch('/api/auth/me', {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+            },
+          });
+          const data = await response.json();
+          if (data.user?.email && data.user?.userId) {
+            setCurrentUser(data.user.email);
+            setCurrentUserId(data.user.userId);
+          } else {
+            setError('You must be logged in to register for events');
+          }
         }
       } catch (err) {
         setError('Failed to verify authentication');
@@ -713,7 +715,7 @@ export default function EventRegistrationForm({ event, onClose, onSuccess }: Reg
                   Event Registration
                 </h2>
                 <p className="text-[#fea6cc]/80 mt-2 font-medium">{event.eventName}</p>
-                <div className="flex items-center gap-4 mt-3 text-sm">
+                <div className="flex flex-wrap items-center gap-4 mt-3 text-sm">
                   <span className="flex items-center gap-1 text-[#ffd4b9]">
                     <IndianRupee className="w-4 h-4" />
                     ₹{event.regFees}
@@ -722,6 +724,35 @@ export default function EventRegistrationForm({ event, onClose, onSuccess }: Reg
                     <Users className="w-4 h-4" />
                     {isTeamEvent ? `Team (Max ${maxTeamMembers})` : 'Individual'}
                   </span>
+                </div>
+                {/* Event Date & Time */}
+                <div className="mt-4 bg-[#010101]/30 border border-[#b53da1]/20 rounded-xl p-3 space-y-2">
+                  <div className="flex items-start gap-2">
+                    <span className="text-[#fea6cc] text-xs font-semibold min-w-[70px]">Starts:</span>
+                    <span className="text-white text-xs">
+                      {event.dateTime ? new Date(event.dateTime).toLocaleString('en-US', {
+                        weekday: 'short',
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      }) : 'TBA'}
+                    </span>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <span className="text-[#fea6cc] text-xs font-semibold min-w-[70px]">Ends:</span>
+                    <span className="text-white text-xs">
+                      {event.endDateTime ? new Date(event.endDateTime).toLocaleString('en-US', {
+                        weekday: 'short',
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      }) : 'TBA'}
+                    </span>
+                  </div>
                 </div>
               </div>
 
@@ -1217,7 +1248,7 @@ export default function EventRegistrationForm({ event, onClose, onSuccess }: Reg
                           <img
                             src="/qr-code.jpg"
                             alt="Payment QR Code"
-                            className="w-48 h-48 object-contain"
+                            className="w-64 h-64 object-contain"
                             onError={(e) => {
                               // Fallback to placeholder if QR image not found
                               (e.target as HTMLImageElement).src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTkyIiBoZWlnaHQ9IjE5MiIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTkyIiBoZWlnaHQ9IjE5MiIgZmlsbD0iI2YwZjBmMCIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTgiIGZpbGw9IiM2NjY2NjYiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj5RUiBDb2RlPC90ZXh0Pjwvc3ZnPg==';
@@ -1227,6 +1258,19 @@ export default function EventRegistrationForm({ event, onClose, onSuccess }: Reg
                         <p className="text-sm text-white text-center mt-3 font-mono">
                            UPI ID:pecchdfest@sbi
                         </p>
+                        {isMobile && (
+                          <a
+                            href={`upi://pay?pa=pecchdfest@sbi&pn=${encodeURIComponent('PUNJAB ENGG. COLLEGE (DEEMED TO BE UNIVERISTY)')}&am=${totalAmount}&cu=INR`}
+                            className="mt-4 inline-flex items-center justify-center px-6 py-2 bg-gradient-to-r from-indigo-700 to-purple-800 text-white font-semibold rounded-lg shadow-md hover:scale-105 transition-transform duration-300"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5 mr-2">
+                              <path d="m12 2 7 7-7 7-7-7 7-7z"></path><path d="m2 12 5 5m5-10 5 5"></path><path d="M2 17h20"></path>
+                            </svg>
+                            Pay with UPI
+                          </a>
+                        )}
                       </div>
                     </div>
 
@@ -1388,7 +1432,7 @@ export default function EventRegistrationForm({ event, onClose, onSuccess }: Reg
 
                           <div className="bg-[#2a0a56]/40 rounded-lg p-3">
                             <p className="text-xs text-[#fea6cc]/60 mb-1">Account Number:</p>
-                            <p className="text-white font-semibold text-sm font-mono">35971055370</p>
+                            <p className="text-white font-semibold text-sm font-mono">00000040903415912</p>
                           </div>
 
                           <div className="bg-[#2a0a56]/40 rounded-lg p-3">

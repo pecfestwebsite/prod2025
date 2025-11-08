@@ -168,6 +168,7 @@ export async function PUT(
 
           // Send email to user ONLY if verification is approved
           if (body.verified === true) {
+            console.log(`✅ Sending verification approval email to user: ${user.email}`);
             sendUserVerificationEmail(
               user.email,
               user.name || user.email,
@@ -184,11 +185,14 @@ export async function PUT(
             ).catch((error) => {
               console.error('❌ Error sending user verification email:', error);
             });
+          } else {
+            console.log(`⚠️ Registration marked as unverified - NOT sending approval email to user`);
           }
 
-          // Always send to pecfestdev for record keeping (both verified and unverified)
+          // Always send admin notification to pecfestdev for record keeping (both verified and unverified)
+          console.log(`📧 Sending admin notification to pecfestdev@gmail.com (Action: ${body.verified ? 'verified' : 'unverified'})`);
           sendEmailNotification({
-            userEmail: 'pecfestdev@gmail.com', // Fixed email address for record
+            userEmail: user.email, // Original user email for context
             userName: user.name || user.email,
             eventName: event.eventName,
             action: body.verified ? 'verified' : 'unverified',
@@ -201,10 +205,10 @@ export async function PUT(
               feesPaid: updatedRegistration.feesPaid,
               dateTime: updatedRegistration.dateTime.toISOString(),
             },
-            sendToUser: true,    // Send to pecfestdev ✅
-            sendToAdmin: false,  // Don't send separate admin email ❌
+            sendToUser: false,   // Don't send to user (already sent above if verified)
+            sendToAdmin: true,   // Send admin notification to pecfestdev
           }).catch((error) => {
-            console.error('❌ Error sending record email to pecfestdev:', error);
+            console.error('❌ Error sending admin notification to pecfestdev:', error);
           });
         } else {
           console.warn('⚠️ Could not find user or event for email notification');

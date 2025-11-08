@@ -4,6 +4,7 @@ import bcrypt from "bcryptjs";
 import { checkRateLimit, updateRateLimit } from '@/lib/rate-limit';
 import dbConnect from '@/lib/dbConnect';
 import OTP from '@/models/OTP';
+import { getSMTPConfig, getSMTPStatus, skipToNextAccount } from '@/lib/smtpRotation';
 
 export async function POST(request: NextRequest) {
   try {
@@ -64,20 +65,9 @@ export async function POST(request: NextRequest) {
       { upsert: true, new: true }
     );
 
-    // Create transporter
-    const transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST || 'smtp.gmail.com',
-      port: parseInt(process.env.SMTP_PORT || '587'),
-      secure: false,
-      auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS,
-      },
-    });
-
     // Arabian Nights themed email
     const mailOptions = {
-      from: process.env.SMTP_FROM || process.env.SMTP_USER,
+      from: '', // Will be set from SMTP config in retry loop
       to: email,
       subject: 'Your Portal Access Code - PECFEST 2025',
       html: `
@@ -248,7 +238,60 @@ export async function POST(request: NextRequest) {
       text: `Your PECFEST 2025 login code is: ${otp}\n\nThis code expires in 10 minutes.\n\nIf you didn't request this code, please ignore this email.`,
     };
 
-    await transporter.sendMail(mailOptions);
+    // Try sending email with up to 3 SMTP accounts
+    let emailSent = false;
+    let lastError: Error | null = null;
+    const maxRetries = 3;
+
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+      try {
+        const currentSmtpConfig = getSMTPConfig();
+        console.log(`📧 Attempt ${attempt + 1}/${maxRetries}: Using SMTP Account ${currentSmtpConfig.accountNumber} (${currentSmtpConfig.user})`);
+
+        const transporter = nodemailer.createTransport({
+          host: process.env.SMTP_HOST || 'smtp.gmail.com',
+          port: parseInt(process.env.SMTP_PORT || '587'),
+          secure: false,
+          auth: {
+            user: currentSmtpConfig.user,
+            pass: currentSmtpConfig.pass,
+          },
+        });
+
+        // Update mailOptions with current account's FROM address
+        const currentMailOptions = {
+          ...mailOptions,
+          from: currentSmtpConfig.from,
+        };
+
+        await transporter.sendMail(currentMailOptions);
+        console.log(`✅ OTP email sent successfully using Account ${currentSmtpConfig.accountNumber}`);
+        emailSent = true;
+        break;
+      } catch (error) {
+        lastError = error instanceof Error ? error : new Error(String(error));
+        const errorMsg = lastError.message;
+
+        // Check if this is a daily limit error
+        if (errorMsg.includes('Daily user sending limit exceeded') || errorMsg.includes('550')) {
+          console.warn(`⚠️ Account hit daily limit, trying next account...`);
+          skipToNextAccount(); // Force skip to next account
+          continue; // Try next account
+        } else {
+          // Other errors (not daily limit) should not retry
+          console.error(`❌ Non-retryable error: ${errorMsg}`);
+          throw error;
+        }
+      }
+    }
+
+    if (!emailSent) {
+      console.error('❌ All SMTP accounts exhausted or failed');
+      return NextResponse.json(
+        { error: 'Email service temporarily unavailable. All accounts at daily limit. Please try again tomorrow.' },
+        { status: 503 }
+      );
+    }
 
     // Create success response and update rate limit cookie
     const response = NextResponse.json({ 
@@ -257,7 +300,10 @@ export async function POST(request: NextRequest) {
     });
     return updateRateLimit(response, request);
   } catch (error) {
-    console.error('Error sending OTP:');
+    console.error('❌ Error sending OTP:', error instanceof Error ? error.message : String(error));
+    if (error instanceof Error) {
+      console.error('Stack trace:', error.stack);
+    }
     return NextResponse.json(
       { error: 'Failed to send OTP. Please try again.' },
       { status: 500 }

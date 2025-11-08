@@ -267,6 +267,7 @@ export default function EventsPage() {
   const loadMoreRef = useRef<HTMLDivElement>(null);
   const EVENTS_PER_PAGE = 12;
   const prevSearchTerm = useRef<string>('');
+  const [allEventsLoaded, setAllEventsLoaded] = useState(false);
 
   const societiesAndClubs = [
     // CLUBS
@@ -386,7 +387,16 @@ export default function EventsPage() {
       console.log('Events data:', data);
       
       if (data.events && data.events.length > 0) {
-        setEvents(prev => resetEvents ? data.events : [...prev, ...data.events]);
+        setEvents(prev => {
+          if (resetEvents) {
+            return data.events;
+          }
+          // Filter out duplicates when appending
+          const existingIds = new Set(prev.map(e => e._id));
+          const newEvents = data.events.filter((event: IEvent) => !existingIds.has(event._id));
+          return [...prev, ...newEvents];
+        });
+        setCurrentPage(data.pagination.page);
         setHasMore(data.pagination.page < data.pagination.totalPages);
         setTotalPages(data.pagination.totalPages);
       } else {
@@ -406,70 +416,64 @@ export default function EventsPage() {
     setCurrentPage(1);
     setEvents([]);
     setHasMore(true);
+    setAllEventsLoaded(false);
     fetchEvents(1, true);
   }, [selectedCategory, fetchEvents]);
 
-  // Handle search - fetch all matching events from server
+  // When user starts searching, automatically load all events in background
   useEffect(() => {
-    const searchEvents = async () => {
-      if (!searchTerm.trim()) {
-        // If search is cleared, return to normal pagination
-        return;
-      }
-
-      try {
-        setLoading(true);
-        console.log('🔍 Searching for:', searchTerm);
+    const loadAllEventsForSearch = async () => {
+      // Only load all events if user is searching and we haven't loaded all yet
+      if (searchTerm.trim() && hasMore && !loadingMore && !allEventsLoaded) {
+        console.log('🔍 Search detected, silently loading all events in background...');
         
-        // Fetch all events (large limit) for search
-        const params = new URLSearchParams({
-          page: '1',
-          limit: '1000', // Get all events for search
-        });
+        // Load all remaining pages silently in background
+        let currentLoadPage = currentPage + 1;
+        let stillHasMore: boolean = true;
         
-        if (selectedCategory !== 'all') {
-          params.append('category', selectedCategory);
+        while (stillHasMore && currentLoadPage <= totalPages) {
+          try {
+            const params = new URLSearchParams({
+              page: currentLoadPage.toString(),
+              limit: EVENTS_PER_PAGE.toString(),
+            });
+            
+            if (selectedCategory !== 'all') {
+              params.append('category', selectedCategory);
+            }
+            
+            const response = await fetch(`/api/events?${params.toString()}`);
+            const data = await response.json();
+            
+            if (data.events && data.events.length > 0) {
+              // Filter out duplicates by checking _id
+              setEvents(prev => {
+                const existingIds = new Set(prev.map(e => e._id));
+                const newEvents = data.events.filter((event: IEvent) => !existingIds.has(event._id));
+                return [...prev, ...newEvents];
+              });
+              stillHasMore = data.pagination.page < data.pagination.totalPages;
+              currentLoadPage++;
+            } else {
+              stillHasMore = false;
+            }
+            
+            // Small delay to prevent overwhelming the server
+            await new Promise(resolve => setTimeout(resolve, 50));
+          } catch (error) {
+            console.error('Error loading events in background:', error);
+            break;
+          }
         }
         
-        const response = await fetch(`/api/events?${params.toString()}`);
-        const data = await response.json();
-        
-        if (data.events) {
-          setEvents(data.events);
-          setHasMore(false); // No pagination during search
-          console.log(`✅ Found ${data.events.length} events for search`);
-        }
-      } catch (error) {
-        console.error('Error searching events:', error);
-      } finally {
-        setLoading(false);
+        setAllEventsLoaded(true);
+        setHasMore(false);
+        console.log('✅ All events loaded for comprehensive search');
       }
     };
 
-    // Debounce search by 300ms
-    const timer = setTimeout(() => {
-      if (searchTerm.trim()) {
-        searchEvents();
-      }
-    }, 300);
-
-    return () => clearTimeout(timer);
-  }, [searchTerm, selectedCategory]);
-
-  // Reset pagination when search is cleared
-  useEffect(() => {
-    // Check if search was cleared (had value before, empty now)
-    if (prevSearchTerm.current && !searchTerm.trim()) {
-      console.log('🔄 Search cleared, resetting to pagination');
-      setCurrentPage(1);
-      setEvents([]);
-      setHasMore(true);
-      fetchEvents(1, true);
-    }
-    
-    // Update previous search term
-    prevSearchTerm.current = searchTerm;
-  }, [searchTerm, fetchEvents]);
+    loadAllEventsForSearch();
+  }, [searchTerm, hasMore, loadingMore, currentPage, fetchEvents, allEventsLoaded, totalPages, EVENTS_PER_PAGE, selectedCategory]);
 
   // Load more when scroll reaches bottom
   useEffect(() => {
@@ -863,6 +867,30 @@ export default function EventsPage() {
           </div>
         </div>
 
+        {/* Search Results Indicator */}
+        {searchTerm && (
+          <div className="max-w-7xl mx-auto px-4 pt-4">
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="bg-gradient-to-r from-[#2a0a56]/60 to-[#4321a9]/60 backdrop-blur-md border border-[#b53da1]/50 rounded-xl px-4 py-3 flex items-center justify-between"
+            >
+              <div className="flex items-center gap-3">
+                <Search className="w-5 h-5 text-[#fea6cc]" />
+                <span className="text-white font-medium">
+                  Found <span className="text-[#ffd4b9] font-bold">{filteredEvents.length}</span> event{filteredEvents.length !== 1 ? 's' : ''} for "{searchTerm}"
+                </span>
+              </div>
+              {!allEventsLoaded && hasMore && (
+                <span className="text-[#fea6cc] text-sm flex items-center gap-2">
+                  <span className="animate-pulse">●</span>
+                  Loading more...
+                </span>
+              )}
+            </motion.div>
+          </div>
+        )}
+
         {/* Events Grid */}
         <div className="max-w-7xl mx-auto px-4 pt-8 pb-24 relative z-10">
           {filteredEvents.length === 0 && !loading && events.length === 0 ? (
@@ -899,7 +927,7 @@ export default function EventsPage() {
 
                   return (
                     <motion.div
-                      key={event._id}
+                      key={`${event._id}-${event.eventId}-${index}`}
                       // Conditionally add the ref and data-letter for the alphabet index
                       ref={isFirstOfLetter ? el => { sectionRefs.current[firstLetter] = el; } : null}
                       data-letter={isFirstOfLetter ? firstLetter : null}
@@ -920,7 +948,7 @@ export default function EventsPage() {
                         {/* Event Image */}
                         <div className="rounded-2xl overflow-hidden border-2 border-[#b53da1]/30 aspect-square bg-black/20 flex items-center justify-center">
                           <img
-                            src={event.image?.includes('PECFEST_2024') ? '/vyom.png' : (event.image || '/vyom.png')}
+                            src={event.image?.includes('PECFEST_2024') ? '/final.png' : (event.image || '/final.png')}
                             alt={event.eventName}
                             className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-500"
                           />
@@ -931,6 +959,23 @@ export default function EventsPage() {
                           <h3 className="text-2xl font-bold text-white group-hover:text-[#ffd4b9] transition-colors duration-300 font-display text-center flex-1">
                             {event.eventName}
                           </h3>
+
+                          {/* Event Date & Time Display */}
+                          <div className="mt-3 space-y-1 text-center">
+                            <div className="text-xs text-[#fea6cc] font-semibold">
+                              📅 {event.dateTime ? new Date(event.dateTime).toLocaleDateString('en-US', {
+                                month: 'short',
+                                day: 'numeric',
+                                year: 'numeric'
+                              }) : 'Date TBA'}
+                            </div>
+                            <div className="text-xs text-[#ffd4b9]/70">
+                              🕒 {event.dateTime ? new Date(event.dateTime).toLocaleTimeString('en-US', {
+                                hour: '2-digit',
+                                minute: '2-digit'
+                              }) : 'Time TBA'}
+                            </div>
+                          </div>
 
                           {/* Action Buttons */}
                           <div className="flex gap-3 mt-6">

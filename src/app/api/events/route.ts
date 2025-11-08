@@ -7,20 +7,41 @@ export async function POST(request: NextRequest) {
     // Connect to the database
     await dbConnect();
 
+    // Handle schema migration - drop old validator if it exists
+    try {
+      const Event_temp = require('@/models/Event').default;
+      const db = Event_temp.db.db;
+      if (db) {
+        // Try to update the collection validator to remove the old dateTime requirement
+        await db.command({
+          collMod: 'events',
+          validator: {
+            $jsonSchema: {
+              // This will be overridden by Mongoose, but helps clear old validators
+            }
+          }
+        }).catch(() => {
+          // If this fails, it's okay - Mongoose will handle validation
+        });
+      }
+    } catch (e) {
+      // Silently fail - this is just a migration helper
+    }
+
     // Parse the request body
     const body = await request.json();
 
-    // Validate required fields (excluding eventId - it will be auto-generated)
+    // Validate required fields (excluding eventId - it will be auto-generated, endDateTime and contactInfo are optional)
     const requiredFields = [
       'category',
       'societyName',
       'eventName',
       'regFees',
       'dateTime',
+      'endDateTime',
       'location',
       'briefDescription',
       'image',
-      'contactInfo',
       'isTeamEvent',
       'minTeamMembers',
       'maxTeamMembers',
@@ -86,6 +107,13 @@ export async function POST(request: NextRequest) {
     
     console.log('🔧 API: Generated eventId:', generatedEventId);
     
+    // Calculate endDateTime if not provided (default to 1 hour after dateTime)
+    let endDateTime = body.endDateTime;
+    if (!endDateTime) {
+      const startDate = new Date(body.dateTime);
+      endDateTime = new Date(startDate.getTime() + 60 * 60 * 1000).toISOString(); // Add 1 hour
+    }
+    
     const eventData = {
       eventId: generatedEventId, // Set eventId explicitly BEFORE creating event
       category: body.category,
@@ -94,11 +122,12 @@ export async function POST(request: NextRequest) {
       eventName: body.eventName.trim(),
       regFees: Number(body.regFees),
       dateTime: new Date(body.dateTime),
+      endDateTime: new Date(body.endDateTime),
       location: body.location.trim(),
       briefDescription: body.briefDescription.trim(),
       pdfLink: body.pdfLink ? body.pdfLink.trim() : '',
       image: body.image,
-      contactInfo: body.contactInfo.trim(),
+      contactInfo: body.contactInfo ? body.contactInfo.trim() : '',
       isTeamEvent: Boolean(body.isTeamEvent),
       minTeamMembers: Number(body.minTeamMembers),
       maxTeamMembers: Number(body.maxTeamMembers),

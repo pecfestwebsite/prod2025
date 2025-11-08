@@ -28,11 +28,12 @@ interface Event {
   eventName: string;
   regFees: number;
   dateTime: string;
+  endDateTime?: string;
   location: string;
   briefDescription: string;
   pdfLink: string;
   image: string;
-  contactInfo: string;
+  contactInfo?: string;
   isTeamEvent: boolean;
   minTeamMembers: number;
   maxTeamMembers: number;
@@ -44,8 +45,34 @@ interface EditEventModalProps {
   onUpdate: () => void;
 }
 
+// Helper function to format ISO datetime to datetime-local format (YYYY-MM-DDTHH:mm)
+const formatDateTimeForInput = (dateString: string): string => {
+  if (!dateString) return '';
+  // If it's already in the correct format, return it
+  if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(dateString)) {
+    return dateString;
+  }
+  // If it's an ISO string, convert it
+  try {
+    const date = new Date(dateString);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
+  } catch (err) {
+    console.error('Error formatting date:', err);
+    return '';
+  }
+};
+
 export default function EditEventModal({ event, onClose, onUpdate }: EditEventModalProps) {
-  const [formData, setFormData] = useState<Event>(event);
+  const [formData, setFormData] = useState<Event>({
+    ...event,
+    dateTime: formatDateTimeForInput(event.dateTime),
+    endDateTime: event.endDateTime ? formatDateTimeForInput(event.endDateTime) : undefined,
+  });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
@@ -66,11 +93,11 @@ export default function EditEventModal({ event, onClose, onUpdate }: EditEventMo
     const { name, value } = e.target;
     setFormData((prev) => ({
       ...prev,
-      [name]: name === 'regFees' || name === 'minTeamMembers' || name === 'maxTeamMembers' 
-        ? parseFloat(value) || 0 
+      [name]: name === 'regFees' || name === 'minTeamMembers' || name === 'maxTeamMembers'
+        ? parseFloat(value) || 0
         : name === 'isTeamEvent'
-        ? e.target instanceof HTMLInputElement ? e.target.checked : value === 'true'
-        : value,
+          ? e.target instanceof HTMLInputElement ? e.target.checked : value === 'true'
+          : value,
     }));
   };
 
@@ -275,11 +302,10 @@ export default function EditEventModal({ event, onClose, onUpdate }: EditEventMo
                   value={formData.societyName}
                   onChange={handleInputChange}
                   disabled={!!lockedSociety}
-                  className={`w-full px-4 py-2 rounded-lg border-2 border-purple-500/50 focus:border-purple-500 focus:outline-none transition-all ${
-                    lockedSociety
-                      ? 'bg-slate-700/50 text-slate-400 cursor-not-allowed opacity-75'
-                      : 'bg-blue-900/40 text-white'
-                  }`}
+                  className={`w-full px-4 py-2 rounded-lg border-2 border-purple-500/50 focus:border-purple-500 focus:outline-none transition-all ${lockedSociety
+                    ? 'bg-slate-700/50 text-slate-400 cursor-not-allowed opacity-75'
+                    : 'bg-blue-900/40 text-white'
+                    }`}
                 >
                   <option value="" className="text-slate-900">Select a Society/Club</option>
                   {CLUBS_SOCS.filter(club => club !== 'None').map((club) => (
@@ -307,14 +333,28 @@ export default function EditEventModal({ event, onClose, onUpdate }: EditEventMo
                 />
               </div>
 
-              {/* Date & Time */}
+              {/* Start Date & Time */}
               <div>
-                <label className="block text-sm font-semibold text-white mb-2">Date & Time</label>
+                <label className="block text-sm font-semibold text-white mb-2">Start Date & Time</label>
                 <input
                   type="datetime-local"
-                  name="dateTime"
-                  value={new Date(formData.dateTime).toISOString().slice(0, 16)}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, dateTime: new Date(e.target.value).toISOString() }))}
+                  value={formData.dateTime}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, dateTime: e.target.value }))}
+                  className="w-full px-4 py-2 rounded-lg border-2 border-purple-500/50 focus:border-purple-500 focus:outline-none bg-blue-900/40 text-white placeholder-slate-400 transition-all"
+                />
+              </div>
+
+              {/* End Date & Time */}
+              <div>
+                <label className="block text-sm font-semibold text-white mb-2">End Date & Time <span className="text-slate-400 text-xs">(Optional - defaults to 1 hour after start time)</span></label>
+                <input
+                  type="datetime-local"
+                  value={formData.endDateTime || ''}
+                  onChange={(e) => {
+                    if (e.target.value > formData.dateTime) {
+                      setFormData((prev) => ({ ...prev, endDateTime: e.target.value }));
+                    }
+                  }}
                   className="w-full px-4 py-2 rounded-lg border-2 border-purple-500/50 focus:border-purple-500 focus:outline-none bg-blue-900/40 text-white placeholder-slate-400 transition-all"
                 />
               </div>
@@ -328,8 +368,8 @@ export default function EditEventModal({ event, onClose, onUpdate }: EditEventMo
                       type="radio"
                       name="isTeamEvent"
                       checked={!formData.isTeamEvent}
-                      onChange={() => setFormData((prev) => ({ 
-                        ...prev, 
+                      onChange={() => setFormData((prev) => ({
+                        ...prev,
                         isTeamEvent: false,
                         minTeamMembers: 1,
                         maxTeamMembers: 1
@@ -343,9 +383,9 @@ export default function EditEventModal({ event, onClose, onUpdate }: EditEventMo
                       type="radio"
                       name="isTeamEvent"
                       checked={formData.isTeamEvent}
-                      onChange={() => setFormData((prev) => ({ 
-                        ...prev, 
-                        isTeamEvent: true 
+                      onChange={() => setFormData((prev) => ({
+                        ...prev,
+                        isTeamEvent: true
                       }))}
                       className="w-4 h-4"
                     />
@@ -366,11 +406,10 @@ export default function EditEventModal({ event, onClose, onUpdate }: EditEventMo
                   onChange={handleInputChange}
                   disabled={!formData.isTeamEvent}
                   min="1"
-                  className={`w-full px-4 py-2 rounded-lg border-2 border-purple-500/50 focus:border-purple-500 focus:outline-none transition-all ${
-                    !formData.isTeamEvent
-                      ? 'bg-slate-700/50 text-slate-400 cursor-not-allowed opacity-75'
-                      : 'bg-blue-900/40 text-white'
-                  }`}
+                  className={`w-full px-4 py-2 rounded-lg border-2 border-purple-500/50 focus:border-purple-500 focus:outline-none transition-all ${!formData.isTeamEvent
+                    ? 'bg-slate-700/50 text-slate-400 cursor-not-allowed opacity-75'
+                    : 'bg-blue-900/40 text-white'
+                    }`}
                 />
               </div>
 
@@ -386,11 +425,10 @@ export default function EditEventModal({ event, onClose, onUpdate }: EditEventMo
                   onChange={handleInputChange}
                   disabled={!formData.isTeamEvent}
                   min="1"
-                  className={`w-full px-4 py-2 rounded-lg border-2 border-purple-500/50 focus:border-purple-500 focus:outline-none transition-all ${
-                    !formData.isTeamEvent
-                      ? 'bg-slate-700/50 text-slate-400 cursor-not-allowed opacity-75'
-                      : 'bg-blue-900/40 text-white'
-                  }`}
+                  className={`w-full px-4 py-2 rounded-lg border-2 border-purple-500/50 focus:border-purple-500 focus:outline-none transition-all ${!formData.isTeamEvent
+                    ? 'bg-slate-700/50 text-slate-400 cursor-not-allowed opacity-75'
+                    : 'bg-blue-900/40 text-white'
+                    }`}
                 />
               </div>
 
@@ -409,94 +447,94 @@ export default function EditEventModal({ event, onClose, onUpdate }: EditEventMo
                 </select>
               </div>
 
-            {/* Location */}
-            <div>
-              <label className="block text-sm font-semibold text-white mb-2">Location</label>
-              <input
-                type="text"
-                name="location"
-                value={formData.location}
-                onChange={handleInputChange}
-                className="w-full px-4 py-2 rounded-lg border-2 border-purple-500/50 focus:border-purple-500 focus:outline-none bg-blue-900/40 text-white placeholder-slate-400 transition-all"
-              />
-            </div>
+              {/* Location */}
+              <div>
+                <label className="block text-sm font-semibold text-white mb-2">Location</label>
+                <input
+                  type="text"
+                  name="location"
+                  value={formData.location}
+                  onChange={handleInputChange}
+                  className="w-full px-4 py-2 rounded-lg border-2 border-purple-500/50 focus:border-purple-500 focus:outline-none bg-blue-900/40 text-white placeholder-slate-400 transition-all"
+                />
+              </div>
 
             {/* Contact Info */}
             <div>
-              <label className="block text-sm font-semibold text-white mb-2">Contact Info</label>
+              <label className="block text-sm font-semibold text-white mb-2">Contact Info <span className="text-slate-400 text-xs">(Phone or Email - Optional)</span></label>
               <input
                 type="text"
                 name="contactInfo"
-                value={formData.contactInfo}
+                value={formData.contactInfo || ''}
                 onChange={handleInputChange}
                 className="w-full px-4 py-2 rounded-lg border-2 border-purple-500/50 focus:border-purple-500 focus:outline-none bg-blue-900/40 text-white placeholder-slate-400 transition-all"
               />
             </div>
 
-            {/* PDF Link */}
-            <div>
-              <label className="block text-sm font-semibold text-white mb-2">PDF Link</label>
-              <input
-                type="url"
-                name="pdfLink"
-                value={formData.pdfLink}
-                onChange={handleInputChange}
-                className="w-full px-4 py-2 rounded-lg border-2 border-purple-500/50 focus:border-purple-500 focus:outline-none bg-blue-900/40 text-white placeholder-slate-400 transition-all"
-              />
-            </div>
-
-            {/* Event Image */}
-            <div>
-              <label className="block text-sm font-semibold text-white mb-2">Event Image</label>
-              <div className="border-4 border-dashed border-purple-500/50 rounded-xl p-6 text-center hover:border-purple-400 hover:bg-purple-900/30 transition-all cursor-pointer bg-purple-900/10">
+              {/* PDF Link */}
+              <div>
+                <label className="block text-sm font-semibold text-white mb-2">PDF Link</label>
                 <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleImageChange}
-                  className="hidden"
-                  id="editImageInput"
+                  type="url"
+                  name="pdfLink"
+                  value={formData.pdfLink}
+                  onChange={handleInputChange}
+                  className="w-full px-4 py-2 rounded-lg border-2 border-purple-500/50 focus:border-purple-500 focus:outline-none bg-blue-900/40 text-white placeholder-slate-400 transition-all"
                 />
-                <label htmlFor="editImageInput" className="cursor-pointer block">
-                  {imagePreview && imagePreview !== event.image ? (
-                    <div className="space-y-2">
-                      <img
-                        src={imagePreview}
-                        alt="Preview"
-                        className="max-h-32 mx-auto rounded-lg border-2 border-purple-500/50"
-                      />
-                      <p className="text-xs text-slate-300 font-semibold">Click to change image</p>
-                    </div>
-                  ) : imagePreview ? (
-                    <div className="space-y-2">
-                      <img
-                        src={imagePreview}
-                        alt="Current"
-                        className="max-h-32 mx-auto rounded-lg border-2 border-purple-500/50"
-                      />
-                      <p className="text-xs text-slate-300 font-semibold">Click to change image</p>
-                    </div>
-                  ) : (
-                    <div className="space-y-1">
-                      <p className="text-2xl">🖼️</p>
-                      <p className="text-xs text-slate-300 font-semibold">Click to upload or drag and drop</p>
-                      <p className="text-xs text-slate-400">PNG, JPG up to 10MB</p>
-                    </div>
-                  )}
-                </label>
               </div>
-            </div>
 
-            {/* Brief Description */}
-            <div>
-              <label className="block text-sm font-semibold text-white mb-2">Brief Description</label>
-              <textarea
-                name="briefDescription"
-                value={formData.briefDescription}
-                onChange={handleInputChange}
-                rows={3}
-                className="w-full px-4 py-2 rounded-lg border-2 border-purple-500/50 focus:border-purple-500 focus:outline-none bg-blue-900/40 text-white placeholder-slate-400 transition-all resize-none"
-              />
-            </div>
+              {/* Event Image */}
+              <div>
+                <label className="block text-sm font-semibold text-white mb-2">Event Image</label>
+                <div className="border-4 border-dashed border-purple-500/50 rounded-xl p-6 text-center hover:border-purple-400 hover:bg-purple-900/30 transition-all cursor-pointer bg-purple-900/10">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageChange}
+                    className="hidden"
+                    id="editImageInput"
+                  />
+                  <label htmlFor="editImageInput" className="cursor-pointer block">
+                    {imagePreview && imagePreview !== event.image ? (
+                      <div className="space-y-2">
+                        <img
+                          src={imagePreview}
+                          alt="Preview"
+                          className="max-h-32 mx-auto rounded-lg border-2 border-purple-500/50"
+                        />
+                        <p className="text-xs text-slate-300 font-semibold">Click to change image</p>
+                      </div>
+                    ) : imagePreview ? (
+                      <div className="space-y-2">
+                        <img
+                          src={imagePreview}
+                          alt="Current"
+                          className="max-h-32 mx-auto rounded-lg border-2 border-purple-500/50"
+                        />
+                        <p className="text-xs text-slate-300 font-semibold">Click to change image</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-1">
+                        <p className="text-2xl">🖼️</p>
+                        <p className="text-xs text-slate-300 font-semibold">Click to upload or drag and drop</p>
+                        <p className="text-xs text-slate-400">PNG, JPG up to 10MB</p>
+                      </div>
+                    )}
+                  </label>
+                </div>
+              </div>
+
+              {/* Brief Description */}
+              <div>
+                <label className="block text-sm font-semibold text-white mb-2">Brief Description</label>
+                <textarea
+                  name="briefDescription"
+                  value={formData.briefDescription}
+                  onChange={handleInputChange}
+                  rows={3}
+                  className="w-full px-4 py-2 rounded-lg border-2 border-purple-500/50 focus:border-purple-500 focus:outline-none bg-blue-900/40 text-white placeholder-slate-400 transition-all resize-none"
+                />
+              </div>
             </div>
           </form>
 

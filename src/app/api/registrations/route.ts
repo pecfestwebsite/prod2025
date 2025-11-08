@@ -163,6 +163,8 @@ export async function POST(request: NextRequest) {
           minute: '2-digit',
           timeZone: 'Asia/Kolkata',
         }),
+        eventdateTime: event.dateTime,
+        eventEndDateTime: event.endDateTime,
         eventLocation: event.location,
         accommodationRequired: body.accommodationRequired || false,
         accommodationMembers: body.accommodationMembers || 0,
@@ -170,13 +172,17 @@ export async function POST(request: NextRequest) {
         receiptUrl: typeof feesPaid === 'string' ? feesPaid : undefined,
       };
 
+      console.log(`📧 Sending registration confirmation email to user: ${userId}`);
+      console.log(`   Event: ${event.eventName} (${event.eventId})`);
+      console.log(`   Paid: ${emailData.feesPaid ? 'Yes' : 'No'} | Team: ${emailData.teamId || 'Individual'}`);
+      
       // Send email asynchronously (don't wait for it to complete)
       sendRegistrationConfirmationEmail(emailData).catch((error) => {
-        console.error('Failed to send registration confirmation email:', error);
+        console.error('❌ Failed to send registration confirmation email:', error);
       });
     } catch (emailError) {
       // Log email error but don't fail the registration
-      console.error('Error preparing registration confirmation email:', emailError);
+      console.error('❌ Error preparing registration confirmation email:', emailError);
     }
 
     return NextResponse.json(

@@ -1,7 +1,7 @@
 'use client';
 import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { User, Mail, Phone, Building2, IdCard, Users, Calendar, Copy, CheckCircle, Loader2 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { User, Mail, Phone, Building2, IdCard, Users, Calendar, Copy, CheckCircle, Loader2, Edit2, X, Save } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
@@ -62,6 +62,11 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(true);
   const [copiedTeamId, setCopiedTeamId] = useState<string>('');
   const [hasFetched, setHasFetched] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [editedUser, setEditedUser] = useState<UserData | null>(null);
+  const [saveSuccess, setSaveSuccess] = useState(false);
+  const [saveError, setSaveError] = useState('');
   const router = useRouter();
 
   useEffect(() => {
@@ -195,6 +200,69 @@ export default function ProfilePage() {
     });
   };
 
+  const handleEditClick = () => {
+    setEditedUser({ ...user! });
+    setIsEditing(true);
+    setSaveError('');
+    setSaveSuccess(false);
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditing(false);
+    setEditedUser(null);
+    setSaveError('');
+  };
+
+  const handleSaveProfile = async () => {
+    if (!editedUser) return;
+
+    try {
+      setIsSaving(true);
+      setSaveError('');
+
+      const token = localStorage.getItem('token');
+      if (!token) {
+        router.push('/register');
+        return;
+      }
+
+      const response = await fetch('/api/auth/update-profile', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          name: editedUser.name,
+          phoneNumber: editedUser.phoneNumber,
+          college: editedUser.college,
+          studentId: editedUser.studentId,
+          branch: editedUser.branch,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to update profile');
+      }
+
+      setUser(editedUser);
+      setIsEditing(false);
+      setSaveSuccess(true);
+      
+      setTimeout(() => {
+        setSaveSuccess(false);
+      }, 3000);
+
+    } catch (error: any) {
+      console.error('Error updating profile:', error);
+      setSaveError(error.message || 'Failed to update profile');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-[#140655] via-[#4321a9] to-[#2a0a56] flex items-center justify-center">
@@ -253,6 +321,23 @@ export default function ProfilePage() {
           </div>
         </div>
 
+        {/* Success Message */}
+        <AnimatePresence>
+          {saveSuccess && (
+            <motion.div
+              initial={{ opacity: 0, y: -50 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -50 }}
+              className="fixed top-24 left-1/2 -translate-x-1/2 z-50"
+            >
+              <div className="bg-gradient-to-r from-green-500 to-emerald-500 text-white px-6 py-3 rounded-full shadow-2xl flex items-center gap-3">
+                <CheckCircle className="w-5 h-5" />
+                <span className="font-semibold">Profile updated successfully!</span>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         {/* Profile Content */}
         <div className="max-w-7xl mx-auto px-4 pb-16">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -262,15 +347,16 @@ export default function ProfilePage() {
               animate={{ opacity: 1, x: 0 }}
               className="lg:col-span-1"
             >
-              <div className="bg-gradient-to-br from-[#2a0a56]/80 to-[#4321a9]/80 backdrop-blur-lg rounded-3xl p-6 border-2 border-[#b53da1]/30 shadow-2xl">
-                <div className="flex items-center gap-3 mb-6">
-                  <div className="p-3 bg-gradient-to-r from-[#b53da1] to-[#ed6ab8] rounded-full">
-                    <User className="w-8 h-8" />
-                  </div>
-                  <div>
-                    <h2 className="text-2xl font-bold text-[#ffd4b9]">User Details</h2>
-                    <p className="text-sm text-[#fea6cc]/80">Your profile information</p>
-                  </div>
+              <div className="bg-[#140655]/40 backdrop-blur-lg rounded-2xl p-6 border border-[#b53da1]/20">
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-2xl font-bold text-[#ffd4b9]">User Details</h2>
+                  <button
+                    onClick={handleEditClick}
+                    className="p-2 bg-[#b53da1]/20 hover:bg-[#b53da1]/40 rounded-lg transition-all"
+                    title="Edit Profile"
+                  >
+                    <Edit2 className="w-5 h-5 text-[#fea6cc]" />
+                  </button>
                 </div>
 
                 <div className="space-y-4">
@@ -502,6 +588,188 @@ export default function ProfilePage() {
             </motion.div>
           </div>
         </div>
+
+        {/* Edit Profile Modal */}
+        <AnimatePresence>
+          {isEditing && editedUser && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm"
+              onClick={handleCancelEdit}
+            >
+              <motion.div
+                initial={{ scale: 0.95, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.95, opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                className="relative w-full max-w-4xl bg-gradient-to-br from-[#140655]/95 via-[#2a0a56]/95 to-[#4321a9]/90 backdrop-blur-2xl rounded-2xl shadow-[0_0_50px_rgba(181,61,161,0.3)] border border-[#b53da1]/20"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {/* Close Button - Minimalist */}
+                <button
+                  onClick={handleCancelEdit}
+                  className="absolute top-6 right-6 p-2 text-white/40 hover:text-white hover:bg-white/5 rounded-lg transition-all z-10"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+
+                {/* Modal Content - Single View */}
+                <div className="p-8">
+                  {/* Header - Clean & Minimal */}
+                  <div className="mb-8">
+                    <h2 className="text-3xl font-bold text-white mb-2">Edit Profile</h2>
+                    <p className="text-white/40 text-sm">Update your personal information</p>
+                  </div>
+
+                  {/* Error Message */}
+                  {saveError && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="mb-6 bg-red-500/10 border border-red-500/20 rounded-lg p-3 text-red-300 text-sm"
+                    >
+                      {saveError}
+                    </motion.div>
+                  )}
+
+                  {/* Form Fields - Grid Layout for Single View */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                    {/* Name Field */}
+                    <div>
+                      <label className="block text-[#ffd4b9] text-sm font-medium mb-2">
+                        Full Name
+                      </label>
+                      <div className="relative">
+                        <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#fea6cc]/50" />
+                        <input
+                          type="text"
+                          value={editedUser.name}
+                          onChange={(e) => setEditedUser({ ...editedUser, name: e.target.value })}
+                          className="w-full pl-10 pr-4 py-2.5 bg-black/30 border border-[#b53da1]/20 rounded-lg text-white placeholder:text-white/30 focus:outline-none focus:border-[#ed6ab8]/50 focus:bg-black/40 transition-all"
+                          placeholder="Enter your name"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Email Field (Read-only) */}
+                    <div>
+                      <label className="block text-[#ffd4b9] text-sm font-medium mb-2">
+                        Email <span className="text-white/30 text-xs">(Read-only)</span>
+                      </label>
+                      <div className="relative">
+                        <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#fea6cc]/50" />
+                        <input
+                          type="email"
+                          value={editedUser.email}
+                          disabled
+                          className="w-full pl-10 pr-4 py-2.5 bg-black/20 border border-[#b53da1]/10 rounded-lg text-white/40 cursor-not-allowed"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Phone Field */}
+                    <div>
+                      <label className="block text-[#ffd4b9] text-sm font-medium mb-2">
+                        Phone Number
+                      </label>
+                      <div className="relative">
+                        <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#fea6cc]/50" />
+                        <input
+                          type="tel"
+                          value={editedUser.phoneNumber}
+                          onChange={(e) => setEditedUser({ ...editedUser, phoneNumber: e.target.value })}
+                          className="w-full pl-10 pr-4 py-2.5 bg-black/30 border border-[#b53da1]/20 rounded-lg text-white placeholder:text-white/30 focus:outline-none focus:border-[#ed6ab8]/50 focus:bg-black/40 transition-all"
+                          placeholder="Enter phone number"
+                        />
+                      </div>
+                    </div>
+
+                    {/* College Field */}
+                    <div>
+                      <label className="block text-[#ffd4b9] text-sm font-medium mb-2">
+                        College Name
+                      </label>
+                      <div className="relative">
+                        <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#fea6cc]/50" />
+                        <input
+                          type="text"
+                          value={editedUser.college}
+                          onChange={(e) => setEditedUser({ ...editedUser, college: e.target.value })}
+                          className="w-full pl-10 pr-4 py-2.5 bg-black/30 border border-[#b53da1]/20 rounded-lg text-white placeholder:text-white/30 focus:outline-none focus:border-[#ed6ab8]/50 focus:bg-black/40 transition-all"
+                          placeholder="Enter college name"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Student ID Field */}
+                    <div>
+                      <label className="block text-[#ffd4b9] text-sm font-medium mb-2">
+                        Student ID
+                      </label>
+                      <div className="relative">
+                        <IdCard className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#fea6cc]/50" />
+                        <input
+                          type="text"
+                          value={editedUser.studentId}
+                          onChange={(e) => setEditedUser({ ...editedUser, studentId: e.target.value })}
+                          className="w-full pl-10 pr-4 py-2.5 bg-black/30 border border-[#b53da1]/20 rounded-lg text-white placeholder:text-white/30 focus:outline-none focus:border-[#ed6ab8]/50 focus:bg-black/40 transition-all"
+                          placeholder="Enter student ID"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Branch Field */}
+                    <div>
+                      <label className="block text-[#ffd4b9] text-sm font-medium mb-2">
+                        Branch
+                      </label>
+                      <div className="relative">
+                        <IdCard className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#fea6cc]/50" />
+                        <input
+                          type="text"
+                          value={editedUser.branch}
+                          onChange={(e) => setEditedUser({ ...editedUser, branch: e.target.value })}
+                          className="w-full pl-10 pr-4 py-2.5 bg-black/30 border border-[#b53da1]/20 rounded-lg text-white placeholder:text-white/30 focus:outline-none focus:border-[#ed6ab8]/50 focus:bg-black/40 transition-all"
+                          placeholder="e.g., Computer Science"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Action Buttons - Pink gradient only on save */}
+                  <div className="flex gap-3 pt-6 border-t border-[#b53da1]/10">
+                    <button
+                      onClick={handleCancelEdit}
+                      className="flex-1 px-6 py-3 bg-black/20 hover:bg-black/30 border border-[#b53da1]/20 text-[#fea6cc] hover:text-white font-medium rounded-lg transition-all"
+                      disabled={isSaving}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleSaveProfile}
+                      disabled={isSaving}
+                      className="flex-1 px-6 py-3 bg-gradient-to-r from-[#b53da1] to-[#ed6ab8] hover:from-[#c44db1] hover:to-[#f57ac8] text-white font-semibold rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg shadow-[#b53da1]/20"
+                    >
+                      {isSaving ? (
+                        <>
+                          <Loader2 className="w-5 h-5 animate-spin" />
+                          Saving...
+                        </>
+                      ) : (
+                        <>
+                          <Save className="w-5 h-5" />
+                          Save Changes
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </main>
     </>
   );

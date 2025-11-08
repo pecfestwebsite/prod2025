@@ -17,6 +17,7 @@ interface Event {
   eventName: string;
   regFees: number;
   dateTime: string;
+  endDateTime: string;
   location: string;
   briefDescription: string;
   contactInfo: string;
@@ -354,10 +355,13 @@ export default function ViewEventsPage() {
                           <span className={`inline-block px-2 py-1 rounded text-xs font-semibold ${
                             event.category === 'technical'
                               ? 'bg-blue-600/30 text-blue-100'
-                              : 'bg-pink-600/30 text-pink-100'
+                              : event.category === 'cultural'
+                              ? 'bg-pink-600/30 text-pink-100'
+                              : 'bg-purple-600/30 text-purple-100'
                           }`}>
                             {event.category === 'technical' && '⚙️ Tech'}
                             {event.category === 'cultural' && '🎨 Cultural'}
+                            {event.category === 'convenor' && '👑 Convenor'}
                           </span>
                         </div>
                       </td>
@@ -365,10 +369,13 @@ export default function ViewEventsPage() {
                         <span className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap ${
                           event.category === 'technical'
                             ? 'bg-blue-600/30 text-blue-100'
-                            : 'bg-pink-600/30 text-pink-100'
+                            : event.category === 'cultural'
+                            ? 'bg-pink-600/30 text-pink-100'
+                            : 'bg-purple-600/30 text-purple-100'
                         }`}>
                           {event.category === 'technical' && '⚙️ Tech'}
                           {event.category === 'cultural' && '🎨 Cultural'}
+                          {event.category === 'convenor' && '👑 Convenor'}
                         </span>
                       </td>
                       <td className="px-4 sm:px-6 py-4 hidden md:table-cell text-white truncate">
@@ -380,12 +387,32 @@ export default function ViewEventsPage() {
                         </div>
                       </td>
                       <td className="px-4 sm:px-6 py-4 hidden lg:table-cell text-slate-300 text-xs">
-                        {new Date(event.dateTime).toLocaleDateString('en-IN', {
-                          month: 'short',
-                          day: 'numeric',
-                          hour: '2-digit',
-                          minute: '2-digit',
-                        })}
+                        {(() => {
+                          const startDate = new Date(event.dateTime);
+                          const endDate = new Date(event.endDateTime);
+                          const startDateStr = startDate.toLocaleDateString('en-IN', {
+                            month: 'short',
+                            day: 'numeric',
+                          });
+                          const endDateStr = endDate.toLocaleDateString('en-IN', {
+                            month: 'short',
+                            day: 'numeric',
+                          });
+                          const startTime = startDate.toLocaleTimeString('en-IN', {
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          });
+                          const endTime = endDate.toLocaleTimeString('en-IN', {
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          });
+                          
+                          // If same day, show "3 Nov, 12:40 am - 03:40 am"
+                          // If different days, show "3 Nov, 12:40 am - 4 Nov, 03:40 am"
+                          return startDateStr === endDateStr 
+                            ? `${startDateStr}, ${startTime} - ${endTime}`
+                            : `${startDateStr}, ${startTime} - ${endDateStr}, ${endTime}`;
+                        })()}
                       </td>
                       <td className="px-4 sm:px-6 py-4 hidden md:table-cell text-white font-semibold">
                         ₹{event.regFees}

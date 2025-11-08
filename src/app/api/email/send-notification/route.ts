@@ -116,19 +116,26 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Send notification to admin
+    // Send notification to admin (pecfestdev)
     if (sendToAdmin) {
       try {
+        // Always send admin notifications to pecfestdev for record keeping
+        const adminRecipient = 'pecfestdev@gmail.com';
+        console.log(`📧 Sending admin notification to: ${adminRecipient}`);
+        
         const adminEmailSent = await sendAdminNotificationEmail(
-          payload.adminEmail,
+          adminRecipient,
           payload.adminName,
           emailData
         );
         results.adminEmailSent = adminEmailSent;
         if (!adminEmailSent) {
           results.errors.push('Failed to send admin notification');
+        } else {
+          console.log(`✅ Admin notification sent successfully to ${adminRecipient}`);
         }
       } catch (error) {
+        console.error('❌ Error sending admin notification:', error);
         results.errors.push(`Error sending admin notification: ${error}`);
       }
     }
