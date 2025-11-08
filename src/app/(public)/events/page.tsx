@@ -7,6 +7,7 @@ import { IEvent } from '../../../models/Event';
 import Link from 'next/link';
 import EventRegistrationForm from '@/components/EventRegistrationForm';
 import { useAuth } from '@/lib/hooks/useAuth';
+export const dynamic = 'force-dynamic';
 
 const TwinklingStars = () => {
   const [stars, setStars] = useState<any[]>([]);
@@ -948,7 +949,7 @@ export default function EventsPage() {
                         {/* Event Image */}
                         <div className="rounded-2xl overflow-hidden border-2 border-[#b53da1]/30 aspect-square bg-black/20 flex items-center justify-center">
                           <img
-                            src={event.image?.includes('PECFEST_2024') ? '/final.png' : (event.image || '/final.png')}
+                            src={event.image?.includes('pecfest') ? '/final.png' : (event.image || '/final.png')}
                             alt={event.eventName}
                             className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-500"
                           />

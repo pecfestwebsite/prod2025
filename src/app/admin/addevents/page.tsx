@@ -6,7 +6,7 @@ import { ChevronRight, ChevronLeft, Check, AlertCircle } from 'lucide-react';
 import { getAdminUser, getLockedSocietyName } from '@/lib/accessControl';
 import { uploadImageToFirebase } from '@/lib/firebaseStorage';
 import Compressor from 'compressorjs';
-
+export const dynamic = 'force-dynamic';
 interface FormData {
   category: 'technical' | 'cultural' | 'convenor';
   societyName: string;

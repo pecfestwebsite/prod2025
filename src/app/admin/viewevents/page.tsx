@@ -7,7 +7,7 @@ import EditEventModal from '@/components/EditEventModal';
 import DeleteEventModal from '@/components/DeleteEventModal';
 import CreateDiscountModal from '@/components/CreateDiscountModal';
 import { getAdminUser, filterEventsByAccessLevel, canDeleteEvent, canEditEvent, canDeleteEventByAdmin, canEditEventByAdmin, canManageDiscounts } from '@/lib/accessControl';
-
+export const dynamic = 'force-dynamic';
 interface Event {
   _id: string;
   eventId: string;

@@ -7,7 +7,7 @@ import { IEvent } from '@/models/Event';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import EventRegistrationForm from '@/components/EventRegistrationForm';
-
+export const dynamic = 'force-dynamic';
 const TwinklingStars = () => {
   const [stars, setStars] = useState<any[]>([]);
   const [isClient, setIsClient] = useState(false);
@@ -222,7 +222,7 @@ export default function EventDescriptionPage() {
                   transition={{ delay: 0.2, duration: 0.5 }}
                 >
                   <img
-                    src={event.image?.includes('PECFEST_2024') ? '/final.png' : (event.image || '/final.png')}
+                    src={event.image?.includes('pecfest') ? '/final.png' : (event.image || '/final.png')}
                     alt={event.eventName}
                     className="w-full h-full object-contain" 
                   />
