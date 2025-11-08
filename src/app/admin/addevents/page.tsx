@@ -392,24 +392,14 @@ export default function AddEventsPage() {
           ...formData,
           image: imageUrl,
           regFees: typeof formData.regFees === 'string' ? 0 : formData.regFees,
-          dateTime: formData.dateTime,
+          // Convert datetime-local format to ISO string for proper Date parsing
+          dateTime: formData.dateTime ? new Date(formData.dateTime).toISOString() : new Date().toISOString(),
           // If endDateTime is not provided, calculate it as dateTime + 1 hour
-          endDateTime: formData.endDateTime || (() => {
+          endDateTime: formData.endDateTime ? new Date(formData.endDateTime).toISOString() : (() => {
             // Parse datetime-local string format (YYYY-MM-DDTHH:mm)
-            const [datePart, timePart] = formData.dateTime.split('T');
-            const [hours, minutes] = timePart.split(':');
-            let newHours = parseInt(hours) + 1;
-            let newDate = datePart;
-            
-            // Handle day overflow
-            if (newHours >= 24) {
-              newHours = newHours % 24;
-              const date = new Date(datePart);
-              date.setDate(date.getDate() + 1);
-              newDate = date.toISOString().split('T')[0];
-            }
-            
-            return `${newDate}T${String(newHours).padStart(2, '0')}:${minutes}`;
+            const startDate = new Date(formData.dateTime);
+            const endDate = new Date(startDate.getTime() + 60 * 60 * 1000); // Add 1 hour
+            return endDate.toISOString();
           })(),
         };
 

@@ -7,27 +7,6 @@ export async function POST(request: NextRequest) {
     // Connect to the database
     await dbConnect();
 
-    // Handle schema migration - drop old validator if it exists
-    try {
-      const Event_temp = require('@/models/Event').default;
-      const db = Event_temp.db.db;
-      if (db) {
-        // Try to update the collection validator to remove the old dateTime requirement
-        await db.command({
-          collMod: 'events',
-          validator: {
-            $jsonSchema: {
-              // This will be overridden by Mongoose, but helps clear old validators
-            }
-          }
-        }).catch(() => {
-          // If this fails, it's okay - Mongoose will handle validation
-        });
-      }
-    } catch (e) {
-      // Silently fail - this is just a migration helper
-    }
-
     // Parse the request body
     const body = await request.json();
 
@@ -114,6 +93,16 @@ export async function POST(request: NextRequest) {
       endDateTime = new Date(startDate.getTime() + 60 * 60 * 1000).toISOString(); // Add 1 hour
     }
     
+    // Log the received dateTime values
+    console.log('📅 API: Received body.dateTime:', body.dateTime, 'Type:', typeof body.dateTime);
+    console.log('📅 API: Received body.endDateTime:', body.endDateTime, 'Type:', typeof body.endDateTime);
+    
+    const parsedDateTime = new Date(body.dateTime);
+    const parsedEndDateTime = new Date(body.endDateTime);
+    
+    console.log('📅 API: Parsed dateTime:', parsedDateTime, 'Valid:', !isNaN(parsedDateTime.getTime()));
+    console.log('📅 API: Parsed endDateTime:', parsedEndDateTime, 'Valid:', !isNaN(parsedEndDateTime.getTime()));
+    
     const eventData = {
       eventId: generatedEventId, // Set eventId explicitly BEFORE creating event
       category: body.category,
@@ -121,8 +110,8 @@ export async function POST(request: NextRequest) {
       additionalClub: additionalClub,
       eventName: body.eventName.trim(),
       regFees: Number(body.regFees),
-      dateTime: new Date(body.dateTime),
-      endDateTime: new Date(body.endDateTime),
+      dateTime: parsedDateTime,
+      endDateTime: parsedEndDateTime,
       location: body.location.trim(),
       briefDescription: body.briefDescription.trim(),
       pdfLink: body.pdfLink ? body.pdfLink.trim() : '',
@@ -139,7 +128,7 @@ export async function POST(request: NextRequest) {
         : undefined,
     };
 
-    console.log('📋 API: eventData to be saved:', { eventId: eventData.eventId, eventName: eventData.eventName });
+    console.log('📋 API: eventData to be saved:', { eventId: eventData.eventId, eventName: eventData.eventName, dateTime: eventData.dateTime, endDateTime: eventData.endDateTime });
 
     // Create event with the explicitly generated eventId
     const newEvent = new Event(eventData);

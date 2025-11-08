@@ -188,40 +188,30 @@ function generateEventId(eventName: string, societyName: string, additionalClub?
 // IMPORTANT: Only the validate hook should generate eventId, not save
 EventSchema.pre('validate', function (this: any, next) {
   console.log('🔍 validate hook - isNew:', this.isNew, 'eventId:', this.eventId);
+  console.log('🔍 validate hook - dateTime BEFORE:', this.dateTime, 'Type:', typeof this.dateTime);
+  console.log('🔍 validate hook - endDateTime BEFORE:', this.endDateTime, 'Type:', typeof this.endDateTime);
   
-  // Ensure dateTime and endDateTime are set
-  if (!this.dateTime && this.dateTime) {
-    this.dateTime = this.dateTime;
-  }
+  // Ensure endDateTime is set if not provided (default to 1 hour after dateTime)
   if (!this.endDateTime && this.dateTime) {
-    this.endDateTime = new Date((this.dateTime || new Date()).getTime() + 3600000);
+    this.endDateTime = new Date(this.dateTime.getTime() + 3600000);
   }
   
-  // Remove old dateTime field
-  if (this.dateTime) {
-    this.dateTime = undefined;
-  }
-  
+  // Generate eventId if it's a new document and doesn't have one
   if (this.isNew && !this.eventId) {
     this.eventId = generateEventId(this.eventName, this.societyName, this.additionalClub);
     console.log('✅ validate hook - Generated eventId:', this.eventId);
   }
+  
+  console.log('🔍 validate hook - dateTime AFTER:', this.dateTime, 'Type:', typeof this.dateTime);
+  console.log('🔍 validate hook - endDateTime AFTER:', this.endDateTime, 'Type:', typeof this.endDateTime);
   next();
 });
 
-// Clean up old dateTime field if it exists and ensure new fields are set
+// Ensure endDateTime is set before saving
 EventSchema.pre('save', function (this: any, next) {
-  // Ensure dateTime and endDateTime are set
-  if (!this.dateTime && this.dateTime) {
-    this.dateTime = this.dateTime;
-  }
+  // Ensure endDateTime is set if not provided (default to 1 hour after dateTime)
   if (!this.endDateTime && this.dateTime) {
-    this.endDateTime = new Date(this.dateTime.getTime() + 3600000); // Add 1 hour
-  }
-  
-  // Remove old dateTime field to avoid validation issues
-  if (this.dateTime) {
-    this.dateTime = undefined;
+    this.endDateTime = new Date(this.dateTime.getTime() + 3600000);
   }
   
   next();
