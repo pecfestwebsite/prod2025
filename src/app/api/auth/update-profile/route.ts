@@ -46,12 +46,15 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { email, name, college, studentId, phoneNumber, referralCode, branch } = body || {};
+    const { name, college, studentId, phoneNumber, referralCode, branch } = body || {};
+
+    // Use email from JWT token instead of request body
+    const email = decoded.email;
 
     console.log('Received update request:', { email, name, college, studentId, phoneNumber, referralCode, branch });
 
     // Validate required fields
-    if (!email || !name || !college || !studentId || !phoneNumber || !branch) {
+    if (!name || !college || !studentId || !phoneNumber || !branch) {
       return NextResponse.json(
         { error: 'All required fields must be provided' },
         { status: 400 }
@@ -59,14 +62,6 @@ export async function POST(request: NextRequest) {
     }
 
     const normalizedEmail = String(email).toLowerCase();
-
-    // Ensure the token email matches the profile being updated
-    if (decoded.email !== normalizedEmail) {
-      return NextResponse.json(
-        { error: 'Cannot update another user\'s profile' },
-        { status: 403 }
-      );
-    }
 
     await dbConnect();
 
@@ -129,4 +124,11 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
+}
+
+/**
+ * PUT method - alias for POST to support PUT requests
+ */
+export async function PUT(request: NextRequest) {
+  return POST(request);
 }

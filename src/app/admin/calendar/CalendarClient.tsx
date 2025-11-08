@@ -422,11 +422,11 @@ export default function CalendarClient({ events }: { events: IEvent[] }) {
                     }`}
                   >
                     <div className="text-xs text-slate-400 uppercase hidden md:block">
-                      {day.toLocaleDateString('en-US', { weekday: 'short' })}
+                      {day.toLocaleDateString('en-US', { timeZone:'UTC',weekday: 'short' })}
                     </div>
                     <div className="text-lg md:text-2xl font-bold">{day.getDate()}</div>
                     <div className="text-xs text-slate-400">
-                      {day.toLocaleDateString('en-US', { month: 'short' })}
+                      {day.toLocaleDateString('en-US', { timeZone:'UTC',month: 'short' })}
                     </div>
                   </button>
                 );
@@ -683,11 +683,13 @@ export default function CalendarClient({ events }: { events: IEvent[] }) {
                                 </div>
                                 <div className="text-xs opacity-75 px-1 truncate">
                                   {new Date(event.dateTime).toLocaleTimeString('en-US', {
+                                    timeZone: 'UTC',
                                     hour: '2-digit',
                                     minute: '2-digit',
                                   })}{' '}
                                   -{' '}
                                   {new Date(event.endDateTime).toLocaleTimeString('en-US', {
+                                    timeZone: 'UTC',
                                     hour: '2-digit',
                                     minute: '2-digit',
                                   })}
@@ -767,12 +769,14 @@ export default function CalendarClient({ events }: { events: IEvent[] }) {
                   <div className="text-xs text-slate-400 uppercase font-semibold mb-1">Start Date & Time</div>
                   <div className="text-white font-semibold text-sm">
                     {new Date(selectedEvent.dateTime).toLocaleDateString('en-US', {
+                      timeZone: 'UTC',
                       month: 'short',
                       day: 'numeric',
                       year: 'numeric',
                     })}
                     {' at '}
                     {new Date(selectedEvent.dateTime).toLocaleTimeString('en-US', {
+                      timeZone: 'UTC',
                       hour: '2-digit',
                       minute: '2-digit',
                     })}
@@ -783,12 +787,14 @@ export default function CalendarClient({ events }: { events: IEvent[] }) {
                   <div className="text-xs text-slate-400 uppercase font-semibold mb-1">End Date & Time</div>
                   <div className="text-white font-semibold text-sm">
                     {new Date(selectedEvent.endDateTime).toLocaleDateString('en-US', {
+                      timeZone: 'UTC',
                       month: 'short',
                       day: 'numeric',
                       year: 'numeric',
                     })}
                     {' at '}
                     {new Date(selectedEvent.endDateTime).toLocaleTimeString('en-US', {
+                      timeZone: 'UTC',
                       hour: '2-digit',
                       minute: '2-digit',
                     })}

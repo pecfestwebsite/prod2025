@@ -342,7 +342,7 @@ export default function DiscountsPage() {
                       <td className="px-6 py-4 hidden sm:table-cell text-slate-400 text-xs">
                         <div className="flex items-center gap-2">
                           <Calendar size={14} />
-                          {new Date(discount.createdAt).toLocaleDateString('en-IN')}
+                          {new Date(discount.createdAt).toLocaleDateString('en-US', { timeZone:'UTC' })}
                         </div>
                       </td>
                       <td className="px-6 py-4">

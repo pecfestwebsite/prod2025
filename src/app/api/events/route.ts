@@ -97,6 +97,7 @@ export async function POST(request: NextRequest) {
     console.log('📅 API: Received body.dateTime:', body.dateTime, 'Type:', typeof body.dateTime);
     console.log('📅 API: Received body.endDateTime:', body.endDateTime, 'Type:', typeof body.endDateTime);
     
+    // Parse dates directly as UTC strings (they already have 'Z' suffix from frontend)
     const parsedDateTime = new Date(body.dateTime);
     const parsedEndDateTime = new Date(body.endDateTime);
     

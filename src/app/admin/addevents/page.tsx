@@ -392,14 +392,16 @@ export default function AddEventsPage() {
           ...formData,
           image: imageUrl,
           regFees: typeof formData.regFees === 'string' ? 0 : formData.regFees,
-          // Convert datetime-local format to ISO string for proper Date parsing
-          dateTime: formData.dateTime ? new Date(formData.dateTime).toISOString() : new Date().toISOString(),
+          // Keep datetime as-is with 'Z' suffix to treat it as UTC (no timezone conversion)
+          dateTime: formData.dateTime ? formData.dateTime + ':00.000Z' : new Date().toISOString(),
           // If endDateTime is not provided, calculate it as dateTime + 1 hour
-          endDateTime: formData.endDateTime ? new Date(formData.endDateTime).toISOString() : (() => {
-            // Parse datetime-local string format (YYYY-MM-DDTHH:mm)
-            const startDate = new Date(formData.dateTime);
-            const endDate = new Date(startDate.getTime() + 60 * 60 * 1000); // Add 1 hour
-            return endDate.toISOString();
+          endDateTime: formData.endDateTime ? formData.endDateTime + ':00.000Z' : (() => {
+            // Add 1 hour to start time in UTC
+            const [datePart, timePart] = formData.dateTime.split('T');
+            const [hours, minutes] = timePart.split(':').map(Number);
+            const newHours = (hours + 1) % 24;
+            const newDatePart = hours === 23 ? new Date(new Date(datePart).getTime() + 86400000).toISOString().split('T')[0] : datePart;
+            return `${newDatePart}T${String(newHours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:00.000Z`;
           })(),
         };
 

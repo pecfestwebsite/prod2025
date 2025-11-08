@@ -46,21 +46,35 @@ interface EditEventModalProps {
 }
 
 // Helper function to format ISO datetime to datetime-local format (YYYY-MM-DDTHH:mm)
+// Converts from UTC timezone for display
 const formatDateTimeForInput = (dateString: string): string => {
   if (!dateString) return '';
   // If it's already in the correct format, return it
   if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(dateString)) {
     return dateString;
   }
-  // If it's an ISO string, convert it
+  // If it's an ISO string, convert it to UTC
   try {
     const date = new Date(dateString);
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    const hours = String(date.getHours()).padStart(2, '0');
-    const minutes = String(date.getMinutes()).padStart(2, '0');
-    return `${year}-${month}-${day}T${hours}:${minutes}`;
+    
+    // Convert to UTC timezone using Intl.DateTimeFormat
+    const utcFormatter = new Intl.DateTimeFormat('sv-SE', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      timeZone: 'UTC',
+    });
+    
+    const parts = utcFormatter.formatToParts(date);
+    const year = parts.find(p => p.type === 'year')?.value;
+    const month = parts.find(p => p.type === 'month')?.value;
+    const day = parts.find(p => p.type === 'day')?.value;
+    const hour = parts.find(p => p.type === 'hour')?.value;
+    const minute = parts.find(p => p.type === 'minute')?.value;
+    
+    return `${year}-${month}-${day}T${hour}:${minute}`;
   } catch (err) {
     console.error('Error formatting date:', err);
     return '';
@@ -182,6 +196,9 @@ export default function EditEventModal({ event, onClose, onUpdate }: EditEventMo
       const updatedFormData = {
         ...formData,
         image: imageUrl,
+        // Convert datetime-local format to UTC ISO string (add Z suffix)
+        dateTime: formData.dateTime ? formData.dateTime + ':00.000Z' : formData.dateTime,
+        endDateTime: formData.endDateTime ? formData.endDateTime + ':00.000Z' : formData.endDateTime,
       };
 
       const response = await fetch(`/api/events/${event.eventId}`, {

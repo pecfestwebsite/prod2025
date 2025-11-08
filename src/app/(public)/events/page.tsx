@@ -689,6 +689,7 @@ export default function EventsPage() {
   const formatDate = (date: Date | string) => {
     const dateObj = typeof date === 'string' ? new Date(date) : date;
     return dateObj.toLocaleDateString('en-US', {
+      timeZone: 'UTC',
       weekday: 'long',
       year: 'numeric',
       month: 'long',
@@ -965,6 +966,7 @@ export default function EventsPage() {
                           <div className="mt-3 space-y-1 text-center">
                             <div className="text-xs text-[#fea6cc] font-semibold">
                               📅 {event.dateTime ? new Date(event.dateTime).toLocaleDateString('en-US', {
+                                timeZone: 'UTC',
                                 month: 'short',
                                 day: 'numeric',
                                 year: 'numeric'
@@ -972,6 +974,7 @@ export default function EventsPage() {
                             </div>
                             <div className="text-xs text-[#ffd4b9]/70">
                               🕒 {event.dateTime ? new Date(event.dateTime).toLocaleTimeString('en-US', {
+                                timeZone: 'UTC',
                                 hour: '2-digit',
                                 minute: '2-digit'
                               }) : 'Time TBA'}

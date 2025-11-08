@@ -113,7 +113,8 @@ export default function UsersClient({ users }: UsersClientProps) {
 
   const formatDate = (dateString: string) => {
     try {
-      return new Date(dateString).toLocaleDateString('en-IN', {
+      return new Date(dateString).toLocaleDateString('en-US', {
+        timeZone: 'UTC',
         day: '2-digit',
         month: 'short',
         year: 'numeric',

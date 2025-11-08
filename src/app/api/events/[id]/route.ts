@@ -48,11 +48,20 @@ export async function PUT(
     const { id } = await params;
     const body = await request.json();
 
-    // Calculate endDateTime if not provided (default to 1 hour after dateTime)
+    // Parse datetime strings that come with 'Z' suffix as UTC (no timezone conversion)
     const updateData = { ...body };
-    if (body.dateTime && !body.endDateTime) {
+    
+    // Parse dates if they exist (they come as ISO strings with Z suffix from frontend)
+    if (body.dateTime) {
+      updateData.dateTime = new Date(body.dateTime);
+    }
+    
+    if (body.endDateTime) {
+      updateData.endDateTime = new Date(body.endDateTime);
+    } else if (body.dateTime) {
+      // If endDateTime is not provided, calculate it as 1 hour after dateTime
       const startDate = new Date(body.dateTime);
-      updateData.endDateTime = new Date(startDate.getTime() + 60 * 60 * 1000); // Add 1 hour
+      updateData.endDateTime = new Date(startDate.getTime() + 60 * 60 * 1000);
     }
 
     // Find and update event

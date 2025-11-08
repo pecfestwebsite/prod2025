@@ -390,19 +390,23 @@ export default function ViewEventsPage() {
                         {(() => {
                           const startDate = new Date(event.dateTime);
                           const endDate = new Date(event.endDateTime);
-                          const startDateStr = startDate.toLocaleDateString('en-IN', {
+                          const startDateStr = startDate.toLocaleDateString('en-US', {
+                            timeZone: 'UTC',
                             month: 'short',
                             day: 'numeric',
                           });
-                          const endDateStr = endDate.toLocaleDateString('en-IN', {
+                          const endDateStr = endDate.toLocaleDateString('en-US', {
+                            timeZone: 'UTC',
                             month: 'short',
                             day: 'numeric',
                           });
                           const startTime = startDate.toLocaleTimeString('en-IN', {
+                            timeZone: 'UTC',
                             hour: '2-digit',
                             minute: '2-digit',
                           });
                           const endTime = endDate.toLocaleTimeString('en-IN', {
+                            timeZone: 'UTC',
                             hour: '2-digit',
                             minute: '2-digit',
                           });
