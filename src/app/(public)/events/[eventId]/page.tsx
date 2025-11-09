@@ -112,6 +112,7 @@ export default function EventDescriptionPage() {
     const dateObj = typeof date === 'string' ? new Date(date) : date;
     if (isNaN(dateObj.getTime())) return 'Invalid Date';
     return dateObj.toLocaleDateString('en-US', {
+      timeZone: "UTC",
       weekday: 'long',
       year: 'numeric',
       month: 'long',
