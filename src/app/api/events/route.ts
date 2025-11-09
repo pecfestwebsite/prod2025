@@ -191,9 +191,9 @@ export async function GET(request: NextRequest) {
 
     const skip = (page - 1) * limit;
 
-    // Fetch events with pagination
+    // Fetch events with pagination - sort alphabetically by eventName
     const events = await Event.find(query)
-      .sort({ dateTime: 1 })
+      .sort({ eventName: 1 })
       .skip(skip)
       .limit(limit)
       .lean();

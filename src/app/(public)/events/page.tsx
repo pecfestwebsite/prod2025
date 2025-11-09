@@ -45,7 +45,7 @@ const TwinklingStars = () => {
 
 const AnimatedBackground = () => {
   return (
-    <div className="absolute inset-0 z-0 overflow-hidden">
+    <div className="fixed inset-0 z-0 overflow-hidden">
       <TwinklingStars />
     </div>
   );
@@ -132,7 +132,7 @@ const CustomSelect = ({ options, value, onChange, placeholder }: {
 const FloatingLantern = ({ duration, size, x, y, delay }: { duration: number, size: number, x: string, y: string, delay: number }) => {
   return (
       <motion.div
-          className="absolute"
+          className="fixed"
           style={{ width: size, height: size * 1.5, left: x, top: y, zIndex: 5 }} 
           animate={{ y: [0, -20, 0], x: [0, 5, 0, -5, 0], scale: [1, 1.05, 1] }}
           transition={{ duration: duration, repeat: Infinity, repeatType: 'mirror', ease: 'easeInOut', delay }}
@@ -155,72 +155,64 @@ const FloatingLantern = ({ duration, size, x, y, delay }: { duration: number, si
 };
 
 
-const AlphabetIndex = ({ onLetterSelect, activeLetter }: { onLetterSelect: (letter: string) => void, activeLetter: string }) => {
-  const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+const AlphabetIndex = ({ onLetterSelect, activeLetter, availableLetters }: { 
+  onLetterSelect: (letter: string) => void, 
+  activeLetter: string,
+  availableLetters: string[]
+}) => {
   const indexRef = useRef<HTMLDivElement>(null);
-  const [isDragging, setIsDragging] = useState(false);
   const [indicator, setIndicator] = useState<{ letter: string; y: number } | null>(null);
 
-  const handleInteraction = useCallback((event: React.MouseEvent<HTMLDivElement> | React.TouchEvent<HTMLDivElement>) => {
-    const target = event.currentTarget;
-    const rect = target.getBoundingClientRect();
-    const clientY = 'touches' in event ? event.touches[0].clientY : event.clientY;
-    const y = clientY - rect.top;
-    const percent = y / rect.height;
-    const index = Math.floor(percent * alphabet.length);
-    const letter = alphabet[index];
-
-    if (letter) {
-      onLetterSelect(letter);
-      const letterElement = target.children[index] as HTMLElement;
-      if (letterElement) {
-        const letterRect = letterElement.getBoundingClientRect();
-        setIndicator({ letter, y: letterRect.top + letterRect.height / 2 });
-      }
-    }
-  }, [alphabet, onLetterSelect]);
-
-  const handlePointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
-    setIsDragging(true);
-    handleInteraction(event as any);
-  };
-
-  const handlePointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
-    if (isDragging) {
-      handleInteraction(event as any);
-    }
-  };
-
-  const handlePointerUp = () => {
-    setIsDragging(false);
-    setTimeout(() => setIndicator(null), 500);
-  };
-
-  const handlePointerLeave = () => {
-    if (isDragging) {
-      setIsDragging(false);
-      setTimeout(() => setIndicator(null), 500);
-    }
-  };
+  const handleLetterClick = useCallback((letter: string, event: React.MouseEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    onLetterSelect(letter);
+    const rect = event.currentTarget.getBoundingClientRect();
+    setIndicator({ letter, y: rect.top + rect.height / 2 });
+    setTimeout(() => setIndicator(null), 800);
+  }, [onLetterSelect]);
 
   return (
     <>
       <div
         ref={indexRef}
-        onPointerDown={handlePointerDown}
-        onPointerMove={handlePointerMove}
-        onPointerUp={handlePointerUp}
-        onPointerLeave={handlePointerLeave}
-        className="fixed right-0 top-1/2 -translate-y-1/2 z-50 flex flex-col items-center justify-center bg-black/20 backdrop-blur-sm rounded-l-full py-2 px-1 sm:px-2 cursor-pointer touch-none"
-        style={{ height: 'calc(100vh - 200px)', maxHeight: '520px' }}
+        className="z-[9999] flex flex-col items-center justify-center bg-black/40 backdrop-blur-sm rounded-l-xl py-3 px-2 select-none"
+        style={{ 
+          position: 'fixed',
+          top: '50%',
+          right: '0',
+          transform: 'translate3d(0, -50%, 0) translateZ(0)',
+          backfaceVisibility: 'hidden',
+          WebkitBackfaceVisibility: 'hidden',
+          height: 'calc(100vh - 250px)', 
+          maxHeight: '450px',
+          touchAction: 'none',
+          WebkitTouchCallout: 'none',
+          WebkitUserSelect: 'none',
+          userSelect: 'none',
+          WebkitTransform: 'translate3d(0, -50%, 0) translateZ(0)',
+          pointerEvents: 'auto',
+          WebkitPerspective: 1000,
+          perspective: 1000
+        }}
       >
-        {alphabet.map(letter => (
+        {availableLetters.map((letter) => (
           <div
             key={letter}
             data-letter={letter}
-            className={`flex-1 flex items-center justify-center text-xs sm:text-base font-bold transition-all duration-200 ${
-              activeLetter === letter ? 'text-[#ffd4b9] scale-150' : 'text-purple-300/70 hover:text-white'
+            onClick={(e) => handleLetterClick(letter, e)}
+            onTouchEnd={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              handleLetterClick(letter, e as any);
+            }}
+            className={`flex-1 flex items-center justify-center min-h-[18px] w-full text-[10px] sm:text-xs font-bold transition-all duration-150 cursor-pointer active:scale-110 ${
+              activeLetter === letter ? 'text-[#ffd4b9] scale-125' : 'text-purple-300/80'
             }`}
+            style={{
+              touchAction: 'manipulation',
+              WebkitTapHighlightColor: 'transparent'
+            }}
           >
             {letter}
           </div>
@@ -266,7 +258,7 @@ export default function EventsPage() {
   const [hasMore, setHasMore] = useState(true);
   const [totalPages, setTotalPages] = useState(1);
   const loadMoreRef = useRef<HTMLDivElement>(null);
-  const EVENTS_PER_PAGE = 12;
+  const EVENTS_PER_PAGE = 12; // Load 12 events at a time (4 rows of 3)
   const prevSearchTerm = useRef<string>('');
   const [allEventsLoaded, setAllEventsLoaded] = useState(false);
 
@@ -352,6 +344,8 @@ export default function EventsPage() {
   // }, [filteredEvents]);
 
   
+  // Get available letters from currently loaded/filtered events for A-Z navigation
+  // As more events load (alphabetically from backend), more letters become available
   const availableLetters = useMemo(() => {
     const letters = new Set(filteredEvents.map(e => e.eventName[0].toUpperCase()));
     return Array.from(letters).sort();
@@ -361,6 +355,7 @@ export default function EventsPage() {
   const [isFilterMenuOpen, setIsFilterMenuOpen] = useState(false);
 
   // Fetch events from backend with pagination
+  // Events are sorted alphabetically (A-Z) by the backend API
   const fetchEvents = useCallback(async (page: number, resetEvents: boolean = false) => {
     try {
       if (page === 1) {
@@ -368,8 +363,6 @@ export default function EventsPage() {
       } else {
         setLoadingMore(true);
       }
-      
-      console.log(`Fetching events page ${page}...`);
       
       // Build query params
       const params = new URLSearchParams({
@@ -383,9 +376,12 @@ export default function EventsPage() {
       }
       
       const response = await fetch(`/api/events?${params.toString()}`);
-      console.log('Response status:', response.status);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
       const data = await response.json();
-      console.log('Events data:', data);
       
       if (data.events && data.events.length > 0) {
         setEvents(prev => {
@@ -393,12 +389,14 @@ export default function EventsPage() {
             return data.events;
           }
           // Filter out duplicates when appending
-          const existingIds = new Set(prev.map(e => e._id));
+          const existingIds = new Set(prev.map((e: IEvent) => e._id));
           const newEvents = data.events.filter((event: IEvent) => !existingIds.has(event._id));
           return [...prev, ...newEvents];
         });
+        
         setCurrentPage(data.pagination.page);
-        setHasMore(data.pagination.page < data.pagination.totalPages);
+        const morePages = data.pagination.page < data.pagination.totalPages;
+        setHasMore(morePages);
         setTotalPages(data.pagination.totalPages);
       } else {
         setHasMore(false);
@@ -410,7 +408,7 @@ export default function EventsPage() {
       setLoading(false);
       setLoadingMore(false);
     }
-  }, [selectedCategory, EVENTS_PER_PAGE]);
+  }, [selectedCategory]);
 
   // Initial fetch
   useEffect(() => {
@@ -426,8 +424,6 @@ export default function EventsPage() {
     const loadAllEventsForSearch = async () => {
       // Only load all events if user is searching and we haven't loaded all yet
       if (searchTerm.trim() && hasMore && !loadingMore && !allEventsLoaded) {
-        console.log('🔍 Search detected, silently loading all events in background...');
-        
         // Load all remaining pages silently in background
         let currentLoadPage = currentPage + 1;
         let stillHasMore: boolean = true;
@@ -469,7 +465,6 @@ export default function EventsPage() {
         
         setAllEventsLoaded(true);
         setHasMore(false);
-        console.log('✅ All events loaded for comprehensive search');
       }
     };
 
@@ -478,69 +473,44 @@ export default function EventsPage() {
 
   // Load more when scroll reaches bottom
   useEffect(() => {
-    const currentRef = loadMoreRef.current;
-    console.log('🔄 IntersectionObserver setup:', { 
-      currentRef: !!currentRef, 
-      hasMore, 
-      loadingMore, 
-      currentPage,
-      eventsCount: events.length
-    });
-    
-    // Don't set up observer until we have events loaded
-    if (events.length === 0) {
-      console.log('⏸️ Waiting for initial events to load');
-      return;
-    }
-    
-    if (!currentRef) {
-      console.log('❌ No ref found');
-      return;
-    }
-
-    if (!hasMore) {
-      console.log('⏸️ No more events to load');
-      return;
-    }
-
-    if (loadingMore) {
-      console.log('⏸️ Already loading');
-      return;
-    }
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const entry = entries[0];
-        console.log('👁️ IntersectionObserver callback:', { 
-          isIntersecting: entry.isIntersecting,
-          intersectionRatio: entry.intersectionRatio,
-          hasMore,
-          loadingMore
-        });
-        
-        if (entry.isIntersecting) {
-          console.log('✅ INTERSECTION DETECTED - Loading next page...');
-          const nextPage = currentPage + 1;
-          console.log('📄 Calling fetchEvents for page:', nextPage);
-          fetchEvents(nextPage, false);
-        }
-      },
-      { 
-        threshold: 0,
-        rootMargin: '300px'
+    // Wait a bit for the DOM to be ready
+    const timeoutId = setTimeout(() => {
+      const currentRef = loadMoreRef.current;
+      
+      if (!currentRef || !hasMore || loadingMore) {
+        return;
       }
-    );
 
-    observer.observe(currentRef);
-    console.log('✅ Observer attached successfully to element:', currentRef);
+      const observer = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            // Only load more if: intersecting, has more pages, not already loading
+            if (entry.isIntersecting && hasMore && !loadingMore) {
+              fetchEvents(currentPage + 1, false);
+            }
+          });
+        },
+        { 
+          root: null,
+          rootMargin: '300px',
+          threshold: 0
+        }
+      );
+
+      observer.observe(currentRef);
+
+      return () => {
+        observer.disconnect();
+      };
+    }, 100);
 
     return () => {
-      console.log('🧹 Cleaning up observer');
-      observer.disconnect();
+      clearTimeout(timeoutId);
     };
-  }, [hasMore, loadingMore, currentPage, fetchEvents]);
+  }, [currentPage, hasMore, loadingMore, fetchEvents, events.length, filteredEvents.length]);
 
   // Filter and sort events (client-side filtering for other filters)
+  // Backend already provides alphabetically sorted events, we maintain that order after filtering
   useEffect(() => {
     let result = [...events];
 
@@ -571,7 +541,7 @@ export default function EventsPage() {
       );
     }
 
-    // Sort events
+    // Maintain alphabetical order (events come pre-sorted from backend, but re-sort after filtering)
     result.sort((a, b) => a.eventName.localeCompare(b.eventName));
 
     setFilteredEvents(result);
@@ -616,28 +586,9 @@ export default function EventsPage() {
     };
   }, []);
 
+  // Handle A-Z index navigation - scroll to the selected letter's section
   const handleLetterSelect = (letter: string) => {
-    let targetLetter = letter;
-    if (!availableLetters.includes(targetLetter)) {
-      const prevLetters = availableLetters.filter(l => l < targetLetter);
-      const nextLetters = availableLetters.filter(l => l > targetLetter);
-
-      const prev = prevLetters.length > 0 ? prevLetters[prevLetters.length - 1] : null;
-      const next = nextLetters.length > 0 ? nextLetters[0] : null;
-
-      if (prev && next) {
-        const distToPrev = targetLetter.charCodeAt(0) - prev.charCodeAt(0);
-        const distToNext = next.charCodeAt(0) - targetLetter.charCodeAt(0);
-        targetLetter = distToNext <= distToPrev ? next : prev;
-      } else if (next) {
-        targetLetter = next;
-      } else if (prev) {
-        targetLetter = prev;
-      } else {
-        return;
-      }
-    }
-    const element = sectionRefs.current[targetLetter];
+    const element = sectionRefs.current[letter];
     if (element) {
       element.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
@@ -757,7 +708,7 @@ export default function EventsPage() {
         }
       `}</style>
       
-      <main className="min-h-screen bg-blue-800/5 text-white relative">
+      <main className="min-h-screen bg-blue-800/5 text-white">
         <AnimatedBackground />
 
         {/* 4 Lanterns - 2 on each side */}
@@ -767,7 +718,7 @@ export default function EventsPage() {
         <FloatingLantern duration={14} size={27} x="95%" y="18%" delay={1.8} />  {/* Inner right, short */}
 
         {/* Header Section */}
-        <div className="relative pt-24 pb-8 px-4 z-20">
+        <div className="relative pt-20 sm:pt-24 pb-6 sm:pb-8 px-4 z-20">
           <div className="max-w-7xl mx-auto text-center">
             <motion.div
               initial={{ opacity: 0, y: -50 }}
@@ -775,21 +726,21 @@ export default function EventsPage() {
               transition={{ duration: 0.8 }}
             >
               {/* Decorative Arabic Pattern */}
-              <div className="mb-6 flex justify-center">
-                <div className="w-32 h-1 bg-gradient-to-r from-transparent via-[#b53da1] to-transparent"></div>
-                <div className="mx-4 w-2 h-2 bg-[#ed6ab8] rounded-full"></div>
-                <div className="w-32 h-1 bg-gradient-to-r from-transparent via-[#fea6cc] to-transparent"></div>
+              <div className="mb-4 sm:mb-6 flex justify-center">
+                <div className="w-20 sm:w-32 h-1 bg-gradient-to-r from-transparent via-[#b53da1] to-transparent"></div>
+                <div className="mx-3 sm:mx-4 w-2 h-2 bg-[#ed6ab8] rounded-full"></div>
+                <div className="w-20 sm:w-32 h-1 bg-gradient-to-r from-transparent via-[#fea6cc] to-transparent"></div>
               </div>
               
-              <h1 className="font-display text-6xl sm:text-7xl md:text-9xl py-2 gradient-title drop-shadow-[0_8px_20px_rgba(237,106,184,0.4)] mb-6 tracking-wider">
+              <h1 className="font-display text-5xl sm:text-7xl md:text-8xl lg:text-9xl py-2 gradient-title drop-shadow-[0_8px_20px_rgba(237,106,184,0.4)] mb-4 sm:mb-6 tracking-wider">
                 EVENTS
               </h1>
               
               {/* Decorative Arabic Pattern */}
-              <div className="mt-6 flex justify-center">
-                <div className="w-24 h-1 bg-gradient-to-r from-transparent via-[#fea7a0] to-transparent"></div>
-                <div className="mx-3 w-1 h-1 bg-[#ffd4b9] rounded-full"></div>
-                <div className="w-24 h-1 bg-gradient-to-r from-transparent via-[#b53da1] to-transparent"></div>
+              <div className="mt-4 sm:mt-6 flex justify-center">
+                <div className="w-16 sm:w-24 h-1 bg-gradient-to-r from-transparent via-[#fea7a0] to-transparent"></div>
+                <div className="mx-2 sm:mx-3 w-1 h-1 bg-[#ffd4b9] rounded-full"></div>
+                <div className="w-16 sm:w-24 h-1 bg-gradient-to-r from-transparent via-[#b53da1] to-transparent"></div>
               </div>
             </motion.div>
 
@@ -798,29 +749,29 @@ export default function EventsPage() {
         </div>
 
         {/* Floating Search Bar */}
-        <div className="sticky top-20 mx-2 sm:mx-4 md:mx-auto max-w-4xl rounded-full z-30 py-2 sm:py-4 bg-blue-800/10 backdrop-blur-lg shadow-lg" ref={filterMenuRef}>
-          <div className="max-w-4xl mx-auto px-4 md:px-6 flex items-center gap-2 md:gap-4">
+        <div className="sticky top-20 mx-2 sm:mx-4 md:mx-auto max-w-4xl rounded-full z-30 py-2 sm:py-3 bg-blue-800/10 backdrop-blur-lg shadow-lg" ref={filterMenuRef}>
+          <div className="max-w-4xl mx-auto px-3 sm:px-4 md:px-6 flex items-center gap-2 md:gap-4">
             
 
             {/* Search Bar */}
             <div className="relative flex-grow md:flex-1">
-              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-[#ffd4b9] w-5 h-5" />
+              <Search className="absolute left-3 sm:left-4 top-1/2 transform -translate-y-1/2 text-[#ffd4b9] w-4 h-4 sm:w-5 sm:h-5" />
               <input
                 type="text"
                 placeholder="Search events..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-12 pr-4 py-2.5 sm:py-3 bg-blue-900/40 border-2 border-purple-500/50 rounded-full text-white placeholder:text-slate-400 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/30 font-medium transition-all"
+                className="w-full pl-10 sm:pl-12 pr-3 sm:pr-4 py-2 sm:py-2.5 text-sm sm:text-base bg-blue-900/40 border-2 border-purple-500/50 rounded-full text-white placeholder:text-slate-400 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/30 font-medium transition-all"
               />
             </div>
             <div className="relative">
               <button
                 onClick={() => setIsFilterMenuOpen(!isFilterMenuOpen)}
-                className="flex items-center justify-center gap-2 px-4 py-3 bg-blue-900/40 border-2 border-purple-500/50 rounded-full text-white font-medium hover:border-purple-400/80 transition-all"
+                className="flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-3 bg-blue-900/40 border-2 border-purple-500/50 rounded-full text-white text-sm sm:text-base font-medium hover:border-purple-400/80 transition-all whitespace-nowrap"
               >
-                <Filter size={16} />
-                <span className="hidden md:inline">Filters</span>
-                <ChevronDown size={16} className={`transform transition-transform ${isFilterMenuOpen ? 'rotate-180' : 'rotate-0'}`} />
+                <Filter size={14} className="sm:w-4 sm:h-4" />
+                <span className="hidden sm:inline">Filters</span>
+                <ChevronDown size={14} className={`sm:w-4 sm:h-4 transform transition-transform ${isFilterMenuOpen ? 'rotate-180' : 'rotate-0'}`} />
               </button>
 
               {/* Filters Dropdown Menu */}
@@ -871,20 +822,20 @@ export default function EventsPage() {
 
         {/* Search Results Indicator */}
         {searchTerm && (
-          <div className="max-w-7xl mx-auto px-4 pt-4">
+          <div className="max-w-7xl mx-auto px-3 sm:px-4 pt-3 sm:pt-4">
             <motion.div
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="bg-gradient-to-r from-[#2a0a56]/60 to-[#4321a9]/60 backdrop-blur-md border border-[#b53da1]/50 rounded-xl px-4 py-3 flex items-center justify-between"
+              className="bg-gradient-to-r from-[#2a0a56]/60 to-[#4321a9]/60 backdrop-blur-md border border-[#b53da1]/50 rounded-xl px-3 sm:px-4 py-2.5 sm:py-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2"
             >
-              <div className="flex items-center gap-3">
-                <Search className="w-5 h-5 text-[#fea6cc]" />
-                <span className="text-white font-medium">
-                  Found <span className="text-[#ffd4b9] font-bold">{filteredEvents.length}</span> event{filteredEvents.length !== 1 ? 's' : ''} for "{searchTerm}"
+              <div className="flex items-center gap-2 sm:gap-3">
+                <Search className="w-4 h-4 sm:w-5 sm:h-5 text-[#fea6cc] flex-shrink-0" />
+                <span className="text-white text-sm sm:text-base font-medium">
+                  Found <span className="text-[#ffd4b9] font-bold">{filteredEvents.length}</span> event{filteredEvents.length !== 1 ? 's' : ''} for <span className="truncate max-w-[150px] sm:max-w-none inline-block">"{searchTerm}"</span>
                 </span>
               </div>
               {!allEventsLoaded && hasMore && (
-                <span className="text-[#fea6cc] text-sm flex items-center gap-2">
+                <span className="text-[#fea6cc] text-xs sm:text-sm flex items-center gap-2">
                   <span className="animate-pulse">●</span>
                   Loading more...
                 </span>
@@ -894,33 +845,33 @@ export default function EventsPage() {
         )}
 
         {/* Events Grid */}
-        <div className="max-w-7xl mx-auto px-4 pt-8 pb-24 relative z-10">
+        <div className="max-w-7xl mx-auto px-3 sm:px-4 pt-6 sm:pt-8 pb-20 sm:pb-24 relative z-10">
           {filteredEvents.length === 0 && !loading && events.length === 0 ? (
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              className="text-center py-20"
+              className="text-center py-12 sm:py-20"
             >
-              <div className="text-6xl sm:text-8xl mb-6 animate-pulse">📜</div>
-              <h3 className="text-2xl sm:text-3xl font-bold text-[#ffd4b9] mb-4 font-display">No Events Found</h3>
-              <p className="text-lg sm:text-xl text-[#fea6cc] font-arabian mb-2">Try adjusting your search or filter criteria</p>
+              <div className="text-5xl sm:text-6xl md:text-8xl mb-4 sm:mb-6 animate-pulse">📜</div>
+              <h3 className="text-xl sm:text-2xl md:text-3xl font-bold text-[#ffd4b9] mb-3 sm:mb-4 font-display px-4">No Events Found</h3>
+              <p className="text-base sm:text-lg md:text-xl text-[#fea6cc] font-arabian mb-2 px-4">Try adjusting your search or filter criteria</p>
             </motion.div>
           ) : filteredEvents.length === 0 && !loading && events.length > 0 ? (
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              className="text-center py-20"
+              className="text-center py-12 sm:py-20"
             >
-              <div className="text-6xl sm:text-8xl mb-6 animate-pulse">🔍</div>
-              <h3 className="text-2xl sm:text-3xl font-bold text-[#ffd4b9] mb-4 font-display">No Matching Events</h3>
-              <p className="text-lg sm:text-xl text-[#fea6cc] font-arabian mb-2">Try a different search term or adjust your filters</p>
+              <div className="text-5xl sm:text-6xl md:text-8xl mb-4 sm:mb-6 animate-pulse">🔍</div>
+              <h3 className="text-xl sm:text-2xl md:text-3xl font-bold text-[#ffd4b9] mb-3 sm:mb-4 font-display px-4">No Matching Events</h3>
+              <p className="text-base sm:text-lg md:text-xl text-[#fea6cc] font-arabian mb-2 px-4">Try a different search term or adjust your filters</p>
             </motion.div>
           ) : null}
           
           {filteredEvents.length > 0 && (
             <div>
             
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 md:gap-8">
                 {filteredEvents.map((event, index) => {
                   
                   // Check if this is the first event for its letter
@@ -982,20 +933,20 @@ export default function EventsPage() {
                           </div>
 
                           {/* Action Buttons */}
-                          <div className="flex gap-3 mt-6">
+                          <div className="flex gap-2 sm:gap-3 mt-4 sm:mt-6">
                             <button 
                               onClick={() => {
                                 setSelectedEvent(event);
                                 setShowRegistrationForm(true);
                               }}
-                              className="flex-1 bg-gradient-to-r from-[#fea6cc] to-[#ffd4b9] text-[#010101] font-bold py-3 px-6 rounded-2xl hover:from-[#ffd4b9] hover:to-[#fea7a0] transition-all duration-300 transform hover:scale-105 font-arabian text-lg shadow-lg hover:shadow-xl"
+                              className="flex-1 bg-gradient-to-r from-[#fea6cc] to-[#ffd4b9] text-[#010101] font-bold py-2.5 sm:py-3 px-4 sm:px-6 rounded-xl sm:rounded-2xl hover:from-[#ffd4b9] hover:to-[#fea7a0] transition-all duration-300 active:scale-95 sm:hover:scale-105 font-arabian text-base sm:text-lg shadow-lg hover:shadow-xl"
                             >
                               Register Now
                             </button>
                             
-                            <motion.div whileHover={{ y: -2, scale: 1.05 }}>
-                              <Link href={`/events/${event.eventId}`} className="flex items-center justify-center bg-gradient-to-r from-[#2a0a56]/80 to-[#4321a9]/80 border-2 border-[#b53da1]/50 text-[#ffd4b9] p-3 rounded-2xl hover:bg-gradient-to-r hover:from-[#b53da1]/40 hover:to-[#ed6ab8]/40 hover:border-[#fea6cc] transition-all duration-300 shadow-lg hover:shadow-xl">
-                                <ExternalLink className="w-5 h-5" />
+                            <motion.div whileHover={{ y: -2, scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                              <Link href={`/events/${event.eventId}`} className="flex items-center justify-center bg-gradient-to-r from-[#2a0a56]/80 to-[#4321a9]/80 border-2 border-[#b53da1]/50 text-[#ffd4b9] p-2.5 sm:p-3 rounded-xl sm:rounded-2xl hover:bg-gradient-to-r hover:from-[#b53da1]/40 hover:to-[#ed6ab8]/40 hover:border-[#fea6cc] transition-all duration-300 shadow-lg hover:shadow-xl">
+                                <ExternalLink className="w-4 h-4 sm:w-5 sm:h-5" />
                               </Link>
                             </motion.div>
                           </div>
@@ -1006,45 +957,34 @@ export default function EventsPage() {
                 })}
               </div>
 
-              {/* Loading More Indicator */}
+              {/* Scroll-based Loading Indicator */}
               <div 
                 ref={loadMoreRef} 
-                className="mt-12 flex flex-col items-center justify-center min-h-[120px] gap-4 rounded-xl p-6"
+                className="mt-8 sm:mt-12 flex flex-col items-center justify-center min-h-[100px] sm:min-h-[120px] gap-3 sm:gap-4 rounded-xl p-4 sm:p-6"
                 style={{ border: '2px dashed rgba(254, 166, 204, 0.3)', backgroundColor: 'rgba(42, 10, 86, 0.2)' }}
               >
                 {loadingMore && (
-                  <div className="flex flex-col items-center gap-3">
+                  <div className="flex flex-col items-center gap-2 sm:gap-3">
                     <motion.div
                       animate={{ rotate: 360 }}
                       transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                      className="w-12 h-12 border-4 border-[#fea6cc] border-t-transparent rounded-full"
+                      className="w-10 h-10 sm:w-12 sm:h-12 border-3 sm:border-4 border-[#fea6cc] border-t-transparent rounded-full"
                     />
-                    <p className="text-[#fea6cc] text-sm">Loading more events...</p>
+                    <p className="text-[#fea6cc] text-xs sm:text-sm">Loading more events...</p>
                   </div>
                 )}
                 {!loadingMore && hasMore && !searchTerm && (
-                  <div className="text-center">
-                    <div className="text-[#fea6cc] text-base font-medium mb-3">
-                      👇 Scroll to load more events
+                  <div className="text-center px-4">
+                    <div className="text-[#fea6cc] text-sm sm:text-base font-medium mb-2 sm:mb-3">
+                      👇 Scroll down for more events
                     </div>
-                    <p className="text-[#fea6cc]/50 text-xs mb-4">
-                      ({events.length} of {totalPages * 12} total)
+                    <p className="text-[#fea6cc]/50 text-xs">
+                      Loaded {events.length} of {totalPages * EVENTS_PER_PAGE} events
                     </p>
-                    <button
-                      onClick={() => {
-                        console.log('🖱️ Manual load button clicked');
-                        const nextPage = currentPage + 1;
-                        setCurrentPage(nextPage);
-                        fetchEvents(nextPage, false);
-                      }}
-                      className="px-6 py-2 bg-gradient-to-r from-[#b53da1] to-[#ed6ab8] text-white font-medium rounded-full hover:from-[#ed6ab8] hover:to-[#fea6cc] transition-all"
-                    >
-                      Load More Events
-                    </button>
                   </div>
                 )}
                 {searchTerm && (
-                  <div className="text-center text-[#fea6cc]/70 text-sm">
+                  <div className="text-center text-[#fea6cc]/70 text-xs sm:text-sm px-4">
                     🔍 Showing all search results
                   </div>
                 )}
@@ -1052,10 +992,10 @@ export default function EventsPage() {
                   <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="text-center py-8"
+                    className="text-center py-6 sm:py-8 px-4"
                   >
-                    <div className="text-[#ffd4b9] text-lg font-medium">✨ You've reached the end ✨</div>
-                    <p className="text-[#fea6cc] text-sm mt-2">All {events.length} events loaded</p>
+                    <div className="text-[#ffd4b9] text-base sm:text-lg font-medium">✨ You've reached the end ✨</div>
+                    <p className="text-[#fea6cc] text-xs sm:text-sm mt-2">All {events.length} events loaded</p>
                   </motion.div>
                 )}
               </div>
@@ -1079,18 +1019,9 @@ export default function EventsPage() {
         )}
 
         {/* Alphabet Index */}
-        <AnimatePresence>
-          {showAlphabetIndex && availableLetters.length > 0 && (
-            <motion.div
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: 20 }}
-              transition={{ duration: 0.3, ease: 'easeInOut' }}
-            >
-              <AlphabetIndex onLetterSelect={handleLetterSelect} activeLetter={activeLetter} />
-            </motion.div>
-          )}
-        </AnimatePresence>
+        {showAlphabetIndex && availableLetters.length > 0 && (
+          <AlphabetIndex onLetterSelect={handleLetterSelect} activeLetter={activeLetter} availableLetters={availableLetters} />
+        )}
       </main>
     </>
   );

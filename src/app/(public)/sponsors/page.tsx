@@ -22,15 +22,17 @@ function groupSponsors(list: Sponsor[]) {
 
 const TwinklingStars = () => {
   const [stars, setStars] = useState<any[]>([]);
+
   useEffect(() => {
-    const generated = Array.from({ length: 160 }).map((_, i) => ({
+    const generatedStars = Array.from({ length: 250 }).map((_, i) => ({
       id: i,
       x: `${Math.random() * 100}%`,
-      y: `${Math.random() * 100}%`,
-      size: `${Math.random() * 5 + 2}px`,
+      y: `${Math.random() * 80}%`,
+      size: `${Math.random() * 1.5 + 0.5}px`,
       duration: Math.random() * 1.5 + 1.5,
+      opacity: Math.random() * 0.4 + 0.1,
     }));
-    setStars(generated);
+    setStars(generatedStars);
   }, []);
 
   return (
@@ -40,8 +42,8 @@ const TwinklingStars = () => {
           key={star.id}
           className="absolute bg-[#ffd4b9] rounded-full"
           style={{ left: star.x, top: star.y, width: star.size, height: star.size }}
-          animate={{ opacity: [0.2, 1, 0.2] }}
-          transition={{ duration: star.duration, repeat: Infinity }}
+          animate={{ opacity: [star.opacity, star.opacity + 0.5, star.opacity] }}
+          transition={{ duration: star.duration, repeat: Infinity, repeatType: 'mirror' }}
         />
       ))}
     </>
@@ -73,11 +75,8 @@ export default function SponsorsPage() {
   useEffect(() => {
     // MOCK DATA: This is temporary. Remove this block to use your real API.
     const mockSponsors: Sponsor[] = [
-      { id: 1, name: "Trident", tier: "Title", logo: "/TridentLogo.png" },
-      // You can add more mock sponsors here to test the layout
-      // { id: 2, name: "Marketing Co.", tier: "Marketing", logo: "/marketing-logo.png" },
-      // { id: 3, name: "Media Inc.", tier: "Media", logo: "/media-logo.png" },
-      // { id: 4, name: "Partner LLC", tier: "Partner", logo: "/partner-logo.png" },
+      { id: 1, name: "Trident Group", tier: "Title", logo: "/TridentLogo.png" },
+      
     ];
     setTimeout(() => {
       setSponsors(mockSponsors);
@@ -141,7 +140,7 @@ export default function SponsorsPage() {
                 (tier) =>
                   grouped[tier].length > 0 && (
                     <section key={tier} className="mb-10">
-                      <h2 className="font-aladin text-4xl text-[#2B005F] mb-4">{tier} Sponsors</h2>
+                      <h2 className="font-aladin text-4xl text-[#2B005F] mb-4">{tier} Sponsor</h2>
 
                       <div className="flex flex-wrap justify-center gap-x-16 gap-y-10 w-full max-w-4xl mx-auto px-6">
                         {grouped[tier].map((s) => (
