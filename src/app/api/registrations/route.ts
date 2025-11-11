@@ -117,11 +117,15 @@ export async function POST(request: NextRequest) {
     const discount = body.discount || 0;
     const totalFees = Math.max(0, eventFees + accommodationFees - discount);
 
+    // For free events, automatically set verified to true
+    const isFreEvent = event.regFees === 0;
+    const verified = isFreEvent ? true : (body.verified ?? false);
+
     const registrationData = {
       eventId: body.eventId.trim(),
       userId: userId,
       teamId: body.teamId ? body.teamId.trim() : '',
-      verified: body.verified ?? false,
+      verified: verified,
       feesPaid,
       discount: discount,
       accommodationRequired: body.accommodationRequired || false,

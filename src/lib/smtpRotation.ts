@@ -1,9 +1,9 @@
 /**
  * SMTP Rotation Utility
  * 
- * Manages rotating between 10 SMTP accounts to handle high email volumes
- * Each account can send 100 emails, allowing 1000 total emails per day
- * After reaching the last account, rotates back to the first
+ * Manages rotating between 16 SMTP accounts to handle high email volumes
+ * Each account can send 100 emails, allowing 1600 total emails per day
+ * After reaching the 16th account, rotates back to the first
  */
 
 // Store email counter in memory (resets on server restart)
@@ -16,8 +16,8 @@ let emailCount = 0;
  * Each account handles 100 emails
  */
 export function getSMTPConfig() {
-  // Determine which account to use (0-9, maps to 1-10)
-  const accountIndex = Math.floor(emailCount / 100) % 10;
+  // Determine which account to use (0-15, maps to 1-16)
+  const accountIndex = Math.floor(emailCount / 100) % 16;
   const accountNumber = accountIndex + 1;
 
   // Get credentials from environment variables
@@ -57,7 +57,7 @@ export function getSMTPConfig() {
  * Get current status of SMTP rotation
  */
 export function getSMTPStatus() {
-  const accountIndex = Math.floor(emailCount / 100) % 10;
+  const accountIndex = Math.floor(emailCount / 100) % 16;
   const accountNumber = accountIndex + 1;
   const emailsUsedInCurrentAccount = emailCount % 100;
   const emailsRemainingInAccount = 100 - emailsUsedInCurrentAccount;
@@ -67,7 +67,7 @@ export function getSMTPStatus() {
     emailsSentFromCurrentAccount: emailsUsedInCurrentAccount,
     emailsRemainingInCurrentAccount: emailsRemainingInAccount,
     totalEmailsSentToday: emailCount,
-    totalCapacity: 1000,
+    totalCapacity: 1600,
   };
 }
 
@@ -93,8 +93,8 @@ export function setSMTPCounter(count: number) {
  * Force skip to next SMTP account (used when current account hits daily limit)
  */
 export function skipToNextAccount() {
-  const currentAccountIndex = Math.floor(emailCount / 100) % 10;
-  const nextAccountIndex = (currentAccountIndex + 1) % 10;
+  const currentAccountIndex = Math.floor(emailCount / 100) % 16;
+  const nextAccountIndex = (currentAccountIndex + 1) % 16;
   const nextEmailCount = (nextAccountIndex * 100) + (emailCount % 100);
   
   console.log(`⏭️ Skipping from Account ${currentAccountIndex + 1} to Account ${nextAccountIndex + 1}`);

@@ -466,8 +466,13 @@ export default function EventRegistrationForm({ event, onClose, onSuccess }: Reg
         // return;
       }
 
-      // Only require receipt if event has fees AND user is not a team member
-      if (event.regFees > 0 && (!isTeamEvent || userRole === 'leader') && !receiptFile) {
+      // Require receipt if:
+      // 1. Event has registration fees AND user is not a team member, OR
+      // 2. Accommodation is required with fees (₹1500 per member)
+      const hasEventFees = event.regFees > 0 && (!isTeamEvent || userRole === 'leader');
+      const hasAccommodationFees = accommodationRequired && accommodationMembers > 0;
+      
+      if ((hasEventFees || hasAccommodationFees) && !receiptFile) {
         setError('Please upload payment receipt');
         setIsSubmitting(false);
         return;
@@ -1351,8 +1356,10 @@ export default function EventRegistrationForm({ event, onClose, onSuccess }: Reg
                 )}
 
                 {/* Payment Receipt Upload or Free Registration */}
-                {/* Only show payment for: Individual events, Team leaders, or Free events */}
-                {event.regFees > 0 && (!isTeamEvent || userRole === 'leader') ? (
+                {/* Show payment section if: 
+                    1. Event has fees (and user is individual or leader), OR 
+                    2. Free event with accommodation fees */}
+                {(event.regFees > 0 && (!isTeamEvent || userRole === 'leader')) || (event.regFees === 0 && accommodationRequired && accommodationMembers > 0) ? (
                   <div className="space-y-3">
                     <label className="text-[#ffd4b9] font-semibold flex items-center gap-2">
                       <IndianRupee className="w-5 h-5" />
@@ -1597,45 +1604,78 @@ export default function EventRegistrationForm({ event, onClose, onSuccess }: Reg
                         <div className="bg-[#010101]/40 border-2 border-[#b53da1]/50 rounded-xl p-6">
                           <div className="space-y-4">
                             <div className="text-center mb-4">
-                              <h3 className="text-[#ffd4b9] font-bold text-xl mb-2">Money Transfer Details</h3>
+                              <h3 className="text-[#ffd4b9] font-bold text-xl mb-2">💳 Payment Details</h3>
                             </div>
 
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                              <div className="bg-[#2a0a56]/40 rounded-lg p-3">
-                                <p className="text-xs text-[#fea6cc]/60 mb-1">Name of the payee:</p>
-                                <p className="text-white font-semibold text-sm">PUNJAB ENGG. COLLEGE (DEEMED TO BE UNIVERISTY)</p>
+                            {/* QR Code Section */}
+                            <div className="flex flex-col items-center gap-4">
+                              <div className="bg-white p-4 rounded-lg shadow-lg">
+                                <img
+                                  src="/qr-code.jpg"
+                                  alt="Payment QR Code"
+                                  className="w-48 h-48 object-contain"
+                                  onError={(e) => {
+                                    (e.target as HTMLImageElement).src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTkyIiBoZWlnaHQ9IjE5MiIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTkyIiBoZWlnaHQ9IjE5MiIgZmlsbD0iI2YwZjBmMCIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTgiIGZpbGw9IiM2NjY2NjYiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj5RUiBDb2RlPC90ZXh0Pjwvc3ZnPg==';
+                                  }}
+                                />
                               </div>
-
-                              <div className="bg-[#2a0a56]/40 rounded-lg p-3">
-                                <p className="text-xs text-[#fea6cc]/60 mb-1">Name of the bank:</p>
-                                <p className="text-white font-semibold text-sm">State Bank of India</p>
-                              </div>
-
-                              <div className="bg-[#2a0a56]/40 rounded-lg p-3">
-                                <p className="text-xs text-[#fea6cc]/60 mb-1">Account Number:</p>
-                                <p className="text-white font-semibold text-sm font-mono">00000040903415912</p>
-                              </div>
-
-                              <div className="bg-[#2a0a56]/40 rounded-lg p-3">
-                                <p className="text-xs text-[#fea6cc]/60 mb-1">Code of the Bank:</p>
-                                <p className="text-white font-semibold text-sm">16002008</p>
-                              </div>
-
-                              <div className="bg-[#2a0a56]/40 rounded-lg p-3">
-                                <p className="text-xs text-[#fea6cc]/60 mb-1">IFSC:</p>
-                                <p className="text-white font-semibold text-sm font-mono">SBIN0002452</p>
-                              </div>
+                              <p className="text-sm text-white text-center font-mono">
+                                UPI ID: pecchdfest@sbi
+                              </p>
+                              {isMobile && (
+                                <a
+                                  href={`upi://pay?pa=pecchdfest@sbi&pn=${encodeURIComponent('PUNJAB ENGG. COLLEGE (DEEMED TO BE UNIVERISTY)')}&am=${accommodationFees}&cu=INR`}
+                                  className="inline-flex items-center justify-center px-6 py-2 bg-gradient-to-r from-indigo-700 to-purple-800 text-white font-semibold rounded-lg shadow-md hover:scale-105 transition-transform duration-300"
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                >
+                                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5 mr-2">
+                                    <path d="m12 2 7 7-7 7-7-7 7-7z"></path><path d="m2 12 5 5m5-10 5 5"></path><path d="M2 17h20"></path>
+                                  </svg>
+                                  Pay with UPI
+                                </a>
+                              )}
                             </div>
 
-                            <div className="bg-[#2a0a56]/40 rounded-lg p-3">
-                              <p className="text-xs text-[#fea6cc]/60 mb-1">Bank Branch (Full address):</p>
-                              <p className="text-white font-semibold text-sm">State Bank of India, Punjab Engineering College, Sector 12, Chandigarh-160012</p>
+                            <div className="border-t border-purple-500/30 pt-4">
+                              <h4 className="text-[#ffd4b9] font-semibold mb-3">Bank Transfer Details</h4>
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div className="bg-[#2a0a56]/40 rounded-lg p-3">
+                                  <p className="text-xs text-[#fea6cc]/60 mb-1">Name of the payee:</p>
+                                  <p className="text-white font-semibold text-sm">PUNJAB ENGG. COLLEGE (DEEMED TO BE UNIVERISTY)</p>
+                                </div>
+
+                                <div className="bg-[#2a0a56]/40 rounded-lg p-3">
+                                  <p className="text-xs text-[#fea6cc]/60 mb-1">Name of the bank:</p>
+                                  <p className="text-white font-semibold text-sm">State Bank of India</p>
+                                </div>
+
+                                <div className="bg-[#2a0a56]/40 rounded-lg p-3">
+                                  <p className="text-xs text-[#fea6cc]/60 mb-1">Account Number:</p>
+                                  <p className="text-white font-semibold text-sm font-mono">00000040903415912</p>
+                                </div>
+
+                                <div className="bg-[#2a0a56]/40 rounded-lg p-3">
+                                  <p className="text-xs text-[#fea6cc]/60 mb-1">Code of the Bank:</p>
+                                  <p className="text-white font-semibold text-sm">16002008</p>
+                                </div>
+
+                                <div className="bg-[#2a0a56]/40 rounded-lg p-3">
+                                  <p className="text-xs text-[#fea6cc]/60 mb-1">IFSC:</p>
+                                  <p className="text-white font-semibold text-sm font-mono">SBIN0002452</p>
+                                </div>
+
+                                <div className="bg-[#2a0a56]/40 rounded-lg p-3">
+                                  <p className="text-xs text-[#fea6cc]/60 mb-1">Branch:</p>
+                                  <p className="text-white font-semibold text-xs">State Bank of India, PEC, Sector 12, Chandigarh-160012</p>
+                                </div>
+                              </div>
                             </div>
 
                             <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-3 mt-4">
                               <p className="text-yellow-200 text-xs flex items-start gap-2">
                                 <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
-                                <span><strong>Important:</strong> Please transfer ₹{accommodationFees} to the bank account for accommodation and upload the payment receipt below.</span>
+                                <span><strong>Important:</strong> Transfer ₹{accommodationFees} and upload the payment receipt below.</span>
                               </p>
                             </div>
                           </div>

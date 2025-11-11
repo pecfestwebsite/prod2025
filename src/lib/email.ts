@@ -1,5 +1,5 @@
 import nodemailer from 'nodemailer';
-import { getSMTPConfig, getSMTPStatus } from './smtpRotation';
+import { getSMTPConfig, getSMTPStatus, skipToNextAccount } from './smtpRotation';
 
 interface EmailOptions {
   to: string;
@@ -80,43 +80,56 @@ const createTransporter = () => {
   }
 };
 
-// Send email using transporter
+// Send email using transporter with retry logic and SMTP rotation
 export const sendEmail = async (options: EmailOptions): Promise<boolean> => {
-  try {
-    const transporter = createTransporter();
+  const maxRetries = 3;
+  let lastError: Error | null = null;
 
-    if (!transporter) {
-      console.error('Email transporter not configured');
-      return false;
-    }
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      // Get SMTP config once at the beginning of each attempt
+      const smtpConfig = getSMTPConfig();
+      
+      const transporter = nodemailer.createTransport({
+        host: process.env.SMTP_HOST || 'smtp.gmail.com',
+        port: parseInt(process.env.SMTP_PORT || '587'),
+        secure: false, // true for 465, false for other ports
+        auth: {
+          user: smtpConfig.user,
+          pass: smtpConfig.pass,
+        },
+      });
 
-    // Use rotating FROM address if using SMTP rotation
-    let fromAddress = process.env.EMAIL_FROM || process.env.EMAIL_USER;
-    const emailService = process.env.EMAIL_SERVICE || 'custom';
-    
-    if (emailService === 'custom' || emailService !== 'gmail') {
-      try {
-        const smtpConfig = getSMTPConfig();
-        // Get the current SMTP config again to ensure we use the same account's FROM
-        const currentAccountNumber = Math.floor((smtpConfig.totalEmailsCount - 1) / 100) % 10 + 1;
-        fromAddress = process.env[`SMTP_${currentAccountNumber}_FROM`] || smtpConfig.from;
-      } catch (error) {
-        console.warn('Could not get rotating FROM address, using default', error);
+      // Use the FROM address from SMTP config
+      const mailOptions = {
+        from: smtpConfig.from,
+        ...options,
+      };
+      
+      console.log(`📧 Attempt ${attempt + 1}/${maxRetries}: Using SMTP Account ${smtpConfig.accountNumber} (${smtpConfig.user})`);
+      
+      await transporter.sendMail(mailOptions);
+      console.log(`✅ Email sent to ${options.to} using Account ${smtpConfig.accountNumber}`);
+      return true;
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error(String(error));
+      const errorMsg = lastError.message;
+
+      // Check if this is a daily limit error
+      if (errorMsg.includes('Daily user sending limit exceeded') || errorMsg.includes('550')) {
+        console.warn(`⚠️ Account hit daily limit, trying next account...`);
+        skipToNextAccount(); // Force skip to next account
+        continue; // Try next account
+      } else {
+        // Other errors (not daily limit) should not retry
+        console.error(`❌ Non-retryable error: ${errorMsg}`);
+        return false;
       }
     }
-
-    const mailOptions = {
-      from: fromAddress,
-      ...options,
-    };
-    
-    await transporter.sendMail(mailOptions);
-    console.log(`✅ Email sent to ${options.to}`);
-    return true;
-  } catch (error) {
-    console.error('Error sending email:', error);
-    return false;
   }
+
+  console.error(`❌ All SMTP accounts exhausted or failed for email to ${options.to}`);
+  return false;
 };
 
 // Generate HTML template for registration verification email
@@ -320,7 +333,14 @@ const generateRegistrationVerificationTemplate = (data: RegistrationEmailData): 
 };
 
 // Helper function to escape HTML
-const escapeHtml = (text: string): string => {
+const escapeHtml = (text: any): string => {
+  // Convert to string if not already a string
+  if (text === null || text === undefined) {
+    return '';
+  }
+  
+  const stringText = typeof text === 'string' ? text : String(text);
+  
   const map: { [key: string]: string } = {
     '&': '&amp;',
     '<': '&lt;',
@@ -328,7 +348,7 @@ const escapeHtml = (text: string): string => {
     '"': '&quot;',
     "'": '&#039;',
   };
-  return text.replace(/[&<>"']/g, (m) => map[m]);
+  return stringText.replace(/[&<>"']/g, (m) => map[m]);
 };
 
 // Send registration verification email
