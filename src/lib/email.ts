@@ -98,6 +98,8 @@ export const sendEmail = async (options: EmailOptions): Promise<boolean> => {
           user: smtpConfig.user,
           pass: smtpConfig.pass,
         },
+        connectionTimeout: 5000, // 5 second connection timeout
+        socketTimeout: 5000, // 5 second socket timeout
       });
 
       // Use the FROM address from SMTP config

@@ -10,6 +10,7 @@
   "dependencies": {
     "@auth0/auth0-react": "^2.8.0",
     "@use-gesture/react": "^10.3.1",
+    "@vercel/analytics": "^1.5.0",
     "@vercel/speed-insights": "^1.2.0",
     "auth0": "^5.0.0",
     "bcryptjs": "^3.0.2",

@@ -11,6 +11,7 @@ interface RegistrationWithEvent {
   eventId: string;
   eventName: string;
   societyName: string;
+  regFees: number;
   userId: string;
   teamId: string;
   verified: boolean;
@@ -43,16 +44,17 @@ async function getRegistrations(): Promise<{ registrations: RegistrationWithEven
     const events = await Event.find({ eventId: { $in: eventIds } }).lean();
 
     // Create a map of eventId to event data for quick lookup
-    const eventMap = new Map(events.map((event: any) => [event.eventId, { eventName: event.eventName, societyName: event.societyName }]));
+    const eventMap = new Map(events.map((event: any) => [event.eventId, { eventName: event.eventName, societyName: event.societyName, regFees: event.regFees }]));
 
     // Combine registration data with event names and society names
     const processedRegistrations = registrations.map((reg: any) => {
-      const eventData = eventMap.get(reg.eventId) || { eventName: 'Unknown Event', societyName: 'Unknown Society' };
+      const eventData = eventMap.get(reg.eventId) || { eventName: 'Unknown Event', societyName: 'Unknown Society', regFees: 0 };
       return {
         _id: reg._id.toString(),
         eventId: reg.eventId,
         eventName: eventData.eventName,
         societyName: eventData.societyName,
+        regFees: eventData.regFees,
         userId: reg.userId,
         teamId: reg.teamId || '',
         verified: reg.verified,

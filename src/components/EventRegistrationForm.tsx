@@ -730,6 +730,7 @@ export default function EventRegistrationForm({ event, onClose, onSuccess }: Reg
                         <span className="text-[#ffd4b9]/70">Registration Date:</span>
                         <span className="text-white font-medium">
                           {new Date(existingRegistration.dateTime).toLocaleDateString('en-US', {
+                            timeZone: "UTC",
                             year: 'numeric',
                             month: 'long',
                             day: 'numeric',
@@ -828,6 +829,7 @@ export default function EventRegistrationForm({ event, onClose, onSuccess }: Reg
                     <span className="text-[#fea6cc] text-xs font-semibold min-w-[70px]">Starts:</span>
                     <span className="text-white text-xs">
                       {event.dateTime ? new Date(event.dateTime).toLocaleString('en-US', {
+                        timeZone:'UTC',
                         weekday: 'short',
                         year: 'numeric',
                         month: 'short',
@@ -841,6 +843,7 @@ export default function EventRegistrationForm({ event, onClose, onSuccess }: Reg
                     <span className="text-[#fea6cc] text-xs font-semibold min-w-[70px]">Ends:</span>
                     <span className="text-white text-xs">
                       {event.endDateTime ? new Date(event.endDateTime).toLocaleString('en-US', {
+                        timeZone:"UTC",
                         weekday: 'short',
                         year: 'numeric',
                         month: 'short',

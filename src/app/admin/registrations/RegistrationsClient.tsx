@@ -110,6 +110,7 @@ export default function RegistrationsClient({ registrations, total }: Registrati
   const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
   const [searchTerm, setSearchTerm] = useState('');
   const [filterVerified, setFilterVerified] = useState<'all' | 'verified' | 'unverified'>('all');
+  const [filterEventType, setFilterEventType] = useState<'all' | 'free' | 'paid'>('all');
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null);
   const [verifyingId, setVerifyingId] = useState<string | null>(null);
@@ -201,6 +202,13 @@ export default function RegistrationsClient({ registrations, total }: Registrati
       filtered = filtered.filter((reg) => !reg.verified);
     }
 
+    // Apply event type filter
+    if (filterEventType === 'free') {
+      filtered = filtered.filter((reg) => reg.totalFees === 0);
+    } else if (filterEventType === 'paid') {
+      filtered = filtered.filter((reg) => (reg.totalFees ?? 0) > 0);
+    }
+
     // Apply sorting
     filtered.sort((a, b) => {
       let aValue: any;
@@ -261,7 +269,7 @@ export default function RegistrationsClient({ registrations, total }: Registrati
     });
 
     return filtered;
-  }, [localRegistrations, searchTerm, filterVerified, sortField, sortOrder]);
+  }, [localRegistrations, searchTerm, filterVerified, filterEventType, sortField, sortOrder]);
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -519,12 +527,21 @@ export default function RegistrationsClient({ registrations, total }: Registrati
             <option value="verified" className="text-slate-900">✓ Verified Only</option>
             <option value="unverified" className="text-slate-900">⏳ Pending Verification</option>
           </select>
+          <select
+            value={filterEventType}
+            onChange={(e) => setFilterEventType(e.target.value as 'all' | 'free' | 'paid')}
+            className="px-3 md:px-4 py-2 md:py-3 bg-slate-800/50 hover:bg-slate-800/70 border-2 border-purple-500/40 rounded-lg md:rounded-xl text-white focus:outline-none focus:border-purple-500/80 focus:bg-slate-800/80 focus:ring-2 focus:ring-purple-500/30 font-medium transition-all text-xs md:text-base shadow-md"
+          >
+            <option value="all" className="text-slate-900">🎭 All Events</option>
+            <option value="free" className="text-slate-900">🎉 Free Events</option>
+            <option value="paid" className="text-slate-900">💳 Paid Events</option>
+          </select>
         </div>
 
         {/* Results Info */}
         <div className="flex items-center justify-between px-3 md:px-4 py-2 bg-slate-800/40 border border-purple-500/20 rounded-lg">
           <p className="text-xs md:text-sm text-slate-300 font-medium">
-            📊 Showing <span className="font-bold text-white">{localRegistrations.length}</span> of{' '}
+            📊 Showing <span className="font-bold text-white">{filteredAndSortedRegistrations.length}</span> of{' '}
             <span className="font-bold text-white">{totalRecords}</span> payments
             {hasSearched && <span className="text-yellow-400 ml-2">(Search Results)</span>}
           </p>
@@ -533,8 +550,8 @@ export default function RegistrationsClient({ registrations, total }: Registrati
 
       {/* Mobile View - Cards */}
       <div className="md:hidden space-y-3">
-        {localRegistrations.length > 0 ? (
-          localRegistrations.map((registration) => (
+        {filteredAndSortedRegistrations.length > 0 ? (
+          filteredAndSortedRegistrations.map((registration) => (
             <div
               key={registration._id}
               className="bg-slate-800/40 border-2 border-purple-500/30 rounded-xl p-4 space-y-3"
@@ -760,8 +777,8 @@ export default function RegistrationsClient({ registrations, total }: Registrati
               </tr>
             </thead>
             <tbody className="divide-y divide-purple-500/10">
-              {localRegistrations.length > 0 ? (
-                localRegistrations.map((registration) => (
+              {filteredAndSortedRegistrations.length > 0 ? (
+                filteredAndSortedRegistrations.map((registration) => (
                   <tr
                     key={registration._id}
                     className="bg-slate-800/30 hover:bg-slate-700/30 transition-colors duration-300 border-b border-purple-500/10"

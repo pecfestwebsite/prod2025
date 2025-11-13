@@ -246,6 +246,7 @@ export default function EventsPage() {
   const [selectedSociety, setSelectedSociety] = useState<string>('all');
   const [selectedDate, setSelectedDate] = useState<string>('all');
   const [selectedEventType, setSelectedEventType] = useState<string>('all');
+  const [selectedFeeType, setSelectedFeeType] = useState<string>('all');
   const [selectedEvent, setSelectedEvent] = useState<IEvent | null>(null);
   const [showRegistrationForm, setShowRegistrationForm] = useState(false);
   const [showAlphabetIndex, setShowAlphabetIndex] = useState(false);
@@ -262,37 +263,58 @@ export default function EventsPage() {
   const prevSearchTerm = useRef<string>('');
   const [allEventsLoaded, setAllEventsLoaded] = useState(false);
 
-  const societiesAndClubs = [
-    // CLUBS
-    "Rotaract Club", "Projection & Design Club", "Music Club", "English Editorial Board",
-    "Hindi Editorial Board", "Punjabi Editorial Board", "SAASC", "Dramatics",
-    "Art & Photography Club", "Electoral Literacy Club",
-    // TECHNICAL SOCIETIES
-    "Indian Institute of Metals(IIM)", "Indian Geotechnical Society(IGS)",
-    "Solar Energy Society of India(SESI)", "Robotics", "Society of Automotive Engineers(SAE)",
-    "Institute of Electronics & Electrical Engineers(IEEE)", "Society of Manufacturing Engineers(SME)",
-    "Autonomy & Space Physics Society (ASPS)", "American Society of Civil Engineers(ASCE)",
-    "Association for Computer Machinery(ACM-CSS)", "American Society of Mechanical Engineers (ASME)",
-    "Aerospace Technical Society(ATS)",
-    // Cells
-    "Student Counselling Cell (SCC)", "Communication, Information & Media Cell(CIM)",
-    "Entrepreneurship & Innovation Cell(EIC)", "Women Empowerment Cell(WEC)"
-  ,
-    // Others
-    "National Cadet Corps(NCC) (Army Wing)",
-    "National Cadet Corps (NCC)(Naval Wing)",
-    "National NSS",
-    "Sports",
-    "Dhyan Kendra"].sort();
+  // Society name mapping: abbreviation -> full name (matches backend abbreviations)
+  const societyNameMapping: Record<string, string> = {
+    // Clubs
+    'Dramatics': 'Dramatics',
+    'SAASC': 'SAASC',
+    'APC': 'Art & Photography Club',
+    'ELC': 'Electoral Literacy Club',
+    'Music': 'Music Club',
+    'HEB': 'Hindi Editorial Board',
+    'PDC': 'Projection & Design Club',
+    'PEB': 'Punjabi Editorial Board',
+    'Rotaract': 'Rotaract Club',
+    'SCC': 'Student Counselling Cell (SCC)',
+    'CIM': 'Communication, Information & Media Cell(CIM)',
+    'EIC': 'Entrepreneurship & Innovation Cell(EIC)',
+    'WEC': 'Women Empowerment Cell(WEC)',
+    'EEB': 'English Editorial Board',
+    'NCC': 'National Cadet Corps(NCC) (Army Wing)',
+    'NCC-Naval': 'National Cadet Corps (NCC)(Naval Wing)',
+    'NSS': 'National NSS',
+    'Sports': 'Sports',
+    'DhyanKendra': 'Dhyan Kendra',
+    
+    // Technical Societies
+    'Robotics': 'Robotics',
+    'ACM': 'Association for Computer Machinery(ACM-CSS)',
+    'ATS': 'Aerospace Technical Society(ATS)',
+    'ASME': 'American Society of Mechanical Engineers (ASME)',
+    'ASCE': 'American Society of Civil Engineers(ASCE)',
+    'ASPS': 'Autonomy & Space Physics Society (ASPS)',
+    'IEEE': 'Institute of Electronics & Electrical Engineers(IEEE)',
+    'IGS': 'Indian Geotechnical Society(IGS)',
+    'IIM': 'Indian Institute of Metals(IIM)',
+    'SESI': 'Solar Energy Society of India(SESI)',
+    'SAE': 'Society of Automotive Engineers(SAE)',
+    'SME': 'Society of Manufacturing Engineers(SME)'
+  };
 
-  const uniqueCategories = ['all', ...Array.from(new Set(events.map(e => e.category)))];
+  // Static list of all societies to show in filter (in alphabetical order)
+  const allSocietiesForFilter = [
+    'ATS', 'ASCE', 'ASME', 'APC', 'ACM', 'ASPS', 'CIM', 'DhyanKendra', 'Dramatics',
+    'ELC', 'EEB', 'EIC', 'HEB', 'IGS', 'IIM', 'IEEE', 'Music', 'NCC-Naval', 'NCC',
+    'NSS', 'PDC', 'PEB', 'Robotics', 'Rotaract', 'SAASC', 'SAE', 'SME', 'SESI',
+    'Sports', 'SCC', 'WEC'
+  ];
   
-  // Use the static list
+  // Create society options with full names for display
   const societyOptionsForSelect = [
     { value: 'all', label: '🏛️ All Societies' },
-    ...societiesAndClubs.map(society => ({
-      value: society,
-      label: society
+    ...allSocietiesForFilter.map(society => ({
+      value: society, // Backend abbreviation
+      label: societyNameMapping[society] || society // Display name
     }))
   ];
 
@@ -313,6 +335,12 @@ export default function EventsPage() {
     // { value: 'all', label: '👥 Team/Individual' },
     { value: 'individual', label: '👤 Individual' },
     { value: 'team', label: '👥 Team' },
+  ];
+
+  const feeTypeOptions = [
+    { value: 'all', label: '💰 All Fees' },
+    { value: 'free', label: '🎉 Free' },
+    { value: 'paid', label: '💳 Paid' },
   ];
 
   const selectedCategoryLabel = categoryOptions.find(c => c.value === selectedCategory)?.label;
@@ -532,6 +560,15 @@ export default function EventsPage() {
       );
     }
 
+    // Filter by fee type
+    if (selectedFeeType !== 'all') {
+      if (selectedFeeType === 'free') {
+        result = result.filter(event => event.regFees === 0);
+      } else if (selectedFeeType === 'paid') {
+        result = result.filter(event => event.regFees > 0);
+      }
+    }
+
     // Filter by search term (client-side filter on already fetched search results)
     if (searchTerm) {
       result = result.filter(event =>
@@ -545,7 +582,7 @@ export default function EventsPage() {
     result.sort((a, b) => a.eventName.localeCompare(b.eventName));
 
     setFilteredEvents(result);
-  }, [events, selectedSociety, selectedDate, searchTerm, selectedEventType]);
+  }, [events, selectedSociety, selectedDate, searchTerm, selectedEventType, selectedFeeType]);
 
   // Detect if the filter bar is sticky
   useEffect(() => {
@@ -811,6 +848,13 @@ export default function EventsPage() {
                     value={selectedEventType}
                     onChange={(value) => setSelectedEventType(value as string)}
                     placeholder="👥 All Types"
+                  />
+
+                  <CustomSelect
+                    options={feeTypeOptions}
+                    value={selectedFeeType}
+                    onChange={(value) => setSelectedFeeType(value as string)}
+                    placeholder="💰 All Fees"
                   />
 
 

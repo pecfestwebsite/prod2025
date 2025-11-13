@@ -47,25 +47,29 @@ export default function EventRegistrationsClient() {
   const [selectedEventId, setSelectedEventId] = useState<string>('');
   const [filteredEvents, setFilteredEvents] = useState<EventOption[]>([]);
   const [showDropdown, setShowDropdown] = useState<boolean>(false);
+  const [allRegistrations, setAllRegistrations] = useState<RegistrationWithDetails[]>([]);
   const [eventRegistrations, setEventRegistrations] = useState<RegistrationWithDetails[]>([]);
   const [loadingRegistrations, setLoadingRegistrations] = useState<boolean>(false);
   const [expandedTeams, setExpandedTeams] = useState<Set<string>>(new Set());
   const [loadingEvents, setLoadingEvents] = useState<boolean>(true);
   const [adminUser, setAdminUser] = useState<any>(null);
+  const [selectedReceiptUrl, setSelectedReceiptUrl] = useState<string | null>(null);
+  const [showReceiptModal, setShowReceiptModal] = useState(false);
 
-  // Fetch available events on mount
+  // Fetch available events and all registrations on mount
   useEffect(() => {
-    const fetchEvents = async () => {
+    const fetchEventsAndRegistrations = async () => {
       try {
         setLoadingEvents(true);
-        const res = await fetch('/api/events?limit=100');
-        if (!res.ok) throw new Error('Failed to fetch events');
-        const data = await res.json();
         
-        // The API returns { events, pagination }
+        // Fetch events
+        const eventsRes = await fetch('/api/events?limit=100');
+        if (!eventsRes.ok) throw new Error('Failed to fetch events');
+        const eventsData = await eventsRes.json();
+        
         let eventsList: EventOption[] = [];
-        if (data?.events && Array.isArray(data.events)) {
-          eventsList = data.events.map((event: any) => ({
+        if (eventsData?.events && Array.isArray(eventsData.events)) {
+          eventsList = eventsData.events.map((event: any) => ({
             eventId: event.eventId || event._id?.toString() || '',
             eventName: event.eventName || '',
             societyName: event.societyName || '',
@@ -76,14 +80,49 @@ export default function EventRegistrationsClient() {
         
         console.log('📌 Fetched events:', eventsList);
         setAvailableEvents(eventsList);
+        
+        // Fetch all registrations
+        const registrationsRes = await fetch('/api/registrations?limit=10000');
+        if (!registrationsRes.ok) throw new Error('Failed to fetch registrations');
+        const registrationsData = await registrationsRes.json();
+        
+        let regsList: RegistrationWithDetails[] = [];
+        if (registrationsData?.registrations && Array.isArray(registrationsData.registrations)) {
+          regsList = registrationsData.registrations.map((reg: any) => {
+            // Find corresponding event details
+            const event = eventsList.find(e => e.eventId === reg.eventId);
+            return {
+              _id: reg._id?.toString() || '',
+              userId: reg.userId || '',
+              eventId: reg.eventId || '',
+              teamId: reg.teamId || undefined,
+              verified: reg.verified || false,
+              feesPaid: reg.feesPaid || undefined,
+              discount: reg.discount || 0,
+              accommodationRequired: reg.accommodationRequired || false,
+              accommodationMembers: reg.accommodationMembers || 0,
+              accommodationFees: reg.accommodationFees || 0,
+              totalFees: reg.totalFees || 0,
+              dateTime: reg.dateTime || '',
+              eventName: event?.eventName || '',
+              isTeamEvent: event?.isTeamEvent || false,
+            };
+          });
+        }
+        
+        console.log('📋 Fetched all registrations:', regsList);
+        setAllRegistrations(regsList);
+        // Show all registrations by default on page load
+        setEventRegistrations(regsList);
       } catch (error) {
-        console.error('Error fetching events:', error);
+        console.error('Error fetching data:', error);
         setAvailableEvents([]);
+        setAllRegistrations([]);
       } finally {
         setLoadingEvents(false);
       }
     };
-    fetchEvents();
+    fetchEventsAndRegistrations();
   }, []);
 
   // Get admin user from localStorage on mount
@@ -120,99 +159,19 @@ export default function EventRegistrationsClient() {
     setFilteredEvents(filtered);
   }, [searchInput, availableEvents]);
 
-  // Handle search button click
-  const handleSearch = async () => {
-    if (!selectedEventId) return;
-
-    setLoadingRegistrations(true);
-    try {
-      const res = await fetch(`/api/registrations?eventId=${selectedEventId}&limit=1000`);
-      const data = await res.json();
-      
-      // The API returns { registrations, total, pagination }
-      let regsList: RegistrationWithDetails[] = [];
-      if (data?.registrations && Array.isArray(data.registrations)) {
-        // Get the selected event details for eventName and isTeamEvent
-        const eventData = selectedEvent;
-        
-        regsList = data.registrations.map((reg: any) => ({
-          _id: reg._id?.toString() || '',
-          userId: reg.userId || '',
-          eventId: reg.eventId || '',
-          teamId: reg.teamId || undefined,
-          verified: reg.verified || false,
-          feesPaid: reg.feesPaid || undefined,
-          discount: reg.discount || 0,
-          accommodationRequired: reg.accommodationRequired || false,
-          accommodationMembers: reg.accommodationMembers || 0,
-          accommodationFees: reg.accommodationFees || 0,
-          totalFees: reg.totalFees || 0,
-          dateTime: reg.dateTime || '',
-          // Add event details from selectedEvent
-          eventName: eventData?.eventName || '',
-          isTeamEvent: eventData?.isTeamEvent || false,
-        }));
-      }
-      
-      console.log('📋 Fetched registrations:', regsList);
-      setEventRegistrations(regsList);
-      setShowDropdown(false);
-    } catch (error) {
-      console.error('Error fetching registrations:', error);
-      setEventRegistrations([]);
-    } finally {
-      setLoadingRegistrations(false);
-    }
-  };
-
-  // Auto-search when event is selected from query parameter (from view events page)
+  // Filter registrations when event is selected
   useEffect(() => {
-    const autoSearch = async () => {
-      if (!selectedEventId || availableEvents.length === 0) return;
-      
-      setLoadingRegistrations(true);
-      try {
-        const res = await fetch(`/api/registrations?eventId=${selectedEventId}&limit=1000`);
-        const data = await res.json();
-        
-        let regsList: RegistrationWithDetails[] = [];
-        if (data?.registrations && Array.isArray(data.registrations)) {
-          const eventData = selectedEvent;
-          
-          regsList = data.registrations.map((reg: any) => ({
-            _id: reg._id?.toString() || '',
-            userId: reg.userId || '',
-            eventId: reg.eventId || '',
-            teamId: reg.teamId || undefined,
-            verified: reg.verified || false,
-            feesPaid: reg.feesPaid || undefined,
-            discount: reg.discount || 0,
-            accommodationRequired: reg.accommodationRequired || false,
-            accommodationMembers: reg.accommodationMembers || 0,
-            accommodationFees: reg.accommodationFees || 0,
-            totalFees: reg.totalFees || 0,
-            dateTime: reg.dateTime || '',
-            eventName: eventData?.eventName || '',
-            isTeamEvent: eventData?.isTeamEvent || false,
-          }));
-        }
-        
-        setEventRegistrations(regsList);
-        setShowDropdown(false);
-      } catch (error) {
-        console.error('Error in auto-search:', error);
-        setEventRegistrations([]);
-      } finally {
-        setLoadingRegistrations(false);
-      }
-    };
-
-    // Only auto-search if we came from view events page (have selectedEventId from query param)
-    const eventParam = searchParams.get('event');
-    if (eventParam && selectedEventId && availableEvents.length > 0 && eventRegistrations.length === 0) {
-      autoSearch();
+    if (!selectedEventId) {
+      // Show all registrations if no event is selected
+      setEventRegistrations(allRegistrations);
+      return;
     }
-  }, [selectedEventId, availableEvents.length, searchParams]);
+    
+    // Filter all registrations by selected event
+    const filtered = allRegistrations.filter(reg => reg.eventId === selectedEventId);
+    setEventRegistrations(filtered);
+    console.log('📋 Filtered registrations:', filtered);
+  }, [selectedEventId, allRegistrations]);
 
   // Get selected event details
   const selectedEvent = (Array.isArray(availableEvents) ? availableEvents : []).find(
@@ -249,6 +208,50 @@ export default function EventRegistrationsClient() {
       }
       return newSet;
     });
+  };
+
+  // Handle verification toggle for registrations
+  const handleVerifyRegistration = async (registrationId: string, verified: boolean) => {
+    try {
+      const token = localStorage.getItem('adminToken');
+      if (!token) {
+        alert('Session expired. Please login again.');
+        return;
+      }
+
+      const response = await fetch(`/api/registrations/${registrationId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ verified }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to update registration');
+      }
+
+      // Update local state
+      setAllRegistrations((prev) =>
+        prev.map((reg) =>
+          reg._id === registrationId ? { ...reg, verified } : reg
+        )
+      );
+
+      setEventRegistrations((prev) =>
+        prev.map((reg) =>
+          reg._id === registrationId ? { ...reg, verified } : reg
+        )
+      );
+
+      console.log(`✅ Registration ${verified ? 'verified' : 'unverified'} successfully`);
+    } catch (error) {
+      console.error('Error updating registration:', error);
+      alert(`Failed to update registration: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   };
 
   // Export to CSV
@@ -306,9 +309,9 @@ export default function EventRegistrationsClient() {
       <div className="sticky top-0 z-50 bg-gradient-to-b from-slate-900/95 via-slate-900/90 to-slate-900/70 backdrop-blur-md border-b-2 border-purple-500/30 rounded-b-lg md:rounded-b-2xl px-4 md:px-6 py-4 md:py-5 space-y-3 md:space-y-4 shadow-lg -mx-4 md:-mx-6 mb-8">
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
           {/* Search Input with Dropdown */}
-          <div className="lg:col-span-3 relative">
+          <div className="lg:col-span-4 relative">
             <label className="block text-sm font-semibold text-slate-300 mb-2">
-              Search Event
+              Search Event (Select to auto-load registrations)
             </label>
             <div className="relative">
               <div className="flex gap-2">
@@ -350,6 +353,7 @@ export default function EventRegistrationsClient() {
                         onClick={() => {
                           console.log('🎯 Selected event:', event);
                           setSelectedEventId(event.eventId);
+                          setSearchInput(event.eventName);
                           setShowDropdown(false);
                         }}
                         className={`w-full text-left px-4 py-3 border-b border-purple-500/20 hover:bg-slate-700/50 transition flex items-center justify-between ${
@@ -375,27 +379,6 @@ export default function EventRegistrationsClient() {
                 </div>
               )}
             </div>
-          </div>
-
-          {/* Search Button */}
-          <div className="flex items-end">
-            <button
-              onClick={handleSearch}
-              disabled={!selectedEventId || loadingRegistrations}
-              className="w-full px-6 py-3 bg-purple-600 hover:bg-purple-700 disabled:bg-purple-600/50 text-white rounded-lg font-semibold flex items-center justify-center gap-2 transition transform hover:scale-105 disabled:hover:scale-100"
-            >
-              {loadingRegistrations ? (
-                <>
-                  <Loader className="w-5 h-5 animate-spin" />
-                  Loading...
-                </>
-              ) : (
-                <>
-                  <Search className="w-5 h-5" />
-                  Search
-                </>
-              )}
-            </button>
           </div>
         </div>
 
@@ -466,22 +449,27 @@ export default function EventRegistrationsClient() {
               </thead>
               <tbody>
                 {/* Team Registrations */}
-                {selectedEvent?.isTeamEvent &&
-                  Array.from(groupedData.teams.entries()).map(([teamId, members]) => {
+                {Array.from(groupedData.teams.entries()).map(([teamId, members], teamIndex) => {
                     // Team leader is the one with feesPaid value (non-empty)
                     const teamLeader = members.find((m) => m.feesPaid) || members[0];
                     const otherMembers = members.filter((m) => m !== teamLeader);
                     
+                    // Alternate background colors for team distinction
+                    const teamBgColor = teamIndex % 2 === 0 ? 'bg-slate-800/10' : 'bg-blue-900/10';
+                    
                     return (
                       <React.Fragment key={teamId}>
                         {/* Team Leader Row - Always Visible */}
-                        <tr className="bg-slate-800/20 border-b border-purple-500/20 hover:bg-slate-800/30 transition font-semibold">
+                        <tr className={`${teamBgColor} border-b-2 border-purple-500/40 hover:bg-slate-800/30 transition font-semibold`}>
                           <td className="px-6 py-4 text-sm text-purple-300 font-mono">
                             {teamLeader.userId}
                           </td>
                           <td className="px-6 py-4 text-sm text-white">{teamLeader.eventName}</td>
                           <td className="px-6 py-4 text-sm text-pink-300 font-mono">
-                            {teamId.slice(0, 12)}...
+                            <div className="flex flex-col gap-1">
+                              <span className="bg-pink-600/50 px-2 py-1 rounded text-xs font-semibold">👑 LEADER</span>
+                              <span>{teamId.slice(0, 12)}...</span>
+                            </div>
                           </td>
                           <td className="px-6 py-4 text-sm text-center">
                             <div className="flex flex-col gap-1">
@@ -499,32 +487,74 @@ export default function EventRegistrationsClient() {
                             ₹{teamLeader.totalFees}
                           </td>
                           <td className="px-6 py-4 text-sm text-center">
-                            <div className="flex items-center justify-center gap-2">
-                              {teamLeader.verified ? (
-                                <span className="inline-flex items-center gap-1 bg-green-500/30 text-green-300 px-3 py-1 rounded-full text-xs font-semibold">
-                                  <CheckCircle className="w-4 h-4" />
-                                  Verified
-                                </span>
-                              ) : (
-                                <span className="inline-flex items-center gap-1 bg-yellow-500/30 text-yellow-300 px-3 py-1 rounded-full text-xs font-semibold">
-                                  <AlertCircle className="w-4 h-4" />
-                                  Pending
-                                </span>
-                              )}
-                              {/* Dropdown button for team members if exists */}
+                            <div className="flex flex-col items-center gap-3">
+                              {/* Dropdown button for team members if exists - MOVED TO TOP */}
                               {otherMembers.length > 0 && (
                                 <button
                                   onClick={() => toggleTeamExpansion(teamId)}
-                                  className="ml-2 p-1 hover:bg-slate-700/50 rounded transition"
+                                  className="px-3 py-1 bg-slate-700/50 hover:bg-slate-700 rounded transition text-xs font-semibold text-slate-300 flex items-center gap-1"
                                   title={expandedTeams.has(teamId) ? 'Hide team members' : `Show ${otherMembers.length} team member${otherMembers.length !== 1 ? 's' : ''}`}
                                 >
                                   <ChevronDown
-                                    className={`w-4 h-4 text-slate-400 transition-transform ${
+                                    className={`w-4 h-4 transition-transform ${
                                       expandedTeams.has(teamId) ? 'rotate-180' : ''
                                     }`}
                                   />
+                                  {otherMembers.length} Member{otherMembers.length !== 1 ? 's' : ''}
                                 </button>
                               )}
+
+                              {/* Payment Receipt Section */}
+                              {teamLeader.feesPaid && (
+                                <button
+                                  onClick={() => {
+                                    setSelectedReceiptUrl(teamLeader.feesPaid || null);
+                                    setShowReceiptModal(true);
+                                  }}
+                                  className="text-xs bg-blue-600/50 hover:bg-blue-600/70 text-blue-200 px-3 py-1 rounded flex items-center gap-1 transition"
+                                  title="View payment receipt"
+                                >
+                                  <Download className="w-4 h-4" />
+                                  Receipt
+                                </button>
+                              )}
+                              
+                              {/* Verification Status */}
+                              <div className="flex items-center justify-center gap-2">
+                                {teamLeader.verified ? (
+                                  <span className="inline-flex items-center gap-1 bg-green-500/30 text-green-300 px-3 py-1 rounded-full text-xs font-semibold">
+                                    <CheckCircle className="w-4 h-4" />
+                                    Verified
+                                  </span>
+                                ) : (
+                                  <span className="inline-flex items-center gap-1 bg-yellow-500/30 text-yellow-300 px-3 py-1 rounded-full text-xs font-semibold">
+                                    <AlertCircle className="w-4 h-4" />
+                                    Pending
+                                  </span>
+                                )}
+                              </div>
+
+                              {/* Verification Toggle Buttons */}
+                              <div className="flex gap-2">
+                                {!teamLeader.verified && (
+                                  <button
+                                    onClick={() => handleVerifyRegistration(teamLeader._id, true)}
+                                    className="text-xs bg-green-600/50 hover:bg-green-600/70 text-green-200 px-3 py-1 rounded transition font-semibold"
+                                    title="Mark as verified"
+                                  >
+                                    ✓ Verify
+                                  </button>
+                                )}
+                                {teamLeader.verified && (
+                                  <button
+                                    onClick={() => handleVerifyRegistration(teamLeader._id, false)}
+                                    className="text-xs bg-red-600/50 hover:bg-red-600/70 text-red-200 px-3 py-1 rounded transition font-semibold"
+                                    title="Mark as unverified"
+                                  >
+                                    ✕ Unverify
+                                  </button>
+                                )}
+                              </div>
                             </div>
                           </td>
                         </tr>
@@ -534,14 +564,16 @@ export default function EventRegistrationsClient() {
                           otherMembers.map((reg: RegistrationWithDetails) => (
                             <tr
                               key={reg._id}
-                              className="border-b border-purple-500/20 hover:bg-slate-800/20 transition bg-slate-900/20"
+                              className={`${teamBgColor} border-b border-purple-500/20 hover:bg-slate-800/20 transition`}
                             >
                               <td className="px-6 py-4 text-sm text-slate-400 font-mono">
                                 {reg.userId}
                               </td>
                               <td className="px-6 py-4 text-sm text-slate-300">{reg.eventName}</td>
                               <td className="px-6 py-4 text-sm text-slate-400">
-                                └─ Member
+                                <div className="flex flex-col gap-1">
+                                  <span className="bg-slate-700/50 px-2 py-1 rounded text-xs font-semibold">👤 MEMBER</span>
+                                </div>
                               </td>
                               <td className="px-6 py-4 text-sm text-center text-slate-400">
                                 —
@@ -636,6 +668,60 @@ export default function EventRegistrationsClient() {
               <p className="text-3xl font-bold text-yellow-400">
                 {eventRegistrations.filter((r) => !r.verified).length}
               </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Receipt Modal */}
+      {showReceiptModal && selectedReceiptUrl && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-slate-900 border-2 border-purple-500/40 rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            {/* Modal Header */}
+            <div className="sticky top-0 flex items-center justify-between p-6 border-b border-purple-500/20 bg-slate-900">
+              <h3 className="text-xl font-bold text-white">Payment Receipt</h3>
+              <button
+                onClick={() => {
+                  setShowReceiptModal(false);
+                  setSelectedReceiptUrl(null);
+                }}
+                className="p-2 hover:bg-slate-800/50 rounded-lg transition"
+              >
+                <X className="w-6 h-6 text-slate-400" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6">
+              <div className="bg-slate-800/40 rounded-lg overflow-hidden border border-purple-500/20">
+                {selectedReceiptUrl.includes('firebasestorage') || selectedReceiptUrl.match(/\.(jpg|jpeg|png|gif|webp)$/i) ? (
+                  <img
+                    src={selectedReceiptUrl}
+                    alt="Payment Receipt"
+                    className="w-full h-auto"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="400" height="300"%3E%3Crect fill="%23374151" width="400" height="300"/%3E%3Ctext x="50%25" y="50%25" text-anchor="middle" dy=".3em" fill="%239CA3AF" font-size="18"%3EReceipt Not Available%3C/text%3E%3C/svg%3E';
+                    }}
+                  />
+                ) : (
+                  <div className="w-full h-64 flex items-center justify-center text-slate-400">
+                    <p>Receipt file format not supported</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Download Link */}
+              <div className="mt-4">
+                <a
+                  href={selectedReceiptUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition"
+                >
+                  <Download className="w-5 h-5" />
+                  Download Receipt
+                </a>
+              </div>
             </div>
           </div>
         </div>

@@ -256,6 +256,8 @@ export async function POST(request: NextRequest) {
             user: currentSmtpConfig.user,
             pass: currentSmtpConfig.pass,
           },
+          connectionTimeout: 5000, // 5 second connection timeout
+          socketTimeout: 5000, // 5 second socket timeout
         });
 
         // Update mailOptions with current account's FROM address
