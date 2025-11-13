@@ -274,6 +274,7 @@ export async function GET(request: NextRequest) {
     const teamId = searchParams.get('teamId');
     const verified = searchParams.get('verified');
     const search = searchParams.get('search'); // New search parameter
+    const filterEventType = searchParams.get('filterEventType'); // 'free' | 'paid' | 'all'
     const limit = parseInt(searchParams.get('limit') || '10');
     
     // Support both 'page' parameter and direct 'skip' parameter
@@ -357,6 +358,13 @@ export async function GET(request: NextRequest) {
       ];
     }
 
+    // Add event type filter - filter by totalFees (free = 0, paid > 0)
+    if (filterEventType === 'free') {
+      query.totalFees = 0;
+    } else if (filterEventType === 'paid') {
+      query.totalFees = { $gt: 0 };
+    }
+
     // Use the skip value directly (either from 'skip' param or calculated from 'page')
     // Fetch registrations with pagination
     const registrations = await Registration.find(query)
@@ -368,15 +376,16 @@ export async function GET(request: NextRequest) {
     // Get all unique event IDs to fetch event details
     const eventIds = [...new Set(registrations.map((reg: any) => reg.eventId))];
     const events = await Event.find({ eventId: { $in: eventIds } }).lean();
-    const eventMap = new Map(events.map((event: any) => [event.eventId, { eventName: event.eventName, societyName: event.societyName }]));
+    const eventMap = new Map(events.map((event: any) => [event.eventId, { eventName: event.eventName, societyName: event.societyName, regFees: event.regFees }]));
 
     // Combine registration data with event details
     const enrichedRegistrations = registrations.map((reg: any) => {
-      const eventData = eventMap.get(reg.eventId) || { eventName: 'Unknown Event', societyName: 'Unknown Society' };
+      const eventData = eventMap.get(reg.eventId) || { eventName: 'Unknown Event', societyName: 'Unknown Society', regFees: 0 };
       return {
         ...reg,
         eventName: eventData.eventName,
         societyName: eventData.societyName,
+        regFees: eventData.regFees,
       };
     });
 

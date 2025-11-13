@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ChevronUp, ChevronDown, Eye, Check, X, Loader, AlertCircle, Trash2 } from 'lucide-react';
 import { getAdminUser, canVerifyRegistrations, filterRegistrationsByAccessLevel, canDeleteRegistrations } from '@/lib/accessControl';
 import ImageModal from '@/components/ImageModal';
@@ -181,95 +181,49 @@ export default function RegistrationsClient({ registrations, total }: Registrati
     setLocalRegistrations(filtered);
   }, [adminUser, registrations]);
 
-  // Filter and sort registrations
-  const filteredAndSortedRegistrations = useMemo(() => {
-    let filtered = [...localRegistrations];
+  // Fetch registrations with filters from backend
+  const [loading, setLoading] = useState(false);
+  const [filteredAndSortedRegistrations, setFilteredAndSortedRegistrations] = useState<RegistrationWithEvent[]>([]);
 
-    // Apply search filter
-    if (searchTerm) {
-      filtered = filtered.filter(
-        (reg) =>
-          reg.userId.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          reg.eventName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          reg.eventId.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    }
+  useEffect(() => {
+    const fetchRegistrations = async () => {
+      setLoading(true);
+      try {
+        const params = new URLSearchParams();
+        
+        if (searchTerm) params.append('search', searchTerm);
+        if (filterVerified !== 'all') params.append('verified', filterVerified === 'verified' ? 'true' : 'false');
+        if (filterEventType !== 'all') params.append('filterEventType', filterEventType);
+        
+        params.append('page', currentPage.toString());
+        params.append('limit', '10');
 
-    // Apply verified filter
-    if (filterVerified === 'verified') {
-      filtered = filtered.filter((reg) => reg.verified);
-    } else if (filterVerified === 'unverified') {
-      filtered = filtered.filter((reg) => !reg.verified);
-    }
+        const response = await fetch(`/api/registrations?${params.toString()}`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
 
-    // Apply event type filter
-    if (filterEventType === 'free') {
-      filtered = filtered.filter((reg) => reg.totalFees === 0);
-    } else if (filterEventType === 'paid') {
-      filtered = filtered.filter((reg) => (reg.totalFees ?? 0) > 0);
-    }
+        if (!response.ok) {
+          throw new Error(`Failed to fetch registrations: ${response.statusText}`);
+        }
 
-    // Apply sorting
-    filtered.sort((a, b) => {
-      let aValue: any;
-      let bValue: any;
-
-      switch (sortField) {
-        case 'eventName':
-          aValue = a.eventName;
-          bValue = b.eventName;
-          break;
-        case 'eventId':
-          aValue = a.eventId;
-          bValue = b.eventId;
-          break;
-        case 'userId':
-          aValue = a.userId;
-          bValue = b.userId;
-          break;
-        case 'teamId':
-          aValue = a.teamId;
-          bValue = b.teamId;
-          break;
-        case 'dateTime':
-          aValue = new Date(a.dateTime).getTime();
-          bValue = new Date(b.dateTime).getTime();
-          break;
-        case 'verified':
-          aValue = a.verified ? 1 : 0;
-          bValue = b.verified ? 1 : 0;
-          break;
-        case 'discount':
-          aValue = a.discount || 0;
-          bValue = b.discount || 0;
-          break;
-        case 'accommodationMembers':
-          aValue = a.accommodationMembers || 0;
-          bValue = b.accommodationMembers || 0;
-          break;
-        case 'totalFees':
-          aValue = a.totalFees || 0;
-          bValue = b.totalFees || 0;
-          break;
-        case 'teamSize':
-          // Sort by whether teamId exists and alphabetically
-          aValue = a.teamId ? 1 : 0;
-          bValue = b.teamId ? 1 : 0;
-          if (aValue !== bValue) break;
-          aValue = a.teamId.localeCompare(b.teamId);
-          bValue = 0;
-          break;
-        default:
-          return 0;
+        const data = await response.json();
+        
+        // Filter by access level on the client side
+        const filtered = filterRegistrationsByAccessLevel(data.registrations, adminUser);
+        setFilteredAndSortedRegistrations(filtered);
+        setTotalRecords(data.total);
+      } catch (error) {
+        console.error('Error fetching registrations:', error);
+      } finally {
+        setLoading(false);
       }
+    };
 
-      if (aValue < bValue) return sortOrder === 'asc' ? -1 : 1;
-      if (aValue > bValue) return sortOrder === 'asc' ? 1 : -1;
-      return 0;
-    });
-
-    return filtered;
-  }, [localRegistrations, searchTerm, filterVerified, filterEventType, sortField, sortOrder]);
+    fetchRegistrations();
+  }, [searchTerm, filterVerified, filterEventType, currentPage, adminUser]);
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -315,6 +269,15 @@ export default function RegistrationsClient({ registrations, total }: Registrati
 
       if (response.ok) {
         const updatedReg = await response.json();
+        
+        // Update filtered registrations immediately
+        setFilteredAndSortedRegistrations((prev) =>
+          prev.map((reg) =>
+            reg._id === registrationId ? { ...reg, verified: !currentStatus } : reg
+          )
+        );
+
+        // Also update local registrations for consistency
         setLocalRegistrations((prev) =>
           prev.map((reg) =>
             reg._id === registrationId ? { ...reg, verified: !currentStatus } : reg
@@ -461,13 +424,13 @@ export default function RegistrationsClient({ registrations, total }: Registrati
   const nextPage = () => {
     const totalPages = Math.ceil(totalRecords / PAGE_SIZE);
     if (currentPage < totalPages) {
-      loadPage(currentPage + 1, hasSearched ? searchTerm : undefined);
+      setCurrentPage(currentPage + 1);
     }
   };
 
   const prevPage = () => {
     if (currentPage > 1) {
-      loadPage(currentPage - 1, hasSearched ? searchTerm : undefined);
+      setCurrentPage(currentPage - 1);
     }
   };
 
@@ -478,14 +441,12 @@ export default function RegistrationsClient({ registrations, total }: Registrati
     }
     setCurrentPage(1);
     setHasSearched(true);
-    await loadPage(1, searchTerm);
   };
 
   const handleClearSearch = () => {
     setSearchTerm('');
     setHasSearched(false);
     setCurrentPage(1);
-    loadPage(1);
   };
 
   return (
@@ -702,7 +663,7 @@ export default function RegistrationsClient({ registrations, total }: Registrati
       {/* Desktop View - Optimized Compact Table */}
       <div className="hidden md:block rounded-2xl border-2 border-slate-400/25 overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="w-full text-sm table-fixed">
             <thead>
               <tr className="bg-slate-800/50 border-b-2 border-purple-500/20">
                 <th className="px-2 py-3 text-left">
@@ -737,24 +698,6 @@ export default function RegistrationsClient({ registrations, total }: Registrati
                 </th>
                 <th className="px-2 py-3 text-center">
                   <button
-                    onClick={() => handleSort('discount')}
-                    className="flex items-center gap-1 text-white font-bold hover:text-slate-300 transition-colors uppercase tracking-wider text-xs mx-auto"
-                  >
-                    Discount
-                    <SortIcon field="discount" />
-                  </button>
-                </th>
-                <th className="px-2 py-3 text-center">
-                  <button
-                    onClick={() => handleSort('accommodationMembers')}
-                    className="flex items-center gap-1 text-white font-bold hover:text-slate-300 transition-colors uppercase tracking-wider text-xs mx-auto"
-                  >
-                    Accom.
-                    <SortIcon field="accommodationMembers" />
-                  </button>
-                </th>
-                <th className="px-2 py-3 text-center">
-                  <button
                     onClick={() => handleSort('totalFees')}
                     className="flex items-center gap-1 text-white font-bold hover:text-slate-300 transition-colors uppercase tracking-wider text-xs mx-auto"
                   >
@@ -784,13 +727,13 @@ export default function RegistrationsClient({ registrations, total }: Registrati
                     className="bg-slate-800/30 hover:bg-slate-700/30 transition-colors duration-300 border-b border-purple-500/10"
                   >
                     {/* Event ID */}
-                    <td className="px-2 py-3">
-                      <p className="font-semibold text-white text-xs truncate">{registration.eventId}</p>
+                    <td className="px-2 py-3 min-w-max">
+                      <p className="font-semibold text-white text-xs truncate" title={registration.eventId}>{registration.eventId}</p>
                     </td>
 
                     {/* User ID */}
-                    <td className="px-2 py-3">
-                      <p className="font-semibold text-white text-xs truncate">{registration.userId}</p>
+                    <td className="px-2 py-3 min-w-max">
+                      <p className="font-semibold text-white text-xs truncate" title={registration.userId}>{registration.userId}</p>
                     </td>
 
                     {/* Team ID */}
@@ -813,20 +756,6 @@ export default function RegistrationsClient({ registrations, total }: Registrati
                       >
                         <Eye size={12} />
                       </button>
-                    </td>
-
-                    {/* Discount */}
-                    <td className="px-2 py-3 text-center">
-                      <p className="font-semibold text-white text-xs">
-                        {registration.discount ? `₹${registration.discount}` : '-'}
-                      </p>
-                    </td>
-
-                    {/* Accommodation Members */}
-                    <td className="px-2 py-3 text-center">
-                      <p className="font-semibold text-white text-xs">
-                        {registration.accommodationMembers ? `${registration.accommodationMembers}` : '-'}
-                      </p>
                     </td>
 
                     {/* Total Fees */}

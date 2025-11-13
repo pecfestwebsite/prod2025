@@ -627,17 +627,59 @@ export default function EventRegistrationsClient() {
                       ₹{reg.totalFees}
                     </td>
                     <td className="px-6 py-4 text-sm text-center">
-                      {reg.verified ? (
-                        <span className="inline-flex items-center gap-1 bg-green-500/30 text-green-300 px-3 py-1 rounded-full text-xs font-semibold">
-                          <CheckCircle className="w-4 h-4" />
-                          Verified
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 bg-yellow-500/30 text-yellow-300 px-3 py-1 rounded-full text-xs font-semibold">
-                          <AlertCircle className="w-4 h-4" />
-                          Pending
-                        </span>
-                      )}
+                      <div className="flex flex-col items-center gap-3">
+                        {/* Payment Receipt Section */}
+                        {reg.feesPaid && (
+                          <button
+                            onClick={() => {
+                              setSelectedReceiptUrl(reg.feesPaid || null);
+                              setShowReceiptModal(true);
+                            }}
+                            className="text-xs bg-blue-600/50 hover:bg-blue-600/70 text-blue-200 px-3 py-1 rounded flex items-center gap-1 transition"
+                            title="View payment receipt"
+                          >
+                            <Download className="w-4 h-4" />
+                            Receipt
+                          </button>
+                        )}
+
+                        {/* Verification Status */}
+                        <div className="flex items-center justify-center gap-2">
+                          {reg.verified ? (
+                            <span className="inline-flex items-center gap-1 bg-green-500/30 text-green-300 px-3 py-1 rounded-full text-xs font-semibold">
+                              <CheckCircle className="w-4 h-4" />
+                              Verified
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 bg-yellow-500/30 text-yellow-300 px-3 py-1 rounded-full text-xs font-semibold">
+                              <AlertCircle className="w-4 h-4" />
+                              Pending
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Verification Toggle Buttons */}
+                        <div className="flex gap-2">
+                          {!reg.verified && (
+                            <button
+                              onClick={() => handleVerifyRegistration(reg._id, true)}
+                              className="text-xs bg-green-600/50 hover:bg-green-600/70 text-green-200 px-3 py-1 rounded transition font-semibold"
+                              title="Mark as verified"
+                            >
+                              ✓ Verify
+                            </button>
+                          )}
+                          {reg.verified && (
+                            <button
+                              onClick={() => handleVerifyRegistration(reg._id, false)}
+                              className="text-xs bg-red-600/50 hover:bg-red-600/70 text-red-200 px-3 py-1 rounded transition font-semibold"
+                              title="Mark as unverified"
+                            >
+                              ✕ Unverify
+                            </button>
+                          )}
+                        </div>
+                      </div>
                     </td>
                   </tr>
                 ))}

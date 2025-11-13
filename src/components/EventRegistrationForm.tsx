@@ -1268,7 +1268,7 @@ export default function EventRegistrationForm({ event, onClose, onSuccess }: Reg
                 )}
 
                 {/* Accommodation Section */}
-                {/* {(!isTeamEvent || userRole === 'leader') && (
+                {(!isTeamEvent || userRole === 'leader') && (
                   <motion.div
                     initial={{ opacity: 0, y: -10 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -1293,7 +1293,7 @@ export default function EventRegistrationForm({ event, onClose, onSuccess }: Reg
                       </label>
                     </div>
 
-                    {/* Accommodation Details *\/}
+                    {/* Accommodation Details */}
                     {accommodationRequired && (
                       <motion.div
                         initial={{ opacity: 0, height: 0 }}
@@ -1337,7 +1337,7 @@ export default function EventRegistrationForm({ event, onClose, onSuccess }: Reg
                           )}
                         </div>
 
-                        {/* Accommodation Fees Breakdown *\/}
+                        {/* Accommodation Fees Breakdown */}
                         {accommodationMembers > 0 && !accommodationError && (
                           <motion.div
                             initial={{ opacity: 0 }}
@@ -1356,8 +1356,7 @@ export default function EventRegistrationForm({ event, onClose, onSuccess }: Reg
                       </motion.div>
                     )}
                   </motion.div>
-                )} */}
-
+                )}
                 {/* Payment Receipt Upload or Free Registration */}
                 {/* Show payment section if: 
                     1. Event has fees (and user is individual or leader), OR 
