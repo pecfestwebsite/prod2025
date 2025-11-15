@@ -275,6 +275,12 @@ export async function GET(request: NextRequest) {
     const verified = searchParams.get('verified');
     const search = searchParams.get('search'); // New search parameter
     const filterEventType = searchParams.get('filterEventType'); // 'free' | 'paid' | 'all'
+    const category = searchParams.get('category'); // 'technical' | 'cultural' | 'all'
+    const paymentStatus = searchParams.get('paymentStatus'); // 'paid' | 'unpaid' | 'all'
+    const accommodation = searchParams.get('accommodation'); // 'required' | 'not-required' | 'all'
+    const dateFrom = searchParams.get('dateFrom');
+    const dateTo = searchParams.get('dateTo');
+    const includeTeamMembers = searchParams.get('includeTeamMembers') === 'true'; // Include team members in results
     const limit = parseInt(searchParams.get('limit') || '10');
     
     // Support both 'page' parameter and direct 'skip' parameter
@@ -348,14 +354,45 @@ export async function GET(request: NextRequest) {
       query.verified = verified === 'true';
     }
 
-    // Add search functionality - search in userId, eventId, and eventName
-    if (search) {
-      const searchRegex = new RegExp(search, 'i'); // Case-insensitive search
-      query.$or = [
-        { userId: searchRegex },
-        { eventId: searchRegex },
-        { eventName: searchRegex }
-      ];
+    // Filter to show only team leaders ONLY if includeTeamMembers is false
+    // team leaders have feesPaid value or no teamId (individuals/leaders)
+    // Team members are those with a teamId but no feesPaid
+    if (!includeTeamMembers) {
+      const teamLeaderFilter = {
+        $or: [
+          { teamId: '' }, // Individuals
+          { teamId: { $exists: false } }, // Individuals without teamId field
+          { feesPaid: { $exists: true, $ne: '' } }, // Team leaders with payment receipt
+        ]
+      };
+
+      // Add search functionality - search in userId, eventId, and eventName
+      if (search) {
+        const searchRegex = new RegExp(search, 'i'); // Case-insensitive search
+        query.$and = [
+          teamLeaderFilter,
+          {
+            $or: [
+              { userId: searchRegex },
+              { eventId: searchRegex },
+              { eventName: searchRegex }
+            ]
+          }
+        ];
+      } else {
+        // Apply team leader filter without search
+        query.$or = teamLeaderFilter.$or;
+      }
+    } else {
+      // When including team members, just apply search without team leader filter
+      if (search) {
+        const searchRegex = new RegExp(search, 'i'); // Case-insensitive search
+        query.$or = [
+          { userId: searchRegex },
+          { eventId: searchRegex },
+          { eventName: searchRegex }
+        ];
+      }
     }
 
     // Add event type filter - filter by totalFees (free = 0, paid > 0)
@@ -363,6 +400,54 @@ export async function GET(request: NextRequest) {
       query.totalFees = 0;
     } else if (filterEventType === 'paid') {
       query.totalFees = { $gt: 0 };
+    }
+
+    // Add payment status filter - filter by feesPaid
+    if (paymentStatus === 'paid') {
+      query.feesPaid = { $exists: true, $ne: '' };
+    } else if (paymentStatus === 'unpaid') {
+      query.feesPaid = { $exists: true, $eq: '' };
+    }
+
+    // Add accommodation filter
+    if (accommodation === 'required') {
+      query.accommodationRequired = true;
+    } else if (accommodation === 'not-required') {
+      query.accommodationRequired = false;
+    }
+
+    // Add date range filter
+    if (dateFrom || dateTo) {
+      query.dateTime = {};
+      if (dateFrom) {
+        query.dateTime.$gte = new Date(dateFrom);
+      }
+      if (dateTo) {
+        const toDate = new Date(dateTo);
+        toDate.setHours(23, 59, 59, 999);
+        query.dateTime.$lte = toDate;
+      }
+    }
+
+    // Get all unique event IDs to check for category filter
+    let eventsForCategoryFilter = [];
+    if (category && category !== 'all') {
+      eventsForCategoryFilter = await Event.find({ category }).lean();
+      const eventIdsForCategory = eventsForCategoryFilter.map((e: any) => e.eventId);
+      if (query.$and) {
+        query.$and.push({ eventId: { $in: eventIdsForCategory } });
+      } else if (query.$or) {
+        // If there's an $or clause, wrap everything properly
+        const prevQuery = { ...query };
+        query = {
+          $and: [
+            prevQuery,
+            { eventId: { $in: eventIdsForCategory } }
+          ]
+        };
+      } else {
+        query.eventId = { $in: eventIdsForCategory };
+      }
     }
 
     // Use the skip value directly (either from 'skip' param or calculated from 'page')
@@ -376,16 +461,17 @@ export async function GET(request: NextRequest) {
     // Get all unique event IDs to fetch event details
     const eventIds = [...new Set(registrations.map((reg: any) => reg.eventId))];
     const events = await Event.find({ eventId: { $in: eventIds } }).lean();
-    const eventMap = new Map(events.map((event: any) => [event.eventId, { eventName: event.eventName, societyName: event.societyName, regFees: event.regFees }]));
+    const eventMap = new Map(events.map((event: any) => [event.eventId, { eventName: event.eventName, societyName: event.societyName, regFees: event.regFees, category: event.category }]));
 
     // Combine registration data with event details
     const enrichedRegistrations = registrations.map((reg: any) => {
-      const eventData = eventMap.get(reg.eventId) || { eventName: 'Unknown Event', societyName: 'Unknown Society', regFees: 0 };
+      const eventData = eventMap.get(reg.eventId) || { eventName: 'Unknown Event', societyName: 'Unknown Society', regFees: 0, category: 'convenor' };
       return {
         ...reg,
         eventName: eventData.eventName,
         societyName: eventData.societyName,
         regFees: eventData.regFees,
+        category: eventData.category,
       };
     });
 

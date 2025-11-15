@@ -27,46 +27,18 @@ import Link from 'next/link';
 // These are copied from your LandingPage to create the same background
 
 const ParallaxDesert = () => {
-    const mouseX = useMotionValue(0);
-
-    useEffect(() => {
-        const handleMouseMove = (e: MouseEvent) => {
-            mouseX.set(e.clientX - window.innerWidth / 2);
-        };
-        window.addEventListener('mousemove', handleMouseMove);
-        return () => window.removeEventListener('mousemove', handleMouseMove);
-    }, [mouseX]);
-
-    const layer1X = useTransform(mouseX, (v) => v * -0.01);
-    const layer2X = useTransform(mouseX, (v) => v * -0.03);
-    const layer3X = useTransform(mouseX, (v) => v * -0.06);
-
     return (
-        <div className="absolute inset-0 z-0 overflow-hidden bg-gradient-to-b from-[#010101] via-[#140655] to-[#2a0a56]"> 
+        <div className="absolute inset-0 z-0 overflow-hidden">
+            <div 
+                className="absolute inset-0 bg-cover bg-center"
+                style={{
+                    backgroundImage: 'url(/contactus_background.jpeg)',
+                    opacity: 0.9
+                }}
+            >
+                <div className="absolute inset-0 bg-black/50" />
+            </div>
             <TwinklingStars />
-            
-            <motion.div 
-                className="absolute bottom-0 w-[150%] left-[-25%] h-auto text-[#4321a9] opacity-70" 
-                style={{ x: layer1X }}
-            >
-                <svg viewBox="0 0 1440 320"><path fill="currentColor" d="M0,160L48,176C96,192,192,224,288,213.3C384,203,480,149,576,149.3C672,149,768,203,864,224C960,245,1056,235,1152,208C1248,181,1344,139,1392,117.3L1440,96L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z"></path></svg>
-            </motion.div>
-
-            <motion.div
-                className="absolute bottom-0 w-[150%] left-[-25%] h-auto text-[#642aa5] opacity-80" 
-                style={{ x: layer2X }}
-            >
-                <svg viewBox="0 0 1440 320"><path fill="currentColor" d="M0,224L48,208C96,192,192,160,288,170.7C384,181,480,235,576,250.7C672,267,768,245,864,213.3C960,181,1056,139,1152,128C1248,117,1344,139,1392,149.3L1440,160L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z"></path></svg>
-            </motion.div>
-
-            <motion.div
-                className="absolute bottom-0 w-[150%] left-[-25%] h-auto text-[#2a0a56]" 
-                style={{ x: layer3X }}
-            >
-                <svg viewBox="0 0 1440 320"><path fill="currentColor" d="M0,288L48,272C96,256,192,224,288,218.7C384,213,480,235,576,218.7C672,203,768,149,864,154.7C960,160,1056,224,1152,245.3C1248,267,1344,245,1392,234.7L1440,224L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z"></path></svg>
-            </motion.div>
-
-            <div className="absolute bottom-0 w-full h-1/4 bg-gradient-to-t from-[#010101]/60 to-transparent z-10"/>
         </div>
     );
 };
@@ -226,11 +198,6 @@ export default function ContactPage() {
                             </motion.h1>
 
                             <div className="space-y-6">
-                                <ContactItem 
-                                    icon={<Phone size={20} />}
-                                    title="Call us directly at"
-                                    text="XXXXX-XXXXX"
-                                />
                                 <ContactItem 
                                     icon={<Mail size={20} />}
                                     title="Reach out via email at"

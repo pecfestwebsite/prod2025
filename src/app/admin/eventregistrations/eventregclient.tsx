@@ -38,6 +38,7 @@ interface RegistrationWithDetails {
   // Event details (fetched separately)
   eventName?: string;
   isTeamEvent?: boolean;
+  category?: 'technical' | 'cultural' | 'convenor';
 }
 
 export default function EventRegistrationsClient() {
@@ -47,7 +48,6 @@ export default function EventRegistrationsClient() {
   const [selectedEventId, setSelectedEventId] = useState<string>('');
   const [filteredEvents, setFilteredEvents] = useState<EventOption[]>([]);
   const [showDropdown, setShowDropdown] = useState<boolean>(false);
-  const [allRegistrations, setAllRegistrations] = useState<RegistrationWithDetails[]>([]);
   const [eventRegistrations, setEventRegistrations] = useState<RegistrationWithDetails[]>([]);
   const [loadingRegistrations, setLoadingRegistrations] = useState<boolean>(false);
   const [expandedTeams, setExpandedTeams] = useState<Set<string>>(new Set());
@@ -55,10 +55,95 @@ export default function EventRegistrationsClient() {
   const [adminUser, setAdminUser] = useState<any>(null);
   const [selectedReceiptUrl, setSelectedReceiptUrl] = useState<string | null>(null);
   const [showReceiptModal, setShowReceiptModal] = useState(false);
+  const [filterVerified, setFilterVerified] = useState<'all' | 'verified' | 'unverified'>('all');
+  const [filterPaymentStatus, setFilterPaymentStatus] = useState<'all' | 'paid' | 'unpaid'>('all');
+  const [filterAccommodation, setFilterAccommodation] = useState<'all' | 'required' | 'not-required'>('all');
+  const [dateFrom, setDateFrom] = useState<string>('');
+  const [dateTo, setDateTo] = useState<string>('');
 
-  // Fetch available events and all registrations on mount
+  // Fetch registrations whenever filters change
   useEffect(() => {
-    const fetchEventsAndRegistrations = async () => {
+    const fetchFilteredRegistrations = async () => {
+      try {
+        setLoadingRegistrations(true);
+        
+        const params = new URLSearchParams();
+        
+        // Add event filter if selected
+        if (selectedEventId) {
+          params.append('eventId', selectedEventId);
+        }
+        
+        // Add filter parameters
+        if (filterVerified !== 'all') {
+          params.append('verified', filterVerified === 'verified' ? 'true' : 'false');
+        }
+        
+        if (filterPaymentStatus !== 'all') {
+          params.append('paymentStatus', filterPaymentStatus);
+        }
+        
+        if (filterAccommodation !== 'all') {
+          params.append('accommodation', filterAccommodation);
+        }
+        
+        if (dateFrom) {
+          params.append('dateFrom', dateFrom);
+        }
+        
+        if (dateTo) {
+          params.append('dateTo', dateTo);
+        }
+        
+        // Important: include team members flag for event registrations page
+        params.append('includeTeamMembers', 'true');
+        params.append('limit', '10000'); // Fetch all records for this event
+        
+        const response = await fetch(`/api/registrations?${params.toString()}`);
+        if (!response.ok) throw new Error('Failed to fetch registrations');
+        
+        const data = await response.json();
+        
+        const regsList: RegistrationWithDetails[] = (data?.registrations || []).map((reg: any) => {
+          // Find corresponding event details from available events
+          const event = availableEvents.find(e => e.eventId === reg.eventId);
+          return {
+            _id: reg._id?.toString() || '',
+            userId: reg.userId || '',
+            eventId: reg.eventId || '',
+            teamId: reg.teamId || undefined,
+            verified: reg.verified || false,
+            feesPaid: reg.feesPaid || undefined,
+            discount: reg.discount || 0,
+            accommodationRequired: reg.accommodationRequired || false,
+            accommodationMembers: reg.accommodationMembers || 0,
+            accommodationFees: reg.accommodationFees || 0,
+            totalFees: reg.totalFees || 0,
+            dateTime: reg.dateTime || '',
+            eventName: reg.eventName || event?.eventName || '',
+            isTeamEvent: event?.isTeamEvent || false,
+            category: reg.category || 'convenor',
+          };
+        });
+        
+        setEventRegistrations(regsList);
+        console.log('📋 Fetched filtered registrations:', regsList);
+      } catch (error) {
+        console.error('Error fetching registrations:', error);
+      } finally {
+        setLoadingRegistrations(false);
+      }
+    };
+    
+    // Fetch whenever filter changes (but only if events are loaded)
+    if (availableEvents.length > 0) {
+      fetchFilteredRegistrations();
+    }
+  }, [selectedEventId, filterVerified, filterPaymentStatus, filterAccommodation, dateFrom, dateTo, availableEvents]);
+
+  // Fetch available events on mount
+  useEffect(() => {
+    const fetchEvents = async () => {
       try {
         setLoadingEvents(true);
         
@@ -80,49 +165,14 @@ export default function EventRegistrationsClient() {
         
         console.log('📌 Fetched events:', eventsList);
         setAvailableEvents(eventsList);
-        
-        // Fetch all registrations
-        const registrationsRes = await fetch('/api/registrations?limit=10000');
-        if (!registrationsRes.ok) throw new Error('Failed to fetch registrations');
-        const registrationsData = await registrationsRes.json();
-        
-        let regsList: RegistrationWithDetails[] = [];
-        if (registrationsData?.registrations && Array.isArray(registrationsData.registrations)) {
-          regsList = registrationsData.registrations.map((reg: any) => {
-            // Find corresponding event details
-            const event = eventsList.find(e => e.eventId === reg.eventId);
-            return {
-              _id: reg._id?.toString() || '',
-              userId: reg.userId || '',
-              eventId: reg.eventId || '',
-              teamId: reg.teamId || undefined,
-              verified: reg.verified || false,
-              feesPaid: reg.feesPaid || undefined,
-              discount: reg.discount || 0,
-              accommodationRequired: reg.accommodationRequired || false,
-              accommodationMembers: reg.accommodationMembers || 0,
-              accommodationFees: reg.accommodationFees || 0,
-              totalFees: reg.totalFees || 0,
-              dateTime: reg.dateTime || '',
-              eventName: event?.eventName || '',
-              isTeamEvent: event?.isTeamEvent || false,
-            };
-          });
-        }
-        
-        console.log('📋 Fetched all registrations:', regsList);
-        setAllRegistrations(regsList);
-        // Show all registrations by default on page load
-        setEventRegistrations(regsList);
       } catch (error) {
-        console.error('Error fetching data:', error);
+        console.error('Error fetching events:', error);
         setAvailableEvents([]);
-        setAllRegistrations([]);
       } finally {
         setLoadingEvents(false);
       }
     };
-    fetchEventsAndRegistrations();
+    fetchEvents();
   }, []);
 
   // Get admin user from localStorage on mount
@@ -159,26 +209,13 @@ export default function EventRegistrationsClient() {
     setFilteredEvents(filtered);
   }, [searchInput, availableEvents]);
 
-  // Filter registrations when event is selected
-  useEffect(() => {
-    if (!selectedEventId) {
-      // Show all registrations if no event is selected
-      setEventRegistrations(allRegistrations);
-      return;
-    }
-    
-    // Filter all registrations by selected event
-    const filtered = allRegistrations.filter(reg => reg.eventId === selectedEventId);
-    setEventRegistrations(filtered);
-    console.log('📋 Filtered registrations:', filtered);
-  }, [selectedEventId, allRegistrations]);
 
   // Get selected event details
   const selectedEvent = (Array.isArray(availableEvents) ? availableEvents : []).find(
     (e) => e.eventId === selectedEventId
   );
 
-  // Group registrations by team
+  // Group registrations by team (no additional filtering needed since API filters are applied)
   const groupedData = useMemo(() => {
     const teams = new Map<string, RegistrationWithDetails[]>();
     const individuals: RegistrationWithDetails[] = [];
@@ -235,12 +272,6 @@ export default function EventRegistrationsClient() {
       }
 
       // Update local state
-      setAllRegistrations((prev) =>
-        prev.map((reg) =>
-          reg._id === registrationId ? { ...reg, verified } : reg
-        )
-      );
-
       setEventRegistrations((prev) =>
         prev.map((reg) =>
           reg._id === registrationId ? { ...reg, verified } : reg
@@ -392,6 +423,78 @@ export default function EventRegistrationsClient() {
             </p>
           </div>
         )}
+
+        {/* Filters Row 1 - Status and Payment */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <select
+            value={filterVerified}
+            onChange={(e) => setFilterVerified(e.target.value as 'all' | 'verified' | 'unverified')}
+            className="px-4 py-2 bg-slate-800/50 hover:bg-slate-800/70 border-2 border-purple-500/40 rounded-lg text-white focus:outline-none focus:border-purple-500/80 focus:bg-slate-800/80 focus:ring-2 focus:ring-purple-500/30 font-medium transition text-sm shadow-md"
+          >
+            <option value="all" className="text-slate-900">📋 All Status</option>
+            <option value="verified" className="text-slate-900">✓ Verified</option>
+            <option value="unverified" className="text-slate-900">⏳ Pending</option>
+          </select>
+
+          <select
+            value={filterPaymentStatus}
+            onChange={(e) => setFilterPaymentStatus(e.target.value as 'all' | 'paid' | 'unpaid')}
+            className="px-4 py-2 bg-slate-800/50 hover:bg-slate-800/70 border-2 border-purple-500/40 rounded-lg text-white focus:outline-none focus:border-purple-500/80 focus:bg-slate-800/80 focus:ring-2 focus:ring-purple-500/30 font-medium transition text-sm shadow-md"
+          >
+            <option value="all" className="text-slate-900">💰 All Payments</option>
+            <option value="paid" className="text-slate-900">✓ Paid</option>
+            <option value="unpaid" className="text-slate-900">✗ Unpaid</option>
+          </select>
+
+          <select
+            value={filterAccommodation}
+            onChange={(e) => setFilterAccommodation(e.target.value as 'all' | 'required' | 'not-required')}
+            className="px-4 py-2 bg-slate-800/50 hover:bg-slate-800/70 border-2 border-purple-500/40 rounded-lg text-white focus:outline-none focus:border-purple-500/80 focus:bg-slate-800/80 focus:ring-2 focus:ring-purple-500/30 font-medium transition text-sm shadow-md"
+          >
+            <option value="all" className="text-slate-900">🏨 All Accommodation</option>
+            <option value="required" className="text-slate-900">✓ Required</option>
+            <option value="not-required" className="text-slate-900">✗ Not Required</option>
+          </select>
+        </div>
+
+        {/* Filters Row 2 - Date Range */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <input
+            type="date"
+            value={dateFrom}
+            onChange={(e) => setDateFrom(e.target.value)}
+            className="px-4 py-2 bg-slate-800/50 hover:bg-slate-800/70 border-2 border-purple-500/40 rounded-lg text-white focus:outline-none focus:border-purple-500/80 focus:bg-slate-800/80 focus:ring-2 focus:ring-purple-500/30 font-medium transition text-sm shadow-md"
+            placeholder="From Date"
+          />
+          <input
+            type="date"
+            value={dateTo}
+            onChange={(e) => setDateTo(e.target.value)}
+            className="px-4 py-2 bg-slate-800/50 hover:bg-slate-800/70 border-2 border-purple-500/40 rounded-lg text-white focus:outline-none focus:border-purple-500/80 focus:bg-slate-800/80 focus:ring-2 focus:ring-purple-500/30 font-medium transition text-sm shadow-md"
+            placeholder="To Date"
+          />
+          {(dateFrom || dateTo || filterVerified !== 'all' || filterPaymentStatus !== 'all' || filterAccommodation !== 'all') && (
+            <button
+              onClick={() => {
+                setDateFrom('');
+                setDateTo('');
+                setFilterVerified('all');
+                setFilterPaymentStatus('all');
+                setFilterAccommodation('all');
+              }}
+              className="px-4 py-2 bg-slate-600 hover:bg-slate-700 text-white rounded-lg font-semibold transition text-sm"
+            >
+              Clear All Filters
+            </button>
+          )}
+        </div>
+
+        {/* Filter Info */}
+        <div className="p-3 bg-slate-800/40 border border-purple-500/20 rounded-lg">
+          <p className="text-sm text-slate-300">
+            📊 Showing <span className="font-bold text-white">{eventRegistrations.length}</span> registrations
+          </p>
+        </div>
       </div>
 
       {/* Results */}
@@ -575,18 +678,64 @@ export default function EventRegistrationsClient() {
                                   <span className="bg-slate-700/50 px-2 py-1 rounded text-xs font-semibold">👤 MEMBER</span>
                                 </div>
                               </td>
-                              <td className="px-6 py-4 text-sm text-center text-slate-400">
-                                —
+                              <td className="px-6 py-4 text-sm text-center">
+                                <div className="flex flex-col gap-1">
+                                  {reg.accommodationMembers > 0 && (
+                                    <>
+                                      <span className="text-xs bg-blue-600/30 text-blue-300 px-2 py-1 rounded">
+                                        {reg.accommodationMembers} members
+                                      </span>
+                                      {reg.accommodationFees > 0 && (
+                                        <span className="text-xs text-blue-300">
+                                          ₹{reg.accommodationFees}
+                                        </span>
+                                      )}
+                                    </>
+                                  )}
+                                </div>
                               </td>
-                              <td className="px-6 py-4 text-sm text-center text-slate-400">
-                                —
+                              <td className="px-6 py-4 text-sm text-center text-green-400 font-semibold">
+                                {reg.totalFees > 0 ? `₹${reg.totalFees}` : '—'}
                               </td>
                               <td className="px-6 py-4 text-sm text-center">
-                                {reg.verified ? (
-                                  <CheckCircle className="w-4 h-4 text-green-400 mx-auto" />
-                                ) : (
-                                  <AlertCircle className="w-4 h-4 text-yellow-400 mx-auto" />
-                                )}
+                                <div className="flex flex-col items-center gap-2">
+                                  {/* Verification Status */}
+                                  <div className="flex items-center justify-center gap-2">
+                                    {reg.verified ? (
+                                      <span className="inline-flex items-center gap-1 bg-green-500/30 text-green-300 px-3 py-1 rounded-full text-xs font-semibold">
+                                        <CheckCircle className="w-4 h-4" />
+                                        Verified
+                                      </span>
+                                    ) : (
+                                      <span className="inline-flex items-center gap-1 bg-yellow-500/30 text-yellow-300 px-3 py-1 rounded-full text-xs font-semibold">
+                                        <AlertCircle className="w-4 h-4" />
+                                        Pending
+                                      </span>
+                                    )}
+                                  </div>
+
+                                  {/* Verification Toggle Buttons */}
+                                  <div className="flex gap-2">
+                                    {!reg.verified && (
+                                      <button
+                                        onClick={() => handleVerifyRegistration(reg._id, true)}
+                                        className="text-xs bg-green-600/50 hover:bg-green-600/70 text-green-200 px-3 py-1 rounded transition font-semibold"
+                                        title="Mark as verified"
+                                      >
+                                        ✓ Verify
+                                      </button>
+                                    )}
+                                    {reg.verified && (
+                                      <button
+                                        onClick={() => handleVerifyRegistration(reg._id, false)}
+                                        className="text-xs bg-red-600/50 hover:bg-red-600/70 text-red-200 px-3 py-1 rounded transition font-semibold"
+                                        title="Mark as unverified"
+                                      >
+                                        ✕ Unverify
+                                      </button>
+                                    )}
+                                  </div>
+                                </div>
                               </td>
                             </tr>
                           ))}

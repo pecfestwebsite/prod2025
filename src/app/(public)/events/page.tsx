@@ -46,6 +46,15 @@ const TwinklingStars = () => {
 const AnimatedBackground = () => {
   return (
     <div className="fixed inset-0 z-0 overflow-hidden">
+      <div 
+        className="absolute inset-0 bg-cover bg-center"
+        style={{
+          backgroundImage: 'url(/events_background.jpeg)',
+          opacity: 0.9
+        }}
+      >
+        <div className="absolute inset-0 bg-black/50" />
+      </div>
       <TwinklingStars />
     </div>
   );

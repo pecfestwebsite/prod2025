@@ -19,6 +19,7 @@ interface RegistrationWithEvent {
   discount?: number;
   accommodationMembers?: number;
   totalFees?: number;
+  category?: 'technical' | 'cultural' | 'convenor';
 }
 
 interface RegistrationsClientProps {
@@ -111,6 +112,11 @@ export default function RegistrationsClient({ registrations, total }: Registrati
   const [searchTerm, setSearchTerm] = useState('');
   const [filterVerified, setFilterVerified] = useState<'all' | 'verified' | 'unverified'>('all');
   const [filterEventType, setFilterEventType] = useState<'all' | 'free' | 'paid'>('all');
+  const [filterCategory, setFilterCategory] = useState<'all' | 'technical' | 'cultural'>('all');
+  const [filterPaymentStatus, setFilterPaymentStatus] = useState<'all' | 'paid' | 'unpaid'>('all');
+  const [filterAccommodation, setFilterAccommodation] = useState<'all' | 'required' | 'not-required'>('all');
+  const [dateFrom, setDateFrom] = useState<string>('');
+  const [dateTo, setDateTo] = useState<string>('');
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null);
   const [verifyingId, setVerifyingId] = useState<string | null>(null);
@@ -125,6 +131,7 @@ export default function RegistrationsClient({ registrations, total }: Registrati
   const [loadingMore, setLoadingMore] = useState(false);
   const [totalRecords, setTotalRecords] = useState(total);
   const [hasSearched, setHasSearched] = useState(false);
+  const [teamMembers, setTeamMembers] = useState<{ [teamId: string]: RegistrationWithEvent[] }>({});
 
   useEffect(() => {
     const admin = getAdminUser();
@@ -194,6 +201,11 @@ export default function RegistrationsClient({ registrations, total }: Registrati
         if (searchTerm) params.append('search', searchTerm);
         if (filterVerified !== 'all') params.append('verified', filterVerified === 'verified' ? 'true' : 'false');
         if (filterEventType !== 'all') params.append('filterEventType', filterEventType);
+        if (filterCategory !== 'all') params.append('category', filterCategory);
+        if (filterPaymentStatus !== 'all') params.append('paymentStatus', filterPaymentStatus);
+        if (filterAccommodation !== 'all') params.append('accommodation', filterAccommodation);
+        if (dateFrom) params.append('dateFrom', dateFrom);
+        if (dateTo) params.append('dateTo', dateTo);
         
         params.append('page', currentPage.toString());
         params.append('limit', '10');
@@ -223,7 +235,7 @@ export default function RegistrationsClient({ registrations, total }: Registrati
     };
 
     fetchRegistrations();
-  }, [searchTerm, filterVerified, filterEventType, currentPage, adminUser]);
+  }, [searchTerm, filterVerified, filterEventType, filterCategory, filterPaymentStatus, filterAccommodation, dateFrom, dateTo, currentPage, adminUser]);
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -284,6 +296,13 @@ export default function RegistrationsClient({ registrations, total }: Registrati
           )
         );
 
+        // If team lead is verified, verify all team members with same team ID
+        const currentReg = filteredAndSortedRegistrations.find(r => r._id === registrationId);
+        if (currentReg && currentReg.teamId && !currentStatus) {
+          // User is being verified, verify team members
+          await verifyTeamMembers(currentReg.eventId, currentReg.teamId, !currentStatus);
+        }
+
         // Increment action count
         const newCount = incrementActionCount(registrationId);
         setActionCounts(prev => ({
@@ -295,6 +314,65 @@ export default function RegistrationsClient({ registrations, total }: Registrati
       console.error('Error verifying registration:', error);
     } finally {
       setVerifyingId(null);
+    }
+  };
+
+  const verifyTeamMembers = async (eventId: string, teamId: string, verifiedStatus: boolean) => {
+    try {
+      const token = localStorage.getItem('adminToken') || localStorage.getItem('token');
+      if (!token) return;
+
+      // Fetch all registrations with this team ID for this event, including team members
+      const params = new URLSearchParams({
+        eventId: eventId,
+        teamId: teamId,
+        limit: '100',
+        includeTeamMembers: 'true' // Include team members to get all registrations with this teamId
+      });
+
+      const response = await fetch(
+        `/api/registrations?${params.toString()}`,
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (!response.ok) return;
+
+      const data = await response.json();
+      const teamRegistrations = data.registrations || [];
+
+      // Verify all team members (excluding the team leader we already verified)
+      for (const reg of teamRegistrations) {
+        if (reg._id) {
+          await fetch(`/api/registrations/${reg._id}`, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`,
+            },
+            body: JSON.stringify({ verified: verifiedStatus }),
+          });
+
+          // Update UI
+          setFilteredAndSortedRegistrations((prev) =>
+            prev.map((r) =>
+              r._id === reg._id ? { ...r, verified: verifiedStatus } : r
+            )
+          );
+
+          // Also update local registrations for consistency
+          setLocalRegistrations((prev) =>
+            prev.map((r) =>
+              r._id === reg._id ? { ...r, verified: verifiedStatus } : r
+            )
+          );
+        }
+      }
+    } catch (error) {
+      console.error('Error verifying team members:', error);
     }
   };
 
@@ -439,6 +517,7 @@ export default function RegistrationsClient({ registrations, total }: Registrati
       alert('Please enter a search term');
       return;
     }
+    // Reset to page 1 when searching to trigger the useEffect
     setCurrentPage(1);
     setHasSearched(true);
   };
@@ -448,6 +527,11 @@ export default function RegistrationsClient({ registrations, total }: Registrati
     setHasSearched(false);
     setCurrentPage(1);
   };
+
+  // Reset to page 1 when any filter changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filterVerified, filterEventType, filterCategory, filterPaymentStatus, filterAccommodation, dateFrom, dateTo]);
 
   return (
     <div className="space-y-6 p-4 md:p-6">
@@ -497,6 +581,75 @@ export default function RegistrationsClient({ registrations, total }: Registrati
             <option value="free" className="text-slate-900">🎉 Free Events</option>
             <option value="paid" className="text-slate-900">💳 Paid Events</option>
           </select>
+        </div>
+
+        {/* Second Row of Filters */}
+        <div className="flex flex-col sm:flex-row gap-2 md:gap-3">
+          <select
+            value={filterCategory}
+            onChange={(e) => setFilterCategory(e.target.value as 'all' | 'technical' | 'cultural')}
+            className="px-3 md:px-4 py-2 md:py-3 bg-slate-800/50 hover:bg-slate-800/70 border-2 border-purple-500/40 rounded-lg md:rounded-xl text-white focus:outline-none focus:border-purple-500/80 focus:bg-slate-800/80 focus:ring-2 focus:ring-purple-500/30 font-medium transition-all text-xs md:text-base shadow-md"
+          >
+            <option value="all" className="text-slate-900">🔧 All Categories</option>
+            <option value="technical" className="text-slate-900">💻 Technical</option>
+            <option value="cultural" className="text-slate-900">🎨 Cultural</option>
+          </select>
+
+          <select
+            value={filterPaymentStatus}
+            onChange={(e) => setFilterPaymentStatus(e.target.value as 'all' | 'paid' | 'unpaid')}
+            className="px-3 md:px-4 py-2 md:py-3 bg-slate-800/50 hover:bg-slate-800/70 border-2 border-purple-500/40 rounded-lg md:rounded-xl text-white focus:outline-none focus:border-purple-500/80 focus:bg-slate-800/80 focus:ring-2 focus:ring-purple-500/30 font-medium transition-all text-xs md:text-base shadow-md"
+          >
+            <option value="all" className="text-slate-900">💰 All Payment Status</option>
+            <option value="paid" className="text-slate-900">✓ Payment Submitted</option>
+            <option value="unpaid" className="text-slate-900">✗ No Payment</option>
+          </select>
+
+          <select
+            value={filterAccommodation}
+            onChange={(e) => setFilterAccommodation(e.target.value as 'all' | 'required' | 'not-required')}
+            className="px-3 md:px-4 py-2 md:py-3 bg-slate-800/50 hover:bg-slate-800/70 border-2 border-purple-500/40 rounded-lg md:rounded-xl text-white focus:outline-none focus:border-purple-500/80 focus:bg-slate-800/80 focus:ring-2 focus:ring-purple-500/30 font-medium transition-all text-xs md:text-base shadow-md"
+          >
+            <option value="all" className="text-slate-900">🏨 All Accommodation</option>
+            <option value="required" className="text-slate-900">✓ Accommodation Required</option>
+            <option value="not-required" className="text-slate-900">✗ No Accommodation</option>
+          </select>
+        </div>
+
+        {/* Third Row - Date Filters */}
+        <div className="flex flex-col sm:flex-row gap-2 md:gap-3">
+          <input
+            type="date"
+            value={dateFrom}
+            onChange={(e) => {
+              setDateFrom(e.target.value);
+              setCurrentPage(1);
+            }}
+            className="flex-1 px-3 md:px-4 py-2 md:py-3 bg-slate-800/50 hover:bg-slate-800/70 border-2 border-purple-500/40 rounded-lg md:rounded-xl text-white focus:outline-none focus:border-purple-500/80 focus:bg-slate-800/80 focus:ring-2 focus:ring-purple-500/30 font-medium transition-all text-xs md:text-base shadow-md"
+            placeholder="From Date"
+          />
+          <input
+            type="date"
+            value={dateTo}
+            onChange={(e) => {
+              setDateTo(e.target.value);
+              setCurrentPage(1);
+            }}
+            className="flex-1 px-3 md:px-4 py-2 md:py-3 bg-slate-800/50 hover:bg-slate-800/70 border-2 border-purple-500/40 rounded-lg md:rounded-xl text-white focus:outline-none focus:border-purple-500/80 focus:bg-slate-800/80 focus:ring-2 focus:ring-purple-500/30 font-medium transition-all text-xs md:text-base shadow-md"
+            placeholder="To Date"
+          />
+          {(dateFrom || dateTo) && (
+            <button
+              onClick={() => {
+                setDateFrom('');
+                setDateTo('');
+                setCurrentPage(1);
+              }}
+              className="px-4 md:px-6 py-2 md:py-3 bg-slate-600 hover:bg-slate-700 text-white font-semibold rounded-lg md:rounded-xl transition-all text-xs md:text-base whitespace-nowrap"
+            >
+              Clear Dates
+            </button>
+          )}
         </div>
 
         {/* Results Info */}
