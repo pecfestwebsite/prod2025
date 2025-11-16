@@ -27,28 +27,6 @@ export default function GalleryPage() {
                 <section className="relative w-full h-screen bg-gradient-to-b from-[#1a0a2e] to-[#0a0a0a]">
                     {/* Retro Film Grain Overlay */}
                     <div className="absolute inset-0 opacity-10 pointer-events-none bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMDAiIGhlaWdodD0iMzAwIj48ZmlsdGVyIGlkPSJhIj48ZmVUdXJidWxlbmNlIGJhc2VGcmVxdWVuY3k9Ii43NSIgc3RpdGNoVGlsZXM9InN0aXRjaCIgdHlwZT0iZnJhY3RhbE5vaXNlIi8+PGZlQ29sb3JNYXRyaXggdHlwZT0ic2F0dXJhdGUiIHZhbHVlcz0iMCIvPjwvZmlsdGVyPjxwYXRoIGQ9Ik0wIDBoMzAwdjMwMEgweiIgZmlsdGVyPSJ1cmwoI2EpIiBvcGFjaXR5PSIuMDUiLz48L3N2Zz4=')]" />
-                    
-                    {/* Retro Header */}
-                    <div className="absolute top-0 left-0 right-0 z-20 pt-8 px-8">
-                        <div className="max-w-4xl mx-auto text-center">
-                            <div className="inline-flex items-center gap-3 mb-4 px-6 py-2 bg-[#b53da1]/10 border-2 border-[#b53da1] rounded-full backdrop-blur-sm">
-                                <Camera className="w-5 h-5 text-[#fea6cc]" />
-                                <span className="text-[#ffd4b9] text-sm font-mono tracking-wider">PECFEST MEMORIES</span>
-                                <Film className="w-5 h-5 text-[#fea6cc]" />
-                            </div>
-                            <h1 className="font-serif text-5xl md:text-7xl font-bold mb-4 text-[#ffd4b9] drop-shadow-[0_0_20px_rgba(255,212,185,0.3)]">
-                                Moments That
-                            </h1>
-                            <h2 className="font-serif text-4xl md:text-6xl font-bold mb-6 text-[#ed6ab8] drop-shadow-[0_0_20px_rgba(237,106,184,0.3)]">
-                                Never Come Back
-                            </h2>
-                            <p className="text-white/70 text-lg md:text-xl max-w-2xl mx-auto font-light leading-relaxed">
-                                Step into our time capsule. Each photograph holds a universe of laughter, 
-                                energy, and memories that defined PecFest. These aren't just images—
-                                they're fragments of moments we'll never get back.
-                            </p>
-                        </div>
-                    </div>
 
                     {/* Dome Gallery - Full Screen */}
                     <div className="absolute inset-0">

@@ -40,25 +40,32 @@ interface UserData {
 interface Registration {
   _id: string;
   eventId: string;
+  eventName: string;
   userId: string;
-  teamId: string;
   verified: boolean;
   feesPaid: string;
   dateTime: string;
+  team?: {
+    teamId: string;
+    totalMembers: number;
+    isLeader: boolean;
+    members: TeamMember[];
+  };
 }
 
 interface TeamMember {
   userId: string;
+  name: string;
+  phoneNumber: string;
   feesPaid: string;
   verified: boolean;
   dateTime: string;
+  isLeader: boolean;
 }
 
 export default function ProfilePage() {
   const [user, setUser] = useState<UserData | null>(null);
   const [registrations, setRegistrations] = useState<Registration[]>([]);
-  const [teamCounts, setTeamCounts] = useState<{ [key: string]: number }>({});
-  const [teamMembers, setTeamMembers] = useState<{ [key: string]: TeamMember[] }>({});
   const [loading, setLoading] = useState(true);
   const [copiedTeamId, setCopiedTeamId] = useState<string>('');
   const [hasFetched, setHasFetched] = useState(false);
@@ -95,7 +102,7 @@ export default function ProfilePage() {
             'Authorization': `Bearer ${token}`,
           },
         }),
-        fetch('/api/registrations?limit=100', {
+        fetch('/api/registrations/detailed?limit=100', {
           headers: {
             'Authorization': `Bearer ${token}`,
           },
@@ -117,15 +124,6 @@ export default function ProfilePage() {
       const userRegistrations = regData.registrations || [];
       setRegistrations(userRegistrations);
 
-      // Lazy load team member counts only for team events
-      // Instead of fetching all at once, fetch on demand
-      const teamIds = [...new Set(userRegistrations.filter((r: Registration) => r.teamId).map((r: Registration) => r.teamId))] as string[];
-      
-      if (teamIds.length > 0) {
-        // Load team counts asynchronously without blocking page render
-        loadTeamCounts(token, userRegistrations, teamIds);
-      }
-
     } catch (error) {
       console.error('Error fetching profile:', error);
     } finally {
@@ -133,56 +131,7 @@ export default function ProfilePage() {
     }
   };
 
-  const loadTeamCounts = async (token: string, userRegistrations: Registration[], teamIds: string[]) => {
-    try {
-      // Fetch team counts and member details in smaller batches to avoid overwhelming the server
-      const batchSize = 5;
-      for (let i = 0; i < teamIds.length; i += batchSize) {
-        const batch = teamIds.slice(i, i + batchSize);
-        const teamCountPromises = batch.map(async (teamId) => {
-          const registration = userRegistrations.find((r: Registration) => r.teamId === teamId);
-          if (registration) {
-            const response = await fetch(`/api/registrations?eventId=${registration.eventId}&teamId=${teamId}`, {
-              headers: {
-                'Authorization': `Bearer ${token}`,
-              },
-            });
-            const data = await response.json();
-            const members = data.registrations || [];
-            return { 
-              teamId: teamId as string, 
-              count: data.total || 0,
-              members: members.map((m: Registration) => ({
-                userId: m.userId,
-                feesPaid: m.feesPaid,
-                verified: m.verified,
-                dateTime: m.dateTime
-              }))
-            };
-          }
-          return { teamId: teamId as string, count: 0, members: [] };
-        });
-        
-        const batchResults = await Promise.all(teamCountPromises);
-        setTeamCounts(prev => {
-          const updated = { ...prev };
-          batchResults.forEach((result: { teamId: string; count: number }) => {
-            updated[result.teamId] = result.count;
-          });
-          return updated;
-        });
-        setTeamMembers(prev => {
-          const updated = { ...prev };
-          batchResults.forEach((result: { teamId: string; members: TeamMember[] }) => {
-            updated[result.teamId] = result.members;
-          });
-          return updated;
-        });
-      }
-    } catch (error) {
-      console.error('Error loading team counts:', error);
-    }
-  };
+
 
   const copyTeamId = (teamId: string) => {
     navigator.clipboard.writeText(teamId);
@@ -441,12 +390,10 @@ export default function ProfilePage() {
                 ) : (
                   <div className="space-y-4">
                     {registrations.map((registration) => {
-                      const teamMemberCount = registration.teamId ? teamCounts[registration.teamId] || 0 : 0;
-                      const hasTeam = !!registration.teamId;
-                      const members = registration.teamId ? teamMembers[registration.teamId] || [] : [];
-                      
-                      // Determine if user is team leader: team leader has feesPaid (payment receipt)
-                      const isTeamLeader = hasTeam && registration.feesPaid && registration.feesPaid !== '' && registration.feesPaid !== '0';
+                      const hasTeam = !!registration.team;
+                      const teamMemberCount = hasTeam ? registration.team!.totalMembers : 0;
+                      const members = hasTeam ? registration.team!.members : [];
+                      const isTeamLeader = hasTeam ? registration.team!.isLeader : false;
 
                       return (
                         <motion.div
@@ -506,13 +453,13 @@ export default function ProfilePage() {
                                     <p className="text-xs text-[#fea6cc]/60 mb-1">Team ID</p>
                                     <div className="flex items-center gap-2">
                                       <code className="text-xs text-white font-mono bg-[#010101]/40 px-2 py-1 rounded flex-1 break-all">
-                                        {registration.teamId}
+                                        {registration.team!.teamId}
                                       </code>
                                       <button
-                                        onClick={() => copyTeamId(registration.teamId)}
+                                        onClick={() => copyTeamId(registration.team!.teamId)}
                                         className="p-1.5 bg-[#4321a9]/40 hover:bg-[#4321a9]/60 rounded transition-all"
                                       >
-                                        {copiedTeamId === registration.teamId ? (
+                                        {copiedTeamId === registration.team!.teamId ? (
                                           <CheckCircle className="w-4 h-4 text-green-400" />
                                         ) : (
                                           <Copy className="w-4 h-4 text-[#fea6cc]" />
@@ -531,43 +478,55 @@ export default function ProfilePage() {
                                   {/* Team Members List */}
                                   {members.length > 0 && (
                                     <div className="pt-2 border-t border-[#b53da1]/30">
-                                      <p className="text-xs text-[#fea6cc]/60 mb-2">Team Members</p>
-                                      <div className="space-y-1.5 max-h-[200px] overflow-y-auto pr-2 custom-scrollbar">
+                                      <p className="text-xs text-[#fea6cc]/60 mb-2">Team Members ({members.length})</p>
+                                      <div className="space-y-2 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
                                         {members.map((member, idx) => {
-                                          const isMemberLeader = member.feesPaid && member.feesPaid !== '' && member.feesPaid !== '0';
                                           const isCurrentUser = member.userId === user?.email;
                                           
                                           return (
                                             <div 
                                               key={idx} 
-                                              className={`flex items-center justify-between p-2 rounded-lg ${
+                                              className={`p-3 rounded-lg border ${
                                                 isCurrentUser 
-                                                  ? 'bg-[#4321a9]/40 border border-[#ed6ab8]/50' 
-                                                  : 'bg-[#010101]/30'
+                                                  ? 'bg-[#4321a9]/40 border-[#ed6ab8]/50' 
+                                                  : 'bg-[#010101]/30 border-[#b53da1]/20'
                                               }`}
                                             >
-                                              <div className="flex items-center gap-2 flex-1 min-w-0">
-                                                <User className="w-3 h-3 text-[#fea6cc] flex-shrink-0" />
-                                                <span className="text-xs text-white font-mono truncate">
-                                                  {member.userId}
-                                                </span>
-                                                {isCurrentUser && (
-                                                  <span className="text-[10px] px-1.5 py-0.5 bg-[#ed6ab8]/40 text-white rounded-full flex-shrink-0">
-                                                    You
-                                                  </span>
-                                                )}
+                                              <div className="flex items-start justify-between gap-2 mb-2">
+                                                <div className="flex items-center gap-2 flex-1 min-w-0">
+                                                  <User className="w-4 h-4 text-[#fea6cc] flex-shrink-0" />
+                                                  <div className="flex-1 min-w-0">
+                                                    <div className="flex items-center gap-2 mb-0.5">
+                                                      <span className="text-sm text-white font-semibold truncate">
+                                                        {member.name}
+                                                      </span>
+                                                      {isCurrentUser && (
+                                                        <span className="text-[10px] px-1.5 py-0.5 bg-[#ed6ab8]/40 text-white rounded-full flex-shrink-0">
+                                                          You
+                                                        </span>
+                                                      )}
+                                                    </div>
+                                                    <p className="text-xs text-[#fea6cc]/60 font-mono truncate">
+                                                      {member.userId}
+                                                    </p>
+                                                  </div>
+                                                </div>
+                                                <div className="flex items-center gap-1 flex-shrink-0">
+                                                  {member.isLeader && (
+                                                    <span className="text-[10px] px-1.5 py-0.5 bg-gradient-to-r from-[#b53da1] to-[#ed6ab8] text-white rounded-full font-bold">
+                                                      LEADER
+                                                    </span>
+                                                  )}
+                                                  {member.verified ? (
+                                                    <CheckCircle className="w-4 h-4 text-green-400" />
+                                                  ) : (
+                                                    <Loader2 className="w-4 h-4 text-yellow-400" />
+                                                  )}
+                                                </div>
                                               </div>
-                                              <div className="flex items-center gap-1 ml-2 flex-shrink-0">
-                                                {isMemberLeader && (
-                                                  <span className="text-[10px] px-1.5 py-0.5 bg-gradient-to-r from-[#b53da1] to-[#ed6ab8] text-white rounded-full font-bold">
-                                                    LEADER
-                                                  </span>
-                                                )}
-                                                {member.verified ? (
-                                                  <CheckCircle className="w-3 h-3 text-green-400" />
-                                                ) : (
-                                                  <Loader2 className="w-3 h-3 text-yellow-400" />
-                                                )}
+                                              <div className="flex items-center gap-2 text-xs text-[#fea6cc]/80">
+                                                <Phone className="w-3 h-3" />
+                                                <span>{member.phoneNumber}</span>
                                               </div>
                                             </div>
                                           );

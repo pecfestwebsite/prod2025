@@ -11,8 +11,9 @@ import {
   AlertCircle,
   Download,
   Users,
+  Trash2,
 } from 'lucide-react';
-import { getAdminUser } from '@/lib/accessControl';
+import { getAdminUser, canDeleteRegistrations } from '@/lib/accessControl';
 
 interface EventOption {
   eventId: string;
@@ -55,6 +56,8 @@ export default function EventRegistrationsClient() {
   const [adminUser, setAdminUser] = useState<any>(null);
   const [selectedReceiptUrl, setSelectedReceiptUrl] = useState<string | null>(null);
   const [showReceiptModal, setShowReceiptModal] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [filterVerified, setFilterVerified] = useState<'all' | 'verified' | 'unverified'>('all');
   const [filterPaymentStatus, setFilterPaymentStatus] = useState<'all' | 'paid' | 'unpaid'>('all');
   const [filterAccommodation, setFilterAccommodation] = useState<'all' | 'required' | 'not-required'>('all');
@@ -282,6 +285,44 @@ export default function EventRegistrationsClient() {
     } catch (error) {
       console.error('Error updating registration:', error);
       alert(`Failed to update registration: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  };
+
+  const handleDelete = async (registrationId: string) => {
+    const confirmed = window.confirm('Are you sure you want to delete this registration? This action cannot be undone.');
+    if (!confirmed) return;
+
+    setDeletingId(registrationId);
+    try {
+      const token = localStorage.getItem('adminToken') || localStorage.getItem('token');
+      if (!token) {
+        alert('Session expired. Please login again.');
+        setDeletingId(null);
+        return;
+      }
+
+      const response = await fetch(`/api/registrations/${registrationId}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        // Remove the registration from the local list
+        setEventRegistrations((prev) => prev.filter((r) => r._id !== registrationId));
+        alert('Registration deleted successfully!');
+      } else {
+        const errorData = await response.json();
+        alert(`Failed to delete registration: ${errorData.error || 'Unknown error'}`);
+      }
+    } catch (error) {
+      console.error('Error deleting registration:', error);
+      alert('An error occurred while deleting the registration.');
+    } finally {
+      setDeletingId(null);
+      setDeleteConfirmId(null);
     }
   };
 
@@ -657,6 +698,24 @@ export default function EventRegistrationsClient() {
                                     ✕ Unverify
                                   </button>
                                 )}
+                                {canDeleteRegistrations(adminUser?.accesslevel || 0) && (
+                                  <button
+                                    onClick={() => handleDelete(teamLeader._id)}
+                                    disabled={deletingId === teamLeader._id}
+                                    className={`text-xs px-3 py-1 rounded transition font-semibold ${
+                                      deletingId === teamLeader._id
+                                        ? 'bg-gray-900/50 border-gray-400/50 text-gray-300 cursor-not-allowed'
+                                        : 'bg-red-900/50 hover:bg-red-900/80 border-red-400/50 text-red-300'
+                                    }`}
+                                    title="Delete registration (Webmaster only)"
+                                  >
+                                    {deletingId === teamLeader._id ? (
+                                      <Loader className="animate-spin w-4 h-4" />
+                                    ) : (
+                                      <Trash2 className="w-4 h-4" />
+                                    )}
+                                  </button>
+                                )}
                               </div>
                             </div>
                           </td>
@@ -732,6 +791,24 @@ export default function EventRegistrationsClient() {
                                         title="Mark as unverified"
                                       >
                                         ✕ Unverify
+                                      </button>
+                                    )}
+                                    {canDeleteRegistrations(adminUser?.accesslevel || 0) && (
+                                      <button
+                                        onClick={() => handleDelete(reg._id)}
+                                        disabled={deletingId === reg._id}
+                                        className={`text-xs px-3 py-1 rounded transition font-semibold ${
+                                          deletingId === reg._id
+                                            ? 'bg-gray-900/50 border-gray-400/50 text-gray-300 cursor-not-allowed'
+                                            : 'bg-red-900/50 hover:bg-red-900/80 border-red-400/50 text-red-300'
+                                        }`}
+                                        title="Delete registration (Webmaster only)"
+                                      >
+                                        {deletingId === reg._id ? (
+                                          <Loader className="animate-spin w-4 h-4" />
+                                        ) : (
+                                          <Trash2 className="w-4 h-4" />
+                                        )}
                                       </button>
                                     )}
                                   </div>
@@ -825,6 +902,24 @@ export default function EventRegistrationsClient() {
                               title="Mark as unverified"
                             >
                               ✕ Unverify
+                            </button>
+                          )}
+                          {canDeleteRegistrations(adminUser?.accesslevel || 0) && (
+                            <button
+                              onClick={() => handleDelete(reg._id)}
+                              disabled={deletingId === reg._id}
+                              className={`text-xs px-3 py-1 rounded transition font-semibold ${
+                                deletingId === reg._id
+                                  ? 'bg-gray-900/50 border-gray-400/50 text-gray-300 cursor-not-allowed'
+                                  : 'bg-red-900/50 hover:bg-red-900/80 border-red-400/50 text-red-300'
+                              }`}
+                              title="Delete registration (Webmaster only)"
+                            >
+                              {deletingId === reg._id ? (
+                                <Loader className="animate-spin w-4 h-4" />
+                              ) : (
+                                <Trash2 className="w-4 h-4" />
+                              )}
                             </button>
                           )}
                         </div>

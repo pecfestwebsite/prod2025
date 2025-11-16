@@ -110,15 +110,15 @@ const DeveloperCard = ({ developer, index }: { developer: Developer; index: numb
       whileInView={{ opacity: 1, y: 0, rotateX: 0 }}
       transition={{ duration: 0.7, delay: index * 0.08 }}
       viewport={{ once: true, margin: "-50px" }}
-      className="h-64 sm:h-72 md:h-80 group relative perspective"
+      className="h-80 sm:h-96 md:h-[28rem] group relative perspective"
       whileHover={{
         y: -12,
         transition: { duration: 0.3 },
       }}
     >
-      {/* Outer Glow */}
+      {/* Outer Glow - No clip, extends beyond card */}
       <motion.div
-        className="absolute -inset-1 bg-gradient-to-br from-[#ed6ab8] via-[#b53da1] to-[#4321a9] rounded-2xl blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 -z-20"
+        className="absolute -inset-4 bg-gradient-to-br from-[#ed6ab8] via-[#b53da1] to-[#4321a9] blur-3xl opacity-0 group-hover:opacity-[0.175] transition-opacity duration-500 -z-20"
         animate={{
           scale: [0.95, 1.05, 0.95],
         }}
@@ -129,9 +129,9 @@ const DeveloperCard = ({ developer, index }: { developer: Developer; index: numb
         }}
       />
 
-      {/* Inner Shadow */}
+      {/* Inner Shadow - No clip, extends beyond card */}
       <motion.div
-        className="absolute inset-0 bg-gradient-to-br from-[#ed6ab8]/20 to-[#b53da1]/20 rounded-xl blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 -z-10"
+        className="absolute -inset-2 bg-gradient-to-br from-[#ed6ab8]/30 to-[#b53da1]/30 blur-2xl opacity-0 group-hover:opacity-20 transition-opacity duration-500 -z-10"
         animate={{
           scale: [1, 1.1, 1],
         }}
@@ -141,9 +141,6 @@ const DeveloperCard = ({ developer, index }: { developer: Developer; index: numb
           repeatType: "mirror",
         }}
       />
-      
-      {/* Card Border Gradient */}
-      <div className="absolute inset-0 bg-gradient-to-br from-[#ed6ab8]/30 to-[#b53da1]/10 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 border border-[#ed6ab8]/20 group-hover:border-[#ed6ab8]/60" />
       
       <DirectionAwareHover
         imageUrl={developer.image}
@@ -224,20 +221,13 @@ export default function DevelopersPage() {
               viewport={{ once: true }}
               className="text-4xl sm:text-5xl md:text-6xl font-bold mb-16 text-center text-transparent bg-clip-text bg-gradient-to-r from-[#ffd4b9] via-[#fea6cc] to-[#ed6ab8] font-display"
             >
-              Leadership Team ✨
+              Leadership Team 
             </motion.h2>
-            <div className="flex flex-wrap justify-center gap-12 md:gap-20">
+            <div className="flex flex-wrap justify-center gap-8 sm:gap-10 md:gap-12 max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
               {developersData.heads.map((head, index) => (
-                <motion.div 
-                  key={head.id} 
-                  className="w-full sm:w-1/2 lg:w-1/3"
-                  initial={{ opacity: 0, y: 30 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.15 }}
-                  viewport={{ once: true }}
-                >
+                <div key={head.id} className="w-full sm:w-[calc(50%-1.25rem)] lg:w-[calc(33.333%-2rem)] xl:w-[calc(25%-2.25rem)]">
                   <DeveloperCard developer={head} index={index} />
-                </motion.div>
+                </div>
               ))}
             </div>
           </motion.div>
@@ -257,20 +247,13 @@ export default function DevelopersPage() {
               viewport={{ once: true }}
               className="text-4xl sm:text-5xl md:text-6xl font-bold mb-16 text-center text-transparent bg-clip-text bg-gradient-to-r from-[#ffd4b9] via-[#fea6cc] to-[#ed6ab8] font-display"
             >
-              Development Team 🚀
+              Development Team 
             </motion.h2>
-            <div className="flex flex-wrap justify-center gap-12 md:gap-16">
+            <div className="flex flex-wrap justify-center gap-8 sm:gap-10 md:gap-12 max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
               {developersData.developers.map((dev, index) => (
-                <motion.div 
-                  key={dev.id} 
-                  className="w-full sm:w-1/2 lg:w-1/4"
-                  initial={{ opacity: 0, y: 30 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.15 }}
-                  viewport={{ once: true }}
-                >
+                <div key={dev.id} className="w-full sm:w-[calc(50%-1.25rem)] lg:w-[calc(33.333%-2rem)] xl:w-[calc(25%-2.25rem)]">
                   <DeveloperCard developer={dev} index={index} />
-                </motion.div>
+                </div>
               ))}
             </div>
           </motion.div>
