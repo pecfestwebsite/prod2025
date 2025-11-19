@@ -13,7 +13,7 @@ import {
   Users,
   Trash2,
 } from 'lucide-react';
-import { getAdminUser, canDeleteRegistrations } from '@/lib/accessControl';
+import { getAdminUser, canDeleteRegistrations, canVerifyRegistrations, filterRegistrationsByAccessLevel } from '@/lib/accessControl';
 
 interface EventOption {
   eventId: string;
@@ -107,7 +107,7 @@ export default function EventRegistrationsClient() {
         
         const data = await response.json();
         
-        const regsList: RegistrationWithDetails[] = (data?.registrations || []).map((reg: any) => {
+        let regsList: any[] = (data?.registrations || []).map((reg: any) => {
           // Find corresponding event details from available events
           const event = availableEvents.find(e => e.eventId === reg.eventId);
           return {
@@ -124,12 +124,16 @@ export default function EventRegistrationsClient() {
             totalFees: reg.totalFees || 0,
             dateTime: reg.dateTime || '',
             eventName: reg.eventName || event?.eventName || '',
+            societyName: event?.societyName || '',
             isTeamEvent: event?.isTeamEvent || false,
             category: reg.category || 'convenor',
           };
         });
         
-        setEventRegistrations(regsList);
+        // Filter registrations based on access level
+        const filteredRegs = filterRegistrationsByAccessLevel(regsList, adminUser);
+        
+        setEventRegistrations(filteredRegs);
         console.log('📋 Fetched filtered registrations:', regsList);
       } catch (error) {
         console.error('Error fetching registrations:', error);
@@ -164,6 +168,14 @@ export default function EventRegistrationsClient() {
             isTeamEvent: event.isTeamEvent || false,
             regFees: event.regFees || 0,
           }));
+        }
+        
+        // Filter events for club/soc admins (access level 1) to show only their club/soc events
+        const admin = getAdminUser();
+        if (admin && admin.accesslevel === 1 && admin.clubsoc) {
+          eventsList = eventsList.filter(
+            (event) => event.societyName === admin.clubsoc
+          );
         }
         
         console.log('📌 Fetched events:', eventsList);
@@ -679,44 +691,46 @@ export default function EventRegistrationsClient() {
                               </div>
 
                               {/* Verification Toggle Buttons */}
-                              <div className="flex gap-2">
-                                {!teamLeader.verified && (
-                                  <button
-                                    onClick={() => handleVerifyRegistration(teamLeader._id, true)}
-                                    className="text-xs bg-green-600/50 hover:bg-green-600/70 text-green-200 px-3 py-1 rounded transition font-semibold"
-                                    title="Mark as verified"
-                                  >
-                                    ✓ Verify
-                                  </button>
-                                )}
-                                {teamLeader.verified && (
-                                  <button
-                                    onClick={() => handleVerifyRegistration(teamLeader._id, false)}
-                                    className="text-xs bg-red-600/50 hover:bg-red-600/70 text-red-200 px-3 py-1 rounded transition font-semibold"
-                                    title="Mark as unverified"
-                                  >
-                                    ✕ Unverify
-                                  </button>
-                                )}
-                                {canDeleteRegistrations(adminUser?.accesslevel || 0) && (
-                                  <button
-                                    onClick={() => handleDelete(teamLeader._id)}
-                                    disabled={deletingId === teamLeader._id}
-                                    className={`text-xs px-3 py-1 rounded transition font-semibold ${
-                                      deletingId === teamLeader._id
-                                        ? 'bg-gray-900/50 border-gray-400/50 text-gray-300 cursor-not-allowed'
-                                        : 'bg-red-900/50 hover:bg-red-900/80 border-red-400/50 text-red-300'
-                                    }`}
-                                    title="Delete registration (Webmaster only)"
-                                  >
-                                    {deletingId === teamLeader._id ? (
-                                      <Loader className="animate-spin w-4 h-4" />
-                                    ) : (
-                                      <Trash2 className="w-4 h-4" />
-                                    )}
-                                  </button>
-                                )}
-                              </div>
+                              {canVerifyRegistrations(adminUser?.accesslevel || 0) && (
+                                <div className="flex gap-2">
+                                  {!teamLeader.verified && (
+                                    <button
+                                      onClick={() => handleVerifyRegistration(teamLeader._id, true)}
+                                      className="text-xs bg-green-600/50 hover:bg-green-600/70 text-green-200 px-3 py-1 rounded transition font-semibold"
+                                      title="Mark as verified"
+                                    >
+                                      ✓ Verify
+                                    </button>
+                                  )}
+                                  {teamLeader.verified && (
+                                    <button
+                                      onClick={() => handleVerifyRegistration(teamLeader._id, false)}
+                                      className="text-xs bg-red-600/50 hover:bg-red-600/70 text-red-200 px-3 py-1 rounded transition font-semibold"
+                                      title="Mark as unverified"
+                                    >
+                                      ✕ Unverify
+                                    </button>
+                                  )}
+                                </div>
+                              )}
+                              {canDeleteRegistrations(adminUser?.accesslevel || 0) && (
+                                <button
+                                  onClick={() => handleDelete(teamLeader._id)}
+                                  disabled={deletingId === teamLeader._id}
+                                  className={`text-xs px-3 py-1 rounded transition font-semibold ${
+                                    deletingId === teamLeader._id
+                                      ? 'bg-gray-900/50 border-gray-400/50 text-gray-300 cursor-not-allowed'
+                                      : 'bg-red-900/50 hover:bg-red-900/80 border-red-400/50 text-red-300'
+                                  }`}
+                                  title="Delete registration (Webmaster only)"
+                                >
+                                  {deletingId === teamLeader._id ? (
+                                    <Loader className="animate-spin w-4 h-4" />
+                                  ) : (
+                                    <Trash2 className="w-4 h-4" />
+                                  )}
+                                </button>
+                              )}
                             </div>
                           </td>
                         </tr>
@@ -774,44 +788,46 @@ export default function EventRegistrationsClient() {
                                   </div>
 
                                   {/* Verification Toggle Buttons */}
-                                  <div className="flex gap-2">
-                                    {!reg.verified && (
-                                      <button
-                                        onClick={() => handleVerifyRegistration(reg._id, true)}
-                                        className="text-xs bg-green-600/50 hover:bg-green-600/70 text-green-200 px-3 py-1 rounded transition font-semibold"
-                                        title="Mark as verified"
-                                      >
-                                        ✓ Verify
-                                      </button>
-                                    )}
-                                    {reg.verified && (
-                                      <button
-                                        onClick={() => handleVerifyRegistration(reg._id, false)}
-                                        className="text-xs bg-red-600/50 hover:bg-red-600/70 text-red-200 px-3 py-1 rounded transition font-semibold"
-                                        title="Mark as unverified"
-                                      >
-                                        ✕ Unverify
-                                      </button>
-                                    )}
-                                    {canDeleteRegistrations(adminUser?.accesslevel || 0) && (
-                                      <button
-                                        onClick={() => handleDelete(reg._id)}
-                                        disabled={deletingId === reg._id}
-                                        className={`text-xs px-3 py-1 rounded transition font-semibold ${
-                                          deletingId === reg._id
-                                            ? 'bg-gray-900/50 border-gray-400/50 text-gray-300 cursor-not-allowed'
-                                            : 'bg-red-900/50 hover:bg-red-900/80 border-red-400/50 text-red-300'
-                                        }`}
-                                        title="Delete registration (Webmaster only)"
-                                      >
-                                        {deletingId === reg._id ? (
-                                          <Loader className="animate-spin w-4 h-4" />
-                                        ) : (
-                                          <Trash2 className="w-4 h-4" />
-                                        )}
-                                      </button>
-                                    )}
-                                  </div>
+                                  {canVerifyRegistrations(adminUser?.accesslevel || 0) && (
+                                    <div className="flex gap-2">
+                                      {!reg.verified && (
+                                        <button
+                                          onClick={() => handleVerifyRegistration(reg._id, true)}
+                                          className="text-xs bg-green-600/50 hover:bg-green-600/70 text-green-200 px-3 py-1 rounded transition font-semibold"
+                                          title="Mark as verified"
+                                        >
+                                          ✓ Verify
+                                        </button>
+                                      )}
+                                      {reg.verified && (
+                                        <button
+                                          onClick={() => handleVerifyRegistration(reg._id, false)}
+                                          className="text-xs bg-red-600/50 hover:bg-red-600/70 text-red-200 px-3 py-1 rounded transition font-semibold"
+                                          title="Mark as unverified"
+                                        >
+                                          ✕ Unverify
+                                        </button>
+                                      )}
+                                    </div>
+                                  )}
+                                  {canDeleteRegistrations(adminUser?.accesslevel || 0) && (
+                                    <button
+                                      onClick={() => handleDelete(reg._id)}
+                                      disabled={deletingId === reg._id}
+                                      className={`text-xs px-3 py-1 rounded transition font-semibold ${
+                                        deletingId === reg._id
+                                          ? 'bg-gray-900/50 border-gray-400/50 text-gray-300 cursor-not-allowed'
+                                          : 'bg-red-900/50 hover:bg-red-900/80 border-red-400/50 text-red-300'
+                                      }`}
+                                      title="Delete registration (Webmaster only)"
+                                    >
+                                      {deletingId === reg._id ? (
+                                        <Loader className="animate-spin w-4 h-4" />
+                                      ) : (
+                                        <Trash2 className="w-4 h-4" />
+                                      )}
+                                    </button>
+                                  )}
                                 </div>
                               </td>
                             </tr>
@@ -885,44 +901,46 @@ export default function EventRegistrationsClient() {
                         </div>
 
                         {/* Verification Toggle Buttons */}
-                        <div className="flex gap-2">
-                          {!reg.verified && (
-                            <button
-                              onClick={() => handleVerifyRegistration(reg._id, true)}
-                              className="text-xs bg-green-600/50 hover:bg-green-600/70 text-green-200 px-3 py-1 rounded transition font-semibold"
-                              title="Mark as verified"
-                            >
-                              ✓ Verify
-                            </button>
-                          )}
-                          {reg.verified && (
-                            <button
-                              onClick={() => handleVerifyRegistration(reg._id, false)}
-                              className="text-xs bg-red-600/50 hover:bg-red-600/70 text-red-200 px-3 py-1 rounded transition font-semibold"
-                              title="Mark as unverified"
-                            >
-                              ✕ Unverify
-                            </button>
-                          )}
-                          {canDeleteRegistrations(adminUser?.accesslevel || 0) && (
-                            <button
-                              onClick={() => handleDelete(reg._id)}
-                              disabled={deletingId === reg._id}
-                              className={`text-xs px-3 py-1 rounded transition font-semibold ${
-                                deletingId === reg._id
-                                  ? 'bg-gray-900/50 border-gray-400/50 text-gray-300 cursor-not-allowed'
-                                  : 'bg-red-900/50 hover:bg-red-900/80 border-red-400/50 text-red-300'
-                              }`}
-                              title="Delete registration (Webmaster only)"
-                            >
-                              {deletingId === reg._id ? (
-                                <Loader className="animate-spin w-4 h-4" />
-                              ) : (
-                                <Trash2 className="w-4 h-4" />
-                              )}
-                            </button>
-                          )}
-                        </div>
+                        {canVerifyRegistrations(adminUser?.accesslevel || 0) && (
+                          <div className="flex gap-2">
+                            {!reg.verified && (
+                              <button
+                                onClick={() => handleVerifyRegistration(reg._id, true)}
+                                className="text-xs bg-green-600/50 hover:bg-green-600/70 text-green-200 px-3 py-1 rounded transition font-semibold"
+                                title="Mark as verified"
+                              >
+                                ✓ Verify
+                              </button>
+                            )}
+                            {reg.verified && (
+                              <button
+                                onClick={() => handleVerifyRegistration(reg._id, false)}
+                                className="text-xs bg-red-600/50 hover:bg-red-600/70 text-red-200 px-3 py-1 rounded transition font-semibold"
+                                title="Mark as unverified"
+                              >
+                                ✕ Unverify
+                              </button>
+                            )}
+                          </div>
+                        )}
+                        {canDeleteRegistrations(adminUser?.accesslevel || 0) && (
+                          <button
+                            onClick={() => handleDelete(reg._id)}
+                            disabled={deletingId === reg._id}
+                            className={`text-xs px-3 py-1 rounded transition font-semibold ${
+                              deletingId === reg._id
+                                ? 'bg-gray-900/50 border-gray-400/50 text-gray-300 cursor-not-allowed'
+                                : 'bg-red-900/50 hover:bg-red-900/80 border-red-400/50 text-red-300'
+                            }`}
+                            title="Delete registration (Webmaster only)"
+                          >
+                            {deletingId === reg._id ? (
+                              <Loader className="animate-spin w-4 h-4" />
+                            ) : (
+                              <Trash2 className="w-4 h-4" />
+                            )}
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>

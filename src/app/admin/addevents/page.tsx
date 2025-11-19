@@ -126,6 +126,12 @@ export default function AddEventsPage() {
     const admin = getAdminUser();
     setAdminUser(admin);
     
+    // Redirect club/soc admins (access level 1) - they don't have access to add events
+    if (admin && admin.accesslevel === 1) {
+      router.push('/admin/dashboard');
+      return;
+    }
+    
     // Load form data from localStorage if available
     try {
       const savedFormData = localStorage.getItem('eventFormData');

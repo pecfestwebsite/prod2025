@@ -80,6 +80,11 @@ export default function ClearanceClient({ admins }: ClearanceClientProps) {
     setMounted(true);
     const admin = getAdminUser();
     if (admin) {
+      // Redirect club/soc admins (access level 1) - they don't have access to clearance
+      if (admin.accesslevel === 1) {
+        window.location.href = '/admin/dashboard';
+        return;
+      }
       setCurrentAdmin(admin);
     } else {
       // If no admin found, redirect to login

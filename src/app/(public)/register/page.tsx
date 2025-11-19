@@ -1,8 +1,10 @@
 "use client";
 
 import { useState, useEffect, Suspense } from 'react';
+import {motion, scale} from "framer-motion"
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/lib/hooks/useAuth';
+import TwinklingStars from '@/components/ui/TwinklingStars';
 import styles from './register.module.css'; // Import CSS module
 
 function RegisterPageContent() {
@@ -285,37 +287,30 @@ function RegisterPageContent() {
   return (
     <div className="min-h-screen py-8 px-4 sm:px-6 lg:px-8 relative overflow-hidden" style={{ backgroundColor: '#140655' }}>
       {/* Starlight background pattern */}
-      <div className="absolute inset-0 opacity-15">
+      {/* <div className="absolute inset-0 opacity-15">
         <div className="absolute top-0 left-0 w-96 h-96 bg-blue-600 rounded-full blur-3xl"></div>
         <div className="absolute bottom-0 right-0 w-96 h-96 bg-purple-600 rounded-full blur-3xl"></div>
         <div className="absolute top-1/2 left-1/2 w-96 h-96 bg-blue-500 rounded-full blur-3xl"></div>
         <div className="absolute top-1/4 right-1/4 w-72 h-72 bg-orange-600 rounded-full blur-3xl opacity-80"></div>
-      </div>
+      </div> */}
+      <div className={`absolute top-0 left-0 overflow-hidden`}><img src="loginbg.png" alt="" className={`w-screen h-screen ${styles.loginbg}`}/></div>
+       <div className={`${styles.geniebox} absolute bottom-[25%] right-[15%] opacity-70`}><img src="genie2.png" className={`${styles.genie}`} /></div>
+        <div className={`${styles.loginlanternbox} absolute w-auto h-auto`}>
+
+        <img src="loginlantern.png" className={`${styles.loginlantern}`}/>
+        </div>
 
       {/* Animated stars */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        {[...Array(50)].map((_, i) => (
-          <div
-            key={i}
-            className="absolute w-1 h-1 bg-white rounded-full animate-pulse"
-            style={{
-              top: `${(i * 7.3) % 100}%`,
-              left: `${(i * 11.7) % 100}%`,
-              animationDelay: `${(i * 0.1) % 3}s`,
-              animationDuration: `${2 + (i * 0.05) % 3}s`,
-              opacity: 0.6,
-            }}
-          ></div>
-        ))}
-      </div>
+      <TwinklingStars/>
 
       {/* Main content */}
+      <div className='absolute inset-0 flex items-center justify-center'>
       <div className="relative z-10 flex min-h-screen items-center justify-center py-12">
         <div className="w-full max-w-md">
           {/* Header */}
           <div className="text-center mb-8 sm:mb-12">
             <div className="flex items-center justify-center gap-3 mb-4">
-              <span className="text-5xl sm:text-6xl filter brightness-0 invert animate-bounce">🌙</span>
+              <span className="text-5xl sm:text-6xl animate-bounce">🌙</span>
             </div>
             <h1 className="text-4xl sm:text-5xl font-bold text-white mb-3" style={{ fontFamily: "'Protest Guerrilla', sans-serif" }}>
               PECFEST 2025
@@ -339,20 +334,18 @@ function RegisterPageContent() {
             {step === 'email' ? (
               <div className="space-y-6">
                 <form onSubmit={handleSendOtp} className="space-y-6">
-                  <div className="space-y-2">
-                    <label htmlFor="email" className="block text-white text-base sm:text-lg font-medium">
-                      Email Address
-                    </label>
+                  <div className={styles.coolinput}>
                     <input
                       id="email"
                       type="email"
-                      placeholder="your@email.com"
+                      placeholder=" "
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       required
-                      className={`${styles.inputField} w-full border-2 text-white placeholder:text-slate-500 focus:border-blue-400 focus:ring-2 focus:ring-blue-400/50 h-12 text-base sm:text-lg rounded-xl px-4 outline-none transition-all`}
+                      className={styles.input}
                       disabled={loading}
                     />
+                    <label htmlFor="email" className={styles.text}>Email Address</label>
                   </div>
 
                   {error && (
@@ -675,6 +668,8 @@ function RegisterPageContent() {
         </div>
       </div>
 
+
+      </div>
       {/* Bottom gradient */}
       <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-black/20 to-transparent pointer-events-none" />
     </div>

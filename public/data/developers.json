@@ -12,11 +12,11 @@
     {
       "id": "head-2",
       "name": "Prasuk Jain",
-      "image": "/prasuk.jpg",
-      "instagram": "https://instagram.com",
-      "linkedin": "https://linkedin.com",
-      "email": "jane@example.com",
-      "phone": "+91-9876543211"
+      "image": "/prasukja.jpg",
+      "instagram": "https://www.instagram.com/prasukjain_07?igsh=N3hkcTR3Z3hqNTRh&utm_source=qr",
+      "linkedin": "https://www.linkedin.com/in/prasuk-jain-1053b5244/",
+      "email": "prasukjain0703@gmail.com",
+      "phone": "+91-7417345233"
     },
     {
       "id": "head-3",
@@ -29,9 +29,17 @@
     }
   ],
   "developers": [
-    
     {
       "id": "dev-1",
+      "name": "Kaavya Sidher",
+      "image": "/WhatsApp Image 2025-10-12 at 01.16.49_ea688ec3.jpg",
+      "instagram": "https://www.instagram.com/kaavya7705?igsh=MWJ1dnhqaGxkNzJ0",
+      "linkedin": "https://www.linkedin.com/in/kaavya-sidher-30a82a29a/",
+      "email": "kaavya4860@gmail.com",
+      "phone": "+91-8847082881"
+    },
+    {
+      "id": "dev-2",
       "name": "Akshat Gupta",
       "image": "/WhatsApp Image 2025-10-26 at 13.42.14_6b2b8469.jpg",
       "instagram": "https://www.instagram.com/akshatguptax/?next=%2F&hl=en",
@@ -40,22 +48,13 @@
       "phone": "+91-9872889057"
     },
     {
-      "id": "dev-2",
+      "id": "dev-3",
       "name": "Bhavik Vishal Sharma",
       "image": "/bhavik.jpeg",
       "instagram": "https://www.instagram.com/its_bhavik7pvt/",
       "linkedin": "https://www.linkedin.com/in/bhavik-sharma-09a6391ab/",
       "email": "bhavik85747@gmail.com",
       "phone": "+91-7347336055"
-    },
-    {
-      "id": "dev-3",
-      "name": "Kaavya Sidher",
-      "image": "/WhatsApp Image 2025-10-12 at 01.16.49_ea688ec3.jpg",
-      "instagram": "https://www.instagram.com/kaavya7705?igsh=MWJ1dnhqaGxkNzJ0",
-      "linkedin": "https://www.linkedin.com/in/kaavya-sidher-30a82a29a/",
-      "email": "kaavya4860@gmail.com",
-      "phone": "+91-8847082881"
     },
     {
       "id": "dev-4",
@@ -66,6 +65,5 @@
       "email": "arushijain866@gmail.com",
       "phone": "+91-9872553799"
     }
-    
   ]
 }

@@ -132,7 +132,7 @@ export default function AdminNavbar() {
       label: 'Events',
       icon: Calendar,
       items: [
-        { label: 'Add Events', href: '/admin/addevents', icon: Plus },
+        ...(adminUser?.accesslevel !== 1 ? [{ label: 'Add Events', href: '/admin/addevents', icon: Plus }] : []),
         { label: 'View Events', href: '/admin/viewevents', icon: Eye },
       ],
     },
@@ -144,7 +144,7 @@ export default function AdminNavbar() {
         { label: 'Payments', href: '/admin/registrations', icon: Users },
         { label: 'Event Registrations', href: '/admin/eventregistrations', icon: Users },
         { label: 'Discounts', href: '/admin/discounts', icon: Percent },
-        { label: 'Clearance', href: '/admin/clearance', icon: FileText },
+        ...(adminUser?.accesslevel !== 1 ? [{ label: 'Clearance', href: '/admin/clearance', icon: FileText }] : []),
       ],
     },
   };

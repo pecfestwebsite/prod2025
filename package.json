@@ -9,6 +9,7 @@
   },
   "dependencies": {
     "@auth0/auth0-react": "^2.8.0",
+    "@react-three/fiber": "^9.4.0",
     "@use-gesture/react": "^10.3.1",
     "@vercel/analytics": "^1.5.0",
     "@vercel/speed-insights": "^1.2.0",
@@ -30,6 +31,7 @@
     "react-pdf": "^10.2.0",
     "styled-components": "^6.1.19",
     "tailwind-merge": "^3.3.1",
+    "three": "^0.181.1",
     "use-gesture": "^1.0.0"
   },
   "devDependencies": {

@@ -7,7 +7,7 @@ import { IEvent } from '@/models/Event';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import EventRegistrationForm from '@/components/EventRegistrationForm';
-export const dynamic = 'force-dynamic';
+
 const TwinklingStars = () => {
   const [stars, setStars] = useState<any[]>([]);
   const [isClient, setIsClient] = useState(false);
@@ -112,7 +112,6 @@ export default function EventDescriptionPage() {
     const dateObj = typeof date === 'string' ? new Date(date) : date;
     if (isNaN(dateObj.getTime())) return 'Invalid Date';
     return dateObj.toLocaleDateString('en-US', {
-      timeZone: "UTC",
       weekday: 'long',
       year: 'numeric',
       month: 'long',
@@ -223,9 +222,10 @@ export default function EventDescriptionPage() {
                   transition={{ delay: 0.2, duration: 0.5 }}
                 >
                   <img
-                    src={event.image?.includes('PECFEST 2025') ? '/final.png' : (event.image || '/final.png')}
+                    src={event.image?.includes('PECFEST_2024') ? '/Pecfest X Mood Indigo Letter Head.pdf_20240920_201728_0000.png' : (event.image || '/Pecfest X Mood Indigo Letter Head.pdf_20240920_201728_0000.png')}
                     alt={event.eventName}
-                    className="w-full h-full object-contain" 
+                    className="w-full h-full object-contain"
+                    style={(event.image?.includes('PECFEST_2024') || !event.image) ? { transform: 'rotate(-90deg)' } : {}}
                   />
                   <div className="absolute top-4 right-4 z-10 bg-gradient-to-r from-[#b53da1]/20 to-[#ed6ab8]/20 backdrop-blur-sm rounded-full p-4 border border-[#b53da1]/40">
                     <span className="text-4xl">{getCategoryIcon(event.category)}</span>
@@ -284,9 +284,7 @@ export default function EventDescriptionPage() {
                     <Calendar className="w-6 h-6 text-[#ffd4b9]" />
                     <h3 className="text-xl font-bold text-[#ffd4b9] font-elegant">Date & Time</h3>
                   </div>
-                  <p className="text-white font-arabian text-lg">
-                    {formatDate(event.dateTime)} - {formatDate(event.endDateTime)}
-                  </p>
+                  <p className="text-white font-arabian text-lg">{formatDate(event.dateTime)}</p>
                 </div>
 
                 {/* Location */}

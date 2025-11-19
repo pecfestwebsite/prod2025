@@ -5,14 +5,31 @@
       {
         "id": "22104040",
         "name": "Aarav Bhardwaj",
-        "image": "",
+        "image": "1N66Hijo1AK_FRMNS73aPf5Y7p4LwuhbB",
         "role": "Convener"
       },
       {
         "id": "22105021",
         "name": "Saarthak Goyal",
-        "image": "",
+        "image": "logo.png",
         "role": "Co-Convener"
+      }
+    ]
+  },
+  {
+    "committeeName": "Website Management",
+    "members": [
+      {
+        "id": "22106063",
+        "name": "Ribhav Aggarwal",
+        "image": "1ihjKsUDiMyGs6U0WignAiMNoCfrOz5yQ",
+        "role": "Head"
+      },
+      {
+        "id": "22103104",
+        "name": "Prasuk Jain",
+        "image": "1BDxpz4sX5dWIdEcu8-Sw7y--KetLKrBf",
+        "role": "Co-Head"
       }
     ]
   },
@@ -22,13 +39,13 @@
       {
         "id": "22107011",
         "name": "Manik Goyal",
-        "image": "/images/team/Manik_Goyal.jpg",
+        "image": "1ulZsVcMXNv5g9MDemtCFln1UCN0yuVcy",
         "role": "Head"
       },
       {
         "id": "22108035",
         "name": "Raushan Kumar",
-        "image": "/images/team/Raushan_Kumar.jpg",
+        "image": "1CAZxnfN9zfZOmqHAmvU0wGZZ17wtWVXj",
         "role": "Co-Head"
       }
     ]
@@ -39,31 +56,31 @@
       {
         "id": "22106005",
         "name": "Harmanpreet Kaur",
-        "image": "/images/team/Harmanpreet_Kaur.jpg",
+        "image": "1rAYaVhSeQuOtqmZFLPTgHOH_wZpdPPXP",
         "role": "Head"
+      },
+      {
+        "id": "22105029",
+        "name": "Aanya Saini",
+        "image": "1UIL6aGCWAaaVDtKDHN9WlXqv_0cNbe7b",
+        "role": "Operational Head"
       },
       {
         "id": "22104009",
         "name": "Lakshit Jain",
-        "image": "/images/team/Lakshit_Jain.jpg",
+        "image": "logo.png",
         "role": "Co-Head"
       },
       {
         "id": "22107025",
         "name": "Hrdiyaa Nijhawan",
-        "image": "/images/team/Hrdiyaa_Nijhawan.jpg",
-        "role": "Operational Head"
-      },
-      {
-        "id": "22105029",
-        "name": "Aanya Saini",
-        "image": "/images/team/Aanya_Saini.jpg",
+        "image": "1PboiV42sXh8fwHTTjWefCqAk-vOB9jVE",
         "role": "Operational Head"
       },
       {
         "id": "22103021",
         "name": "Brahmnoor Singh",
-        "image": "/images/team/Brahmnoor_Singh.jpg",
+        "image": "1gphkRfqjdqB_5E6A_x0yIfWSTqfmo3t5",
         "role": "Operational Head"
       }
     ]
@@ -74,19 +91,19 @@
       {
         "id": "22105068",
         "name": "Vaibhav Makkar",
-        "image": "/images/team/Vaibhav_Makkar.jpg",
+        "image": "1aTWAtWeGW-nbTxIzfMwnOoQiY0KZ-1SU",
         "role": "Head"
       },
       {
         "id": "22107018",
         "name": "Ekom P Saidha",
-        "image": "/images/team/Ekom_P_Saidha.jpg",
+        "image": "1N0sVEzocaHkloSkzP1TIFt6dKz4CQ8cE",
         "role": "Co-Head"
       },
       {
         "id": "22105133",
         "name": "Archie Garg",
-        "image": "/images/team/Archie_Garg.jpg",
+        "image": "1Hyx-7EV41KgprclHls-VyUDPsIUrNrdI",
         "role": "Operational Head"
       }
     ]
@@ -97,19 +114,19 @@
       {
         "id": "22109036",
         "name": "Vikas Attri",
-        "image": "/images/team/Vikas_Attri.jpg",
+        "image": "1MW2zeLR1NxTtRG6K0YgVyZdoxkYVxdiC",
         "role": "Head"
       },
       {
         "id": "22105076",
         "name": "Rishabh Saggar",
-        "image": "/images/team/Rishabh_Saggar.jpg",
+        "image": "1SJhEvV_TTVwEyx_SFHcB5KeCisoX7ryG",
         "role": "Co-Head"
       },
       {
         "id": "22102101",
         "name": "Aashish dodwal",
-        "image": "/images/team/Aashish_dodwal.jpg",
+        "image": "logo.png",
         "role": "Operational Head"
       }
     ]
@@ -120,25 +137,25 @@
       {
         "id": "22105025",
         "name": "Harshul Singla",
-        "image": "/images/team/Harshul_Singla.jpg",
+        "image": "1lFqXB5lB4RfTvuL3hXAY9_rRFoZe1AP4",
         "role": "Head"
       },
       {
         "id": "22101025",
         "name": "Varun",
-        "image": "/images/team/Varun.jpg",
+        "image": "1RsSlAs3iQ3yPRCvN3AfUfRYMvSlnns72",
         "role": "Co-Head"
       },
       {
         "id": "22108052",
         "name": "Jatin Chauhan",
-        "image": "/images/team/Jatin_Chauhan.jpg",
+        "image": "1_TA6x9r00KH_gikMugATdgdLIJS3c6eK",
         "role": "Operational Head"
       },
       {
         "id": "22102127",
         "name": "Indra Kumar",
-        "image": "/images/team/Indra_Kumar.jpg",
+        "image": "1hgkImeO0N69vqIJdTmlpzxTg0japi7GM",
         "role": "Operational Head"
       }
     ]
@@ -149,31 +166,31 @@
       {
         "id": "22107088",
         "name": "Gopal Pareek",
-        "image": "/images/team/Gopal_Pareek.jpg",
+        "image": "14YW52JXOCXvvIqd9CwWC2LvLaEzCMh-0",
         "role": "Head"
       },
       {
         "id": "22106054",
         "name": "Sartaaj",
-        "image": "/images/team/Sartaaj.jpg",
+        "image": "17QIxXo7OxSakFc1WR5AtasTKlumZRqXA",
         "role": "Co-Head"
       },
       {
         "id": "22102037",
         "name": "Aayush Chauhan",
-        "image": "/images/team/Aayush_Chauhan.jpg",
+        "image": "logo.png",
         "role": "Operational Head"
       },
       {
         "id": "22104074",
         "name": "Hitesh Kochar",
-        "image": "/images/team/Hitesh_Kochar.jpg",
+        "image": "logo.png",
         "role": "Co-Head"
       },
       {
         "id": "22102097",
         "name": "Rishabh Tripathi",
-        "image": "/images/team/Rishabh_Tripathi.jpg",
+        "image": "1XwFJ_JHfjaUfywL1WqkbfGHz74nD83HQ",
         "role": "Co-Head"
       }
     ]
@@ -184,13 +201,13 @@
       {
         "id": "22107027",
         "name": "Avi Sinha",
-        "image": "/images/team/Avi_Sinha.jpg",
+        "image": "1x8Qkkj786nDbd3TWoUNSr6sguOeGmuc3",
         "role": "Head"
       },
       {
         "id": "22102113",
         "name": "Mihika Arora",
-        "image": "/images/team/Mihika_Arora.jpg",
+        "image": "14nrObxQ7f6wz3Bz8n3Tc-YX-l7lcQ3Ed",
         "role": "Co-Head"
       }
     ]
@@ -201,13 +218,13 @@
       {
         "id": "22105086",
         "name": "Kunal Dhawan",
-        "image": "/images/team/Kunal_Dhawan.jpg",
+        "image": "1Y2C0P9FOugo5VfGGuO1b2lugUXXO6Wut",
         "role": "Head"
       },
       {
         "id": "22105005",
         "name": "Aryaman Sharma",
-        "image": "/images/team/Aryaman_Sharma.jpg",
+        "image": "1TYdViNq2HaM1ykSLLOlO295jH-_rXoeL",
         "role": "Co-Head"
       }
     ]
@@ -218,19 +235,19 @@
       {
         "id": "22105031",
         "name": "Ishaan Gupta",
-        "image": "/images/team/Ishaan_Gupta.jpg",
+        "image": "1_8Ycs1VVeoF7g2o3dOe1PO1DfrAfILN7",
         "role": "Head"
       },
       {
         "id": "22105048",
         "name": "Sidharth Chauhan",
-        "image": "/images/team/Sidharth_Chauhan.jpg",
+        "image": "15cG_oOHK4P3SwI5jY7byIl315qB5EGHm",
         "role": "Co-Head"
       },
       {
         "id": "22105142",
         "name": "Tushar Saini",
-        "image": "/images/team/Tushar_Saini.jpg",
+        "image": "1ZrRqyJooog5VZ5FTLjFI1f3Edr5T9-aP",
         "role": "Operational Head"
       }
     ]
@@ -241,13 +258,13 @@
       {
         "id": "22108011",
         "name": "Kinjal Gulati",
-        "image": "/images/team/Kinjal_Gulati.jpg",
+        "image": "1v28fn0dq9DYReApdpYc8HcVB8NHSZ5YL",
         "role": "Head"
       },
       {
         "id": "22109033",
         "name": "V. Ajith",
-        "image": "/images/team/V_Ajith.jpg",
+        "image": "13o9mP4x01Xt7oH_enfNOcSNbSdyPP2qI",
         "role": "Co-Head"
       }
     ]
@@ -258,100 +275,55 @@
       {
         "id": "22108058",
         "name": "Mahesh Ratta",
-        "image": "/images/team/Mahesh_Ratta.jpg",
+        "image": "1uyiv9-nAu0YlAPNM2xAJDRAEY4jEY6N5",
         "role": "Head"
       },
       {
         "id": "22109017",
         "name": "Vansh Dhiman",
-        "image": "/images/team/Vansh_Dhiman.jpg",
+        "image": "1ieqgfMWpel5wmtH1_EfcNxTHVZU4LCEJ",
         "role": "Co-Head"
       }
     ]
   },
-  {
-    "committeeName": "Website Management",
-    "members": [
-      {
-        "id": "22106063",
-        "name": "Ribhav Aggarwal",
-        "image": "/images/team/Ribhav_Aggarwal.jpg",
-        "role": "Head"
-      },
-      {
-        "id": "22103104",
-        "name": "Prasuk Jain",
-        "image": "/images/team/Prasuk_Jain.jpg",
-        "role": "Co-Head"
-      }
-    ]
-  },
-  {
-    "committeeName": "Publicity",
-    "members": [
-      {
-        "id": "22105026",
-        "name": "Saksham Prashar",
-        "image": "/images/team/Saksham_Prashar.jpg",
-        "role": "Head"
-      },
-      {
-        "id": "22103088",
-        "name": "Saira Garg",
-        "image": "/images/team/Saira_Garg.jpg",
-        "role": "Co-Head"
-      },
-      {
-        "id": "22103009",
-        "name": "Mananpreet kaur",
-        "image": "/images/team/Mananpreet_Kaur.jpg",
-        "role": "Operational Head"
-      },
-      {
-        "id": "22105009",
-        "name": "Ishnoor Singh",
-        "image": "/images/team/Ishnoor_Singh.jpg",
-        "role": "Operational Head"
-      }
-    ]
-  },
+  
   {
     "committeeName": "Security and Discipline",
     "members": [
       {
         "id": "22103128",
         "name": "Sehajdeep Singh",
-        "image": "/images/team/Sehajdeep_Singh.jpg",
+        "image": "15i9ZozZxje9GG_qSaq9LOsLq_L6AwSWn",
         "role": "Head"
       },
       {
         "id": "22104024",
         "name": "Armaan Singh Brar",
-        "image": "/images/team/Armaan_Singh_Brar.jpg",
+        "image": "1YLxjXddTyw7bXnBTMds3B3S-YnieZuOm",
         "role": "Co-Head"
       },
       {
         "id": "22105053",
         "name": "Vansh Bhatia",
-        "image": "/images/team/Vansh_Bhatia.jpg",
+        "image": "logo.png",
         "role": "Operational Head"
       },
       {
         "id": "22103075",
         "name": "Pratham Garg",
-        "image": "/images/team/Pratham_Garg.jpg",
+        "image": "1GiD7uPJXlUVuDZZGVznx1OZww_okwSm7",
         "role": "Operational Head"
       },
       {
         "id": "22106040",
         "name": "Gauravpreet Singh",
-        "image": "/images/team/Gauravpreet_Singh.jpg",
+        "image": "14QHbSgU1XmLO8_oU79W-8iLnXhqxn-hR",
         "role": "Operational Head"
       },
       {
         "id": "22109028",
         "name": "Mayank Saharan",
-        "image": "/images/team/Mayank_Saharan.jpg",
+        "image": "1ECTN9FumAkoJ-qSuxAumO8HdVe2VlG1I",
         "role": "Operational Head"
       }
     ]
@@ -362,14 +334,43 @@
       {
         "id": "22104103",
         "name": "Akshay Sharma",
-        "image": "/images/team/Akshay_Sharma.jpg",
+        "image": "11bVDTFapmRUQUDZBMzr26AJtA9AH74bb",
         "role": "Head"
       },
       {
         "id": "22105054",
         "name": "Aniket Singh Indora",
-        "image": "/images/team/Aniket_Singh_Indora.jpg",
+        "image": "1XQrGASFoOgnAbiUqa9NepdTAcAQFji_2",
         "role": "Co-Head"
+      }
+    ]
+  },
+  {
+    "committeeName": "Publicity",
+    "members": [
+      {
+        "id": "22105026",
+        "name": "Saksham Prashar",
+        "image": "1D2CzIwXxA5LPkvCjf6QDvBphgIKz2NBF",
+        "role": "Head"
+      },
+      {
+        "id": "22103088",
+        "name": "Saira Garg",
+        "image": "1bIBNoxiwQnocFwX9VM_7eWF5f-qZc_v_",
+        "role": "Co-Head"
+      },
+      {
+        "id": "22103009",
+        "name": "Mananpreet kaur",
+        "image": "1nxM5U6apmUtXzrsdIn_ywACOhmZ3AOp6",
+        "role": "Operational Head"
+      },
+      {
+        "id": "22105009",
+        "name": "Ishnoor Singh",
+        "image": "17ws5ukHihTURqw9ULl5XhlDNVD9-E0RP",
+        "role": "Operational Head"
       }
     ]
   }

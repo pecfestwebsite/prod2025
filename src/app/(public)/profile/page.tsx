@@ -1,7 +1,7 @@
 'use client';
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { User, Mail, Phone, Building2, IdCard, Users, Calendar, Copy, CheckCircle, Loader2, Edit2, X, Save } from 'lucide-react';
+import { User, Mail, Phone, Building2, IdCard, Users, Calendar, Copy, CheckCircle, Loader2, Edit2, X, Save, Clock, MapPin, ChevronDown } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
@@ -74,6 +74,8 @@ export default function ProfilePage() {
   const [editedUser, setEditedUser] = useState<UserData | null>(null);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [saveError, setSaveError] = useState('');
+  const [eventDetails, setEventDetails] = useState<Record<string, any>>({});
+  const [expandedEvent, setExpandedEvent] = useState<string | null>(null);
   const router = useRouter();
 
   useEffect(() => {
@@ -123,6 +125,24 @@ export default function ProfilePage() {
       const regData = await regResponse.json();
       const userRegistrations = regData.registrations || [];
       setRegistrations(userRegistrations);
+      
+      // Fetch event details for all registered events
+      const eventIds = userRegistrations.map((reg: Registration) => reg.eventId);
+      if (eventIds.length > 0) {
+        const details: Record<string, any> = {};
+        for (const eventId of eventIds) {
+          try {
+            const response = await fetch(`/api/events/${eventId}`);
+            const data = await response.json();
+            if (data.event) {
+              details[eventId] = data.event;
+            }
+          } catch (err) {
+            console.error(`Error fetching event ${eventId}:`, err);
+          }
+        }
+        setEventDetails(details);
+      }
 
     } catch (error) {
       console.error('Error fetching profile:', error);
@@ -232,11 +252,13 @@ export default function ProfilePage() {
     <>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Protest+Guerrilla&display=swap');
-        @import url('https://fonts.googleapis.com/css2?family=Scheherazade+New:wght@400;700&display=swap');
+        @font-face {
+          font-family: 'Arabic';
+          src: url('/arabic.otf') format('opentype');
+        }
         
-        body { font-family: 'Scheherazade New', serif; background-color: #010101; }
-        .font-display { font-family: 'Protest Guerrilla', sans-serif; }
-        .font-arabian { font-family: 'Scheherazade New', serif; }
+        .font-display { font-family: 'Protest Guerrilla', sans-serif !important; }
+        .font-arabian { font-family: 'Arabic', serif !important; }
         
         .custom-scrollbar::-webkit-scrollbar {
           width: 6px;
@@ -252,6 +274,13 @@ export default function ProfilePage() {
         .custom-scrollbar::-webkit-scrollbar-thumb:hover {
           background: linear-gradient(180deg, #ed6ab8, #fea6cc);
         }
+        @keyframes gradient {
+          0%, 100% { background-position: 0% 50%; }
+          50% { background-position: 100% 50%; }
+        }
+        .animate-gradient {
+          animation: gradient 4s ease infinite;
+        }
       `}</style>
       
       <main className="min-h-screen bg-gradient-to-b from-[#140655] via-[#4321a9] to-[#2a0a56] text-white">
@@ -263,8 +292,8 @@ export default function ProfilePage() {
               animate={{ opacity: 1, y: 0 }}
               className="text-center mb-8"
             >
-              <h1 className="font-display text-6xl md:text-8xl text-transparent bg-clip-text bg-gradient-to-r from-[#ffd4b9] via-[#fea6cc] to-[#ed6ab8] mb-4">
-                MY PROFILE
+              <h1 className="font-arabian text-6xl md:text-8xl animate-gradient bg-gradient-to-r from-white via-yellow-400 via-amber-500 via-yellow-600 via-amber-700 to-white bg-clip-text text-transparent bg-[length:200%_auto] drop-shadow-[0_0_30px_rgba(251,191,36,0.8)] tracking-wider">
+                My Profile
               </h1>
             </motion.div>
           </div>
@@ -289,12 +318,12 @@ export default function ProfilePage() {
 
         {/* Profile Content */}
         <div className="max-w-7xl mx-auto px-4 pb-16">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* User Details Card */}
+          <div className="grid grid-cols-1 lg:grid-cols-10 gap-8">
+            {/* User Details Card - Sticky */}
             <motion.div
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
-              className="lg:col-span-1"
+              className="lg:col-span-3 lg:sticky lg:top-32 lg:h-fit"
             >
               <div className="bg-[#140655]/40 backdrop-blur-lg rounded-2xl p-6 border border-[#b53da1]/20">
                 <div className="flex items-center justify-between mb-6">
@@ -370,14 +399,15 @@ export default function ProfilePage() {
               </div>
             </motion.div>
 
-            {/* Registered Events */}
-            <motion.div
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              className="lg:col-span-2"
-            >
+            {/* Registered Events + Calendar */}
+            <div className="lg:col-span-7 flex flex-col gap-8">
+              {/* Registered Events */}
+              <motion.div
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+              >
               <div className="bg-gradient-to-br from-[#2a0a56]/80 to-[#4321a9]/80 backdrop-blur-lg rounded-3xl p-6 border-2 border-[#b53da1]/30 shadow-2xl">
-                <h2 className="text-2xl font-bold text-[#ffd4b9] mb-6">Registered Events ({registrations.length})</h2>
+                <h2 className="text-2xl font-bold text-[#ffd4b9] mb-6">My Events ({registrations.length})</h2>
 
                 {registrations.length === 0 ? (
                   <div className="text-center py-12">
@@ -394,157 +424,208 @@ export default function ProfilePage() {
                       const teamMemberCount = hasTeam ? registration.team!.totalMembers : 0;
                       const members = hasTeam ? registration.team!.members : [];
                       const isTeamLeader = hasTeam ? registration.team!.isLeader : false;
+                      const eventDateStr = eventDetails[registration.eventId]?.dateTime;
+                      const eventDate = eventDateStr ? new Date(eventDateStr) : null;
+                      const isValidDate = eventDate && !isNaN(eventDate.getTime());
+                      const isExpanded = expandedEvent === registration._id;
+                      const hasExpandableContent = hasTeam || members.length > 0;
 
                       return (
                         <motion.div
                           key={registration._id}
                           initial={{ opacity: 0, y: 20 }}
                           animate={{ opacity: 1, y: 0 }}
-                          className="bg-[#010101]/40 border-2 border-[#b53da1]/30 rounded-xl p-5 hover:border-[#ed6ab8] transition-all"
+                          className="bg-[#010101]/40 border-2 border-[#b53da1]/30 rounded-xl hover:border-[#ed6ab8] transition-all overflow-hidden"
                         >
-                          <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
-                            <div className="flex-1">
-                              <div className="flex items-center gap-3 mb-2">
-                                <h3 className="text-xl font-bold text-white">{registration.eventId}</h3>
-                                {isTeamLeader && (
-                                  <span className="px-3 py-1 bg-gradient-to-r from-[#b53da1] to-[#ed6ab8] text-white text-xs font-bold rounded-full flex items-center gap-1 shadow-lg">
-                                    <Users className="w-3 h-3" />
-                                    TEAM LEADER
-                                  </span>
-                                )}
+                          <div className="flex flex-col md:flex-row gap-0">
+                            {/* Date Box */}
+                            {isValidDate && eventDate && (
+                              <div className="bg-gradient-to-br from-[#b53da1]/30 to-[#ed6ab8]/20 border-r border-[#b53da1]/30 p-4 flex flex-col items-center justify-center min-w-[100px]">
+                                <div className="text-center">
+                                  <div className="text-3xl font-bold text-white">
+                                    {eventDate.getDate()}
+                                  </div>
+                                  <div className="text-xs font-semibold text-[#ffd4b9]">
+                                    {eventDate.toLocaleDateString('en-US', { month: 'short' })}
+                                  </div>
+                                </div>
                               </div>
-                              <div className="flex flex-wrap gap-2 mb-3">
-                                {registration.verified ? (
-                                  <span className="px-3 py-1 bg-green-500/20 border border-green-500/50 text-green-400 text-sm rounded-full flex items-center gap-1">
-                                    <CheckCircle className="w-3 h-3" />
-                                    Verified
-                                  </span>
-                                ) : (
-                                  <span className="px-3 py-1 bg-yellow-500/20 border border-yellow-500/50 text-yellow-400 text-sm rounded-full flex items-center gap-1">
-                                    <Loader2 className="w-3 h-3" />
-                                    Pending
-                                  </span>
+                            )}
+
+                            {/* Event Details */}
+                            <div className="flex-1 p-5">
+                              <div className="flex items-center justify-between mb-3">
+                                <div className="flex-1">
+                                  <h3 className="text-xl font-bold text-white mb-2">{registration.eventId}</h3>
+                                  <div className="flex flex-wrap gap-2">
+                                    {isTeamLeader && (
+                                      <span className="px-3 py-1 bg-gradient-to-r from-[#b53da1] to-[#ed6ab8] text-white text-xs font-bold rounded-full flex items-center gap-1 shadow-lg">
+                                        <Users className="w-3 h-3" />
+                                        TEAM LEADER
+                                      </span>
+                                    )}
+                                    {registration.verified ? (
+                                      <span className="px-3 py-1 bg-green-500/20 border border-green-500/50 text-green-400 text-sm rounded-full flex items-center gap-1">
+                                        <CheckCircle className="w-3 h-3" />
+                                        Verified
+                                      </span>
+                                    ) : (
+                                      <span className="px-3 py-1 bg-yellow-500/20 border border-yellow-500/50 text-yellow-400 text-sm rounded-full flex items-center gap-1">
+                                        <Loader2 className="w-3 h-3" />
+                                        Pending
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                                
+                                {hasTeam && (
+                                  <button
+                                    onClick={() => setExpandedEvent(isExpanded ? null : registration._id)}
+                                    className="p-2 bg-[#b53da1]/20 hover:bg-[#b53da1]/40 rounded-lg transition-all flex items-center gap-2"
+                                  >
+                                    <Users className="w-4 h-4 text-[#fea6cc]" />
+                                    <span className="text-sm text-[#fea6cc]">Team ({teamMemberCount})</span>
+                                    <ChevronDown className={`w-4 h-4 text-[#fea6cc] transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+                                  </button>
                                 )}
                               </div>
 
                               <div className="space-y-2 text-sm">
-                                <div className="flex items-center gap-2 text-[#fea6cc]">
-                                  <Calendar className="w-4 h-4" />
-                                  <span>Registered: {formatDate(registration.dateTime)}</span>
-                                </div>
+                                {eventDetails[registration.eventId] && (
+                                  <>
+                                    <div className="flex items-center gap-2 text-[#fea6cc]">
+                                      <MapPin className="w-4 h-4" />
+                                      <span>{eventDetails[registration.eventId].location}</span>
+                                    </div>
+                                  </>
+                                )}
                               </div>
                             </div>
 
-                            {/* Team Info */}
-                            {hasTeam && (
-                              <div className="bg-gradient-to-r from-[#b53da1]/20 to-[#ed6ab8]/20 border border-[#b53da1]/40 rounded-xl p-4 min-w-[280px]">
-                                <div className="flex items-center gap-2 mb-3">
-                                  <Users className="w-5 h-5 text-[#fea6cc]" />
-                                  <span className="text-[#ffd4b9] font-semibold">Team Details</span>
-                                  {isTeamLeader && (
-                                    <span className="ml-auto text-xs px-2 py-0.5 bg-[#ed6ab8]/30 text-[#ffd4b9] rounded-full">
-                                      Leader
-                                    </span>
-                                  )}
-                                </div>
-                                
-                                <div className="space-y-3">
-                                  <div>
-                                    <p className="text-xs text-[#fea6cc]/60 mb-1">Team ID</p>
-                                    <div className="flex items-center gap-2">
-                                      <code className="text-xs text-white font-mono bg-[#010101]/40 px-2 py-1 rounded flex-1 break-all">
-                                        {registration.team!.teamId}
-                                      </code>
-                                      <button
-                                        onClick={() => copyTeamId(registration.team!.teamId)}
-                                        className="p-1.5 bg-[#4321a9]/40 hover:bg-[#4321a9]/60 rounded transition-all"
-                                      >
-                                        {copiedTeamId === registration.team!.teamId ? (
-                                          <CheckCircle className="w-4 h-4 text-green-400" />
-                                        ) : (
-                                          <Copy className="w-4 h-4 text-[#fea6cc]" />
-                                        )}
-                                      </button>
-                                    </div>
+                          </div>
+                          
+                          {/* Expandable Team Info */}
+                          <AnimatePresence>
+                            {hasTeam && isExpanded && (
+                              <motion.div
+                                initial={{ height: 0, opacity: 0 }}
+                                animate={{ height: 'auto', opacity: 1 }}
+                                exit={{ height: 0, opacity: 0 }}
+                                transition={{ duration: 0.3, ease: 'easeInOut' }}
+                                className="overflow-hidden"
+                              >
+                                <div className="bg-gradient-to-r from-[#b53da1]/20 to-[#ed6ab8]/20 border-t border-[#b53da1]/40 p-4">
+                                  <div className="flex items-center gap-2 mb-3">
+                                    <Users className="w-5 h-5 text-[#fea6cc]" />
+                                    <span className="text-[#ffd4b9] font-semibold">Team Details</span>
+                                    {isTeamLeader && (
+                                      <span className="ml-auto text-xs px-2 py-0.5 bg-[#ed6ab8]/30 text-[#ffd4b9] rounded-full">
+                                        Leader
+                                      </span>
+                                    )}
                                   </div>
-
-                                  <div className="flex items-center justify-between pt-2 border-t border-[#b53da1]/30">
-                                    <span className="text-sm text-[#fea6cc]">Total Members</span>
-                                    <span className="text-2xl font-bold text-white">
-                                      {teamMemberCount}
-                                    </span>
-                                  </div>
-
-                                  {/* Team Members List */}
-                                  {members.length > 0 && (
-                                    <div className="pt-2 border-t border-[#b53da1]/30">
-                                      <p className="text-xs text-[#fea6cc]/60 mb-2">Team Members ({members.length})</p>
-                                      <div className="space-y-2 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
-                                        {members.map((member, idx) => {
-                                          const isCurrentUser = member.userId === user?.email;
-                                          
-                                          return (
-                                            <div 
-                                              key={idx} 
-                                              className={`p-3 rounded-lg border ${
-                                                isCurrentUser 
-                                                  ? 'bg-[#4321a9]/40 border-[#ed6ab8]/50' 
-                                                  : 'bg-[#010101]/30 border-[#b53da1]/20'
-                                              }`}
-                                            >
-                                              <div className="flex items-start justify-between gap-2 mb-2">
-                                                <div className="flex items-center gap-2 flex-1 min-w-0">
-                                                  <User className="w-4 h-4 text-[#fea6cc] flex-shrink-0" />
-                                                  <div className="flex-1 min-w-0">
-                                                    <div className="flex items-center gap-2 mb-0.5">
-                                                      <span className="text-sm text-white font-semibold truncate">
-                                                        {member.name}
-                                                      </span>
-                                                      {isCurrentUser && (
-                                                        <span className="text-[10px] px-1.5 py-0.5 bg-[#ed6ab8]/40 text-white rounded-full flex-shrink-0">
-                                                          You
-                                                        </span>
-                                                      )}
-                                                    </div>
-                                                    <p className="text-xs text-[#fea6cc]/60 font-mono truncate">
-                                                      {member.userId}
-                                                    </p>
-                                                  </div>
-                                                </div>
-                                                <div className="flex items-center gap-1 flex-shrink-0">
-                                                  {member.isLeader && (
-                                                    <span className="text-[10px] px-1.5 py-0.5 bg-gradient-to-r from-[#b53da1] to-[#ed6ab8] text-white rounded-full font-bold">
-                                                      LEADER
-                                                    </span>
-                                                  )}
-                                                  {member.verified ? (
-                                                    <CheckCircle className="w-4 h-4 text-green-400" />
-                                                  ) : (
-                                                    <Loader2 className="w-4 h-4 text-yellow-400" />
-                                                  )}
-                                                </div>
-                                              </div>
-                                              <div className="flex items-center gap-2 text-xs text-[#fea6cc]/80">
-                                                <Phone className="w-3 h-3" />
-                                                <span>{member.phoneNumber}</span>
-                                              </div>
-                                            </div>
-                                          );
-                                        })}
+                                  
+                                  <div className="space-y-3">
+                                    <div>
+                                      <p className="text-xs text-[#fea6cc]/60 mb-1">Team ID</p>
+                                      <div className="flex items-center gap-2">
+                                        <code className="text-xs text-white font-mono bg-[#010101]/40 px-2 py-1 rounded flex-1 break-all">
+                                          {registration.team!.teamId}
+                                        </code>
+                                        <button
+                                          onClick={() => copyTeamId(registration.team!.teamId)}
+                                          className="p-1.5 bg-[#4321a9]/40 hover:bg-[#4321a9]/60 rounded transition-all"
+                                        >
+                                          {copiedTeamId === registration.team!.teamId ? (
+                                            <CheckCircle className="w-4 h-4 text-green-400" />
+                                          ) : (
+                                            <Copy className="w-4 h-4 text-[#fea6cc]" />
+                                          )}
+                                        </button>
                                       </div>
                                     </div>
-                                  )}
+
+                                    <div className="flex items-center justify-between pt-2 border-t border-[#b53da1]/30">
+                                      <span className="text-sm text-[#fea6cc]">Total Members</span>
+                                      <span className="text-2xl font-bold text-white">
+                                        {teamMemberCount}
+                                      </span>
+                                    </div>
+
+                                    {/* Team Members List */}
+                                    {members.length > 0 && (
+                                      <div className="pt-2 border-t border-[#b53da1]/30">
+                                        <p className="text-xs text-[#fea6cc]/60 mb-2">Team Members ({members.length})</p>
+                                        <div className="space-y-2 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
+                                          {members.map((member, idx) => {
+                                            const isCurrentUser = member.userId === user?.email;
+                                            
+                                            return (
+                                              <div 
+                                                key={idx} 
+                                                className={`p-3 rounded-lg border ${
+                                                  isCurrentUser 
+                                                    ? 'bg-[#4321a9]/40 border-[#ed6ab8]/50' 
+                                                    : 'bg-[#010101]/30 border-[#b53da1]/20'
+                                                }`}
+                                              >
+                                                <div className="flex items-start justify-between gap-2 mb-2">
+                                                  <div className="flex items-center gap-2 flex-1 min-w-0">
+                                                    <User className="w-4 h-4 text-[#fea6cc] flex-shrink-0" />
+                                                    <div className="flex-1 min-w-0">
+                                                      <div className="flex items-center gap-2 mb-0.5">
+                                                        <span className="text-sm text-white font-semibold truncate">
+                                                          {member.name}
+                                                        </span>
+                                                        {isCurrentUser && (
+                                                          <span className="text-[10px] px-1.5 py-0.5 bg-[#ed6ab8]/40 text-white rounded-full flex-shrink-0">
+                                                            You
+                                                          </span>
+                                                        )}
+                                                      </div>
+                                                      <p className="text-xs text-[#fea6cc]/60 font-mono truncate">
+                                                        {member.userId}
+                                                      </p>
+                                                    </div>
+                                                  </div>
+                                                  <div className="flex items-center gap-1 flex-shrink-0">
+                                                    {member.isLeader && (
+                                                      <span className="text-[10px] px-1.5 py-0.5 bg-gradient-to-r from-[#b53da1] to-[#ed6ab8] text-white rounded-full font-bold">
+                                                        LEADER
+                                                      </span>
+                                                    )}
+                                                    {member.verified ? (
+                                                      <CheckCircle className="w-4 h-4 text-green-400" />
+                                                    ) : (
+                                                      <Loader2 className="w-4 h-4 text-yellow-400" />
+                                                    )}
+                                                  </div>
+                                                </div>
+                                                <div className="flex items-center gap-2 text-xs text-[#fea6cc]/80">
+                                                  <Phone className="w-3 h-3" />
+                                                  <span>{member.phoneNumber}</span>
+                                                </div>
+                                              </div>
+                                            );
+                                          })}
+                                        </div>
+                                      </div>
+                                    )}
+                                  </div>
                                 </div>
-                              </div>
+                              </motion.div>
                             )}
-                          </div>
+                          </AnimatePresence>
                         </motion.div>
                       );
                     })}
                   </div>
                 )}
               </div>
-            </motion.div>
+              </motion.div>
+
+
+            </div>
           </div>
         </div>
 

@@ -1002,43 +1002,43 @@ export default function RegistrationsClient({ registrations, total }: Registrati
             </tbody>
           </table>
         </div>
+      </div>
 
-        {/* Pagination Control */}
-        <div className="flex items-center justify-between mt-8 px-4 py-6 bg-slate-800/40 border-2 border-purple-500/30 rounded-xl">
-          <button
-            onClick={prevPage}
-            disabled={currentPage === 1 || loadingMore}
-            className="px-6 py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-purple-600/50 text-white font-semibold rounded-lg transition-all flex items-center gap-2"
-          >
-            ← Previous
-          </button>
-          
-          <div className="text-center space-y-1">
-            <div className="text-sm text-slate-400">
-              Page <span className="font-semibold text-white">{currentPage}</span> of <span className="font-semibold text-white">{Math.ceil(totalRecords / PAGE_SIZE)}</span>
-            </div>
-            <div className="text-xs text-slate-400">
-              Showing <span className="font-semibold text-white">{localRegistrations.length}</span> of <span className="font-semibold text-white">{totalRecords}</span> payments
-            </div>
+      {/* Pagination Control - Shown for both mobile and desktop */}
+      <div className="flex flex-col md:flex-row items-center justify-between gap-4 mt-6 px-4 py-6 bg-slate-800/40 border-2 border-purple-500/30 rounded-xl">
+        <button
+          onClick={prevPage}
+          disabled={currentPage === 1 || loadingMore}
+          className="w-full md:w-auto px-6 py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-purple-600/50 text-white font-semibold rounded-lg transition-all flex items-center justify-center gap-2"
+        >
+          ← Previous
+        </button>
+        
+        <div className="text-center space-y-1">
+          <div className="text-sm text-slate-400">
+            Page <span className="font-semibold text-white">{currentPage}</span> of <span className="font-semibold text-white">{Math.ceil(totalRecords / PAGE_SIZE)}</span>
           </div>
-          
-          <button
-            onClick={nextPage}
-            disabled={currentPage >= Math.ceil(totalRecords / PAGE_SIZE) || loadingMore}
-            className="px-6 py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-purple-600/50 text-white font-semibold rounded-lg transition-all flex items-center gap-2"
-          >
-            {loadingMore ? (
-              <>
-                <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
-                Loading...
-              </>
-            ) : (
-              <>
-                Next →
-              </>
-            )}
-          </button>
+          <div className="text-xs text-slate-400">
+            Showing <span className="font-semibold text-white">{filteredAndSortedRegistrations.length}</span> of <span className="font-semibold text-white">{totalRecords}</span> payments
+          </div>
         </div>
+        
+        <button
+          onClick={nextPage}
+          disabled={currentPage >= Math.ceil(totalRecords / PAGE_SIZE) || loadingMore}
+          className="w-full md:w-auto px-6 py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-purple-600/50 text-white font-semibold rounded-lg transition-all flex items-center justify-center gap-2"
+        >
+          {loadingMore ? (
+            <>
+              <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+              Loading...
+            </>
+          ) : (
+            <>
+              Next →
+            </>
+          )}
+        </button>
       </div>
 
       <ImageModal imageUrl={selectedImage} onClose={() => setSelectedImage(null)} />

@@ -7,3 +7,85 @@
   background-color: #1a0a4e;
   border-color: #4321a9;
 }
+
+.coolinput {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  position: relative;
+}
+
+.coolinput label.text {
+  font-size: 0.75rem;
+  color: #818CF8;
+  font-weight: 700;
+  position: absolute;
+  top: 12px;
+  left: 10px;
+  padding: 0 3px;
+  background: #1a0a4e;
+  width: fit-content;
+  z-index: 1;
+  transition: all 0.3s ease;
+  pointer-events: none;
+}
+
+.coolinput input.input:focus + label.text,
+.coolinput input.input:not(:placeholder-shown) + label.text {
+  top: -8px;
+  font-size: 0.65rem;
+}
+
+.coolinput input.input {
+  padding: 11px 10px;
+  font-size: 0.875rem;
+  border: 2px #818CF8 solid;
+  border-radius: 8px;
+  background: #1a0a4e;
+  color: white;
+}
+
+.coolinput input.input:focus {
+  outline: none;
+  border-color: #60A5FA;
+}
+
+
+.genie {
+  transform: scale(2); /* 200% */
+}
+
+.loginlantern{
+  transform: scale(1.7);
+}
+.loginlanternbox{
+  top: 15%;
+  left: 10%;
+}
+
+@media (max-width: 425px) {
+  .genie { 
+    transform: scale(1.2);
+  }
+
+  .geniebox {
+    right: 0;
+    bottom: 10%; /* optional: adjust genie vertical placement */
+  }
+
+  .loginbg {
+    object-fit: cover;
+    object-position: top;
+  }
+
+  .loginlanternbox {
+    position: absolute;
+    top: 0;
+    left: 20%;
+  }
+
+  .loginlantern {
+    transform: scale(0.8);
+    transform-origin: top left;
+  }
+}

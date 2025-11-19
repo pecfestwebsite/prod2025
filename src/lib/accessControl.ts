@@ -29,21 +29,21 @@ export function canViewAllEvents(accessLevel: number): boolean {
  * Check if user can add events
  */
 export function canAddEvent(accessLevel: number): boolean {
-  return accessLevel === 1 || accessLevel === 2 || accessLevel === 3;
+  return accessLevel === 2 || accessLevel === 3;
 }
 
 /**
  * Check if user can edit events
  */
 export function canEditEvent(accessLevel: number): boolean {
-  return accessLevel === 1 || accessLevel === 2 || accessLevel === 3;
+  return accessLevel === 2 || accessLevel === 3;
 }
 
 /**
  * Check if user can delete events
  */
 export function canDeleteEvent(accessLevel: number): boolean {
-  return accessLevel === 1 || accessLevel === 2 || accessLevel === 3;
+  return accessLevel === 2 || accessLevel === 3;
 }
 
 /**

@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import { motion } from "framer-motion"
 import { DirectionAwareHover } from "@/components/ui/direction-aware-hover"
+import Navbar from "@/components/Navbar"
 
 interface Developer {
   id: string
@@ -179,9 +180,19 @@ export default function DevelopersPage() {
   return (
     <div className="relative min-h-screen bg-gradient-to-b from-[#0f0a1a] via-[#1a0f2e] to-[#0f0a1a] overflow-hidden">
       <style>{`
+      @import url('https://fonts.googleapis.com/css2?family=Protest+Guerrilla&display=swap');
+        @font-face {
+          font-family: 'Arabic';
+          src: url('/arabic.otf') format('opentype');
+          font-display: swap;
+        }
         .font-display { font-family: 'Protest Guerrilla', sans-serif; }
-        .font-arabian { font-family: 'Scheherazade New', serif; }
+        .font-arabic { font-family: 'Arabic', serif; }
+        .arabian-border {
+          border-image: linear-gradient(45deg, #b53da1, #ed6ab8, #fea6cc, #ffd4b9) 1;
+        }
       `}</style>
+      <Navbar />
       <AnimatedBackground />
 
       {/* Floating Lanterns */}
@@ -190,7 +201,7 @@ export default function DevelopersPage() {
       <FloatingLantern duration={6} size={35} x="15%" y="60%" delay={2} />
       <FloatingLantern duration={4.5} size={28} x="85%" y="70%" delay={1.5} />
 
-      <div className="relative z-10 pt-20 pb-20 px-4 sm:px-8 lg:px-12 w-full">
+      <div className="relative z-10 pt-32 pb-20 px-4 sm:px-8 lg:px-12 w-full">
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
@@ -198,7 +209,7 @@ export default function DevelopersPage() {
           transition={{ duration: 0.8 }}
           className="text-center mb-24 sm:mb-32"
         >
-          <h1 className="font-display text-6xl sm:text-7xl md:text-8xl font-bold mb-4 text-transparent bg-clip-text bg-gradient-to-r from-[#ffd4b9] via-[#fea6cc] to-[#ed6ab8] drop-shadow-[0_8px_20px_rgba(237,106,184,0.4)] tracking-wider">
+          <h1 className="font-arabic text-6xl sm:text-7xl md:text-9xl animate-gradient bg-gradient-to-r from-white via-pink-200 via-pink-300 via-pink-400 via-pink-500 to-white bg-clip-text text-transparent bg-[length:200%_auto] tracking-wider">
             Meet Our Developers
           </h1>
           <div className="h-1 w-32 mx-auto bg-gradient-to-r from-transparent via-[#ed6ab8] to-transparent mb-6"></div>
@@ -219,7 +230,7 @@ export default function DevelopersPage() {
               initial={{ opacity: 0, x: -50 }}
               whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: true }}
-              className="text-4xl sm:text-5xl md:text-6xl font-bold mb-16 text-center text-transparent bg-clip-text bg-gradient-to-r from-[#ffd4b9] via-[#fea6cc] to-[#ed6ab8] font-display"
+              className="text-4xl sm:text-5xl md:text-6xl font-arabic text-center pb-8 animate-gradient bg-gradient-to-r from-white via-pink-200 via-pink-300 via-pink-400 via-pink-500 to-white bg-clip-text text-transparent bg-[length:200%_auto] tracking-wider"
             >
               Leadership Team 
             </motion.h2>
@@ -245,7 +256,7 @@ export default function DevelopersPage() {
               initial={{ opacity: 0, x: -50 }}
               whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: true }}
-              className="text-4xl sm:text-5xl md:text-6xl font-bold mb-16 text-center text-transparent bg-clip-text bg-gradient-to-r from-[#ffd4b9] via-[#fea6cc] to-[#ed6ab8] font-display"
+              className="text-4xl sm:text-5xl md:text-6xl font-arabic text-center pb-8 animate-gradient bg-gradient-to-r from-white via-pink-200 via-pink-300 via-pink-400 via-pink-500 to-white bg-clip-text text-transparent bg-[length:200%_auto] tracking-wider"
             >
               Development Team 
             </motion.h2>
