@@ -1,4 +1,4 @@
-
+import { Suspense } from 'react';
 import { Auth0ProviderClient } from "@/components/auth0-provider";
 import Navbar from '@/components/Navbar';
 import ClickSpark from '@/components/ClickSpark';
@@ -15,10 +15,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           sparkColor='#fea6cc'
           sparkSize={30}
           sparkRadius={15}
-          sparkCount={4}
-          duration={500}
+        sparkCount={4}
+        duration={500}
         >
-        <Navbar />
+        <Suspense fallback={<div />}>
+          <Navbar />
+        </Suspense>
         {children}
       </ClickSpark>
       <Analytics/>

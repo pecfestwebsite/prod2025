@@ -1,6 +1,6 @@
 "use client";
 import React from "react";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, Suspense } from "react";
 import {
   motion,
   AnimatePresence,
@@ -396,7 +396,9 @@ export default function LandingPage() {
         <FloatingLantern duration={16} size={45} x="20%" y="10%" delay={5} />
         <FloatingLantern duration={11} size={30} x="70%" y="40%" delay={0.5} />
 
-        <Navbar />
+        <Suspense fallback={<div />}>
+          <Navbar />
+        </Suspense>
 
         <div className="relative z-20">
           <section
