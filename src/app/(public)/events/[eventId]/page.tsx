@@ -256,17 +256,23 @@ export default function EventDescriptionPage() {
 
                   {/* Action Buttons */}
                   <motion.div className="flex flex-col sm:flex-row gap-4" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5, duration: 0.5 }}>
-                    <button
-                      onClick={() => setShowRegistrationForm(true)}
-                      disabled={closedRegistrations.has(event.eventId)}
-                      className={`flex-1 font-bold py-4 px-8 rounded-2xl font-arabian text-xl shadow-lg transition-all duration-300 ${
-                        closedRegistrations.has(event.eventId)
-                          ? 'bg-slate-600/60 text-slate-200 cursor-not-allowed border border-slate-400/40'
-                          : 'bg-gradient-to-r from-[#fea6cc] to-[#ffd4b9] text-[#010101] hover:from-[#ffd4b9] hover:to-[#fea7a0] hover:scale-105 hover:shadow-xl'
-                      }`}
-                    >
-                      {closedRegistrations.has(event.eventId) ? 'Registration Closed' : 'Register Now'}
-                    </button>
+                    {new Date(event.dateTime) <= new Date() ? (
+                      <div className="flex-1 py-4 px-8 rounded-2xl border border-slate-400/40 bg-slate-700/40 text-slate-200 font-semibold text-center">
+                        Registration closed
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => setShowRegistrationForm(true)}
+                        disabled={closedRegistrations.has(event.eventId)}
+                        className={`flex-1 font-bold py-4 px-8 rounded-2xl font-arabian text-xl shadow-lg transition-all duration-300 ${
+                          closedRegistrations.has(event.eventId)
+                            ? 'bg-slate-600/60 text-slate-200 cursor-not-allowed border border-slate-400/40'
+                            : 'bg-gradient-to-r from-[#fea6cc] to-[#ffd4b9] text-[#010101] hover:from-[#ffd4b9] hover:to-[#fea7a0] hover:scale-105 hover:shadow-xl'
+                        }`}
+                      >
+                        {closedRegistrations.has(event.eventId) ? 'Registration Closed' : 'Register Now'}
+                      </button>
+                    )}
 
                     {event.pdfLink && event.pdfLink !== '/' && (
                       <a

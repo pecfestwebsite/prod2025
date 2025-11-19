@@ -86,9 +86,8 @@ const RegistrationSchema = new Schema<IRegistration>(
 
 // Add indexes for better query performance
 RegistrationSchema.index({ eventId: 1 });
-RegistrationSchema.index({ userId: 1 });
 RegistrationSchema.index({ teamId: 1 });
-RegistrationSchema.index({ eventId: 1, userId: 1 }); // Composite index for unique registrations per event per user
+RegistrationSchema.index({ eventId: 1, userId: 1 }); // Composite index for unique registrations per event per user (includes userId)
 RegistrationSchema.index({ verified: 1 });
 
 // Prevent model recompilation in development (Next.js hot reload)

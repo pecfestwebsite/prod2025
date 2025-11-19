@@ -339,44 +339,120 @@ export default function EventRegistrationsClient() {
   };
 
   // Export to CSV
-  const exportToCSV = () => {
-    let csv =
-      'Team Number,User ID,Role,Event Name,Team ID,Accommodation Members,Accommodation Fees,Total Fees,Discount,Verification Status,Receipt Paid\n';
+  const exportToCSV = async () => {
+    try {
+      // Collect all unique user emails
+      const userEmails = Array.from(new Set([
+        ...Array.from(groupedData.teams.values()).flat().map(m => m.userId),
+        ...groupedData.individuals.map(r => r.userId)
+      ]));
 
-    let teamNumber = 1;
+      const userDetailsMap = new Map();
+      const token = localStorage.getItem('adminToken') || localStorage.getItem('token');
+      
+      // Fetch user details in batches
+      const batchSize = 10;
+      for (let i = 0; i < userEmails.length; i += batchSize) {
+        const batch = userEmails.slice(i, i + batchSize);
+        
+        await Promise.all(
+          batch.map(async (email) => {
+            try {
+              // Fetch user from auth/me endpoint or direct API
+              const response = await fetch(`/api/auth/user-details?email=${encodeURIComponent(email)}`, {
+                headers: {
+                  'Authorization': `Bearer ${token}`,
+                },
+              });
+              
+              if (response.ok) {
+                const data = await response.json();
+                if (data.user) {
+                  userDetailsMap.set(email, {
+                    name: data.user.name || 'null',
+                    email: email,
+                    phone: data.user.phoneNumber || 'null',
+                    college: data.user.college || 'null',
+                    branch: data.user.branch || 'null',
+                  });
+                  return;
+                }
+              }
+              
+              // Fallback: set null values
+              userDetailsMap.set(email, {
+                name: 'null',
+                email: email,
+                phone: 'null',
+                college: 'null',
+                branch: 'null',
+              });
+            } catch (error) {
+              console.error(`Failed to fetch user ${email}:`, error);
+              userDetailsMap.set(email, {
+                name: 'null',
+                email: email,
+                phone: 'null',
+                college: 'null',
+                branch: 'null',
+              });
+            }
+          })
+        );
+      }
 
-    // Add team registrations - leader first, then members grouped together
-    groupedData.teams.forEach((members, teamId) => {
-      // Team leader is the one with feesPaid value (non-empty)
-      const teamLeader = members.find((m) => m.feesPaid) || members[0];
-      const otherMembers = members.filter((m) => m !== teamLeader);
-      
-      // Add team leader
-      csv += `"${teamNumber}","${teamLeader.userId}","Team Leader","${teamLeader.eventName}","${teamId}","${teamLeader.accommodationMembers}","${teamLeader.accommodationFees}","${teamLeader.totalFees}","${teamLeader.discount}","${teamLeader.verified ? 'Verified' : 'Pending'}","${teamLeader.feesPaid ? 'Yes' : 'No'}"\n`;
-      
-      // Add team members right after the leader - same team number
-      otherMembers.forEach((member) => {
-        csv += `"${teamNumber}","${member.userId}","Team Member","${member.eventName}","${teamId}","—","—","—","${member.discount}","${member.verified ? 'Verified' : 'Pending'}","${member.feesPaid ? 'Yes' : 'No'}"\n`;
+      // Helper function to format value - show 'null' for empty/undefined values
+      const formatValue = (value: any) => {
+        if (value === null || value === undefined || value === '' || value === 0) {
+          return 'null';
+        }
+        return value;
+      };
+
+      let csv =
+        'Team Number,User ID,Name,Email,Phone,College,Branch,Role,Event Name,Team ID,Accommodation Members,Accommodation Fees,Total Fees,Discount,Verification Status,Receipt Paid\n';
+
+      let teamNumber = 1;
+
+      // Add team registrations - leader first, then members grouped together
+      groupedData.teams.forEach((members, teamId) => {
+        // Team leader is the one with feesPaid value (non-empty)
+        const teamLeader = members.find((m) => m.feesPaid) || members[0];
+        const otherMembers = members.filter((m) => m !== teamLeader);
+        
+        // Add team leader
+        const leaderDetails = userDetailsMap.get(teamLeader.userId) || { name: 'null', email: teamLeader.userId, phone: 'null', college: 'null', branch: 'null' };
+        csv += `"${teamNumber}","${teamLeader.userId}","${formatValue(leaderDetails.name)}","${formatValue(leaderDetails.email)}","${formatValue(leaderDetails.phone)}","${formatValue(leaderDetails.college)}","${formatValue(leaderDetails.branch)}","Team Leader","${teamLeader.eventName || 'null'}","${teamId || 'null'}","${formatValue(teamLeader.accommodationMembers)}","${formatValue(teamLeader.accommodationFees)}","${formatValue(teamLeader.totalFees)}","${formatValue(teamLeader.discount)}","${teamLeader.verified ? 'Verified' : 'Pending'}","${teamLeader.feesPaid ? 'Yes' : 'No'}"\n`;
+        
+        // Add team members right after the leader - same team number
+        otherMembers.forEach((member) => {
+          const memberDetails = userDetailsMap.get(member.userId) || { name: 'null', email: member.userId, phone: 'null', college: 'null', branch: 'null' };
+          csv += `"${teamNumber}","${member.userId}","${formatValue(memberDetails.name)}","${formatValue(memberDetails.email)}","${formatValue(memberDetails.phone)}","${formatValue(memberDetails.college)}","${formatValue(memberDetails.branch)}","Team Member","${member.eventName || 'null'}","${teamId || 'null'}","null","null","null","${formatValue(member.discount)}","${member.verified ? 'Verified' : 'Pending'}","${member.feesPaid ? 'Yes' : 'No'}"\n`;
+        });
+        
+        teamNumber++;
       });
-      
-      teamNumber++;
-    });
 
-    // Add individual registrations
-    groupedData.individuals.forEach((reg) => {
-      csv += `"${teamNumber}","${reg.userId}","Individual","${reg.eventName}","N/A","${reg.accommodationMembers}","${reg.accommodationFees}","${reg.totalFees}","${reg.discount}","${reg.verified ? 'Verified' : 'Pending'}","${reg.feesPaid ? 'Yes' : 'No'}"\n`;
-      teamNumber++;
-    });
+      // Add individual registrations
+      groupedData.individuals.forEach((reg) => {
+        const userDetails = userDetailsMap.get(reg.userId) || { name: 'null', email: reg.userId, phone: 'null', college: 'null', branch: 'null' };
+        csv += `"${teamNumber}","${reg.userId}","${formatValue(userDetails.name)}","${formatValue(userDetails.email)}","${formatValue(userDetails.phone)}","${formatValue(userDetails.college)}","${formatValue(userDetails.branch)}","Individual","${reg.eventName || 'null'}","null","${formatValue(reg.accommodationMembers)}","${formatValue(reg.accommodationFees)}","${formatValue(reg.totalFees)}","${formatValue(reg.discount)}","${reg.verified ? 'Verified' : 'Pending'}","${reg.feesPaid ? 'Yes' : 'No'}"\n`;
+        teamNumber++;
+      });
 
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', `registrations_${selectedEventId}.csv`);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', `registrations_${selectedEventId}.csv`);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (error) {
+      console.error('Error exporting to CSV:', error);
+      alert('Failed to export registrations. Please try again.');
+    }
   };
 
   return (

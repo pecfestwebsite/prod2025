@@ -23,7 +23,6 @@ export default function GalleryPage() {
         "1FdkXOQW2uGQLmEVVXZ8EeP3dSiCuzllu",
         "1DWK-17lokEDdJLZOUTneQOyJCbODJ9zl",
         "1bOlPPxOF1urWZLxWg2oHOfIgghEwV1bs",
-
         "1dUCKH_Sw9al_D7HefH0GSdz-SAOwFdSP",
         "1muuYni1DbEUjD7N5Sw49lQHG2T5K1tM-",
         "1FraQ4c0pFPsT7BFmJdeSnkxTJSbRpZxr",
