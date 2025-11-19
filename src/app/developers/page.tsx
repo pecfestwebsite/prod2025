@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, Suspense } from "react"
 import { motion } from "framer-motion"
 import { DirectionAwareHover } from "@/components/ui/direction-aware-hover"
 import Navbar from "@/components/Navbar"
@@ -192,7 +192,9 @@ export default function DevelopersPage() {
           border-image: linear-gradient(45deg, #b53da1, #ed6ab8, #fea6cc, #ffd4b9) 1;
         }
       `}</style>
-      <Navbar />
+      <Suspense fallback={<div />}>
+        <Navbar />
+      </Suspense>
       <AnimatedBackground />
 
       {/* Floating Lanterns */}
