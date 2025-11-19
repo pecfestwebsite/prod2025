@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import dbConnect from "@/lib/dbConnect";
 import Event from "@/models/Event";
 
+
 export async function POST(request: NextRequest) {
   try {
     // Connect to the database
@@ -177,6 +178,7 @@ export async function POST(request: NextRequest) {
 export async function GET(request: NextRequest) {
   try {
     await dbConnect();
+    
 
     // Get query parameters for filtering
     const searchParams = request.nextUrl.searchParams;

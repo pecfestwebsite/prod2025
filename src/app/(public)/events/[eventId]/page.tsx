@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { Home, Calendar, MapPin, Users, IndianRupee, ArrowLeft, ExternalLink, Phone, Mail } from 'lucide-react';
 import { IEvent } from '@/models/Event'; 
@@ -143,6 +143,8 @@ export default function EventDescriptionPage() {
     }
   };
 
+  const closedRegistrations = useMemo(() => new Set(['pecathon_acm_eic']), []);
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-[#140655] via-[#4321a9] to-[#2a0a56] flex items-center justify-center">
@@ -256,9 +258,14 @@ export default function EventDescriptionPage() {
                   <motion.div className="flex flex-col sm:flex-row gap-4" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5, duration: 0.5 }}>
                     <button
                       onClick={() => setShowRegistrationForm(true)}
-                      className="flex-1 bg-gradient-to-r from-[#fea6cc] to-[#ffd4b9] text-[#010101] font-bold py-4 px-8 rounded-2xl hover:from-[#ffd4b9] hover:to-[#fea7a0] transition-all duration-300 transform hover:scale-105 font-arabian text-xl shadow-lg hover:shadow-xl"
+                      disabled={closedRegistrations.has(event.eventId)}
+                      className={`flex-1 font-bold py-4 px-8 rounded-2xl font-arabian text-xl shadow-lg transition-all duration-300 ${
+                        closedRegistrations.has(event.eventId)
+                          ? 'bg-slate-600/60 text-slate-200 cursor-not-allowed border border-slate-400/40'
+                          : 'bg-gradient-to-r from-[#fea6cc] to-[#ffd4b9] text-[#010101] hover:from-[#ffd4b9] hover:to-[#fea7a0] hover:scale-105 hover:shadow-xl'
+                      }`}
                     >
-                      Register Now
+                      {closedRegistrations.has(event.eventId) ? 'Registration Closed' : 'Register Now'}
                     </button>
 
                     {event.pdfLink && event.pdfLink !== '/' && (
@@ -273,6 +280,11 @@ export default function EventDescriptionPage() {
                       </a>
                     )}
                   </motion.div>
+                  {closedRegistrations.has(event.eventId) && (
+                    <p className="text-sm text-red-300 font-semibold mt-4">
+                      Registrations are currently closed for this event.
+                    </p>
+                  )}
                 </div>
               </div>
 

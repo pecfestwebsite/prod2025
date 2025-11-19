@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/dbConnect';
 import Event from '@/models/Event';
+
 import jwt from 'jsonwebtoken';
 import { sendEventDeletionEmail } from '@/lib/email';
 
@@ -10,6 +11,7 @@ export async function GET(
 ) {
   try {
     await dbConnect();
+    
 
     const { id } = await params;
 

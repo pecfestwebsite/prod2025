@@ -1,6 +1,6 @@
 "use client";
 import React from "react";
-import { useState, useEffect, useRef, Suspense } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   motion,
   AnimatePresence,
@@ -56,93 +56,85 @@ const ParallaxDesert = () => {
       <TwinklingStars />
       <div className="absolute h-screen w-screen bg-black"></div>
       {/* CLOUDS */}
-{/* CLOUDS */}
-<motion.div
-  className="absolute inset-0 w-full h-auto text-[#f7ba85] opacity-70 will-change-transform"
-  style={{ x: layer1X }}
->
-  <motion.div
-    className={`flex will-change-transform`}
-    style={{ x: drift3X }}
-  >
-    <img
-      src="clouds.webp"
-      className={`relative inset-0`}
-      width="1920px"
-    />
-    <img
-      src="clouds.webp"
-      className={`relative inset-0`}
-      width="1920px"
-    />
-  </motion.div>
-</motion.div>
+      {/* CLOUDS */}
+      <motion.div
+        className="absolute inset-0 w-full h-auto text-[#f7ba85] opacity-70 will-change-transform"
+        style={{ x: layer1X }}
+      >
+        <motion.div
+          className={`flex will-change-transform`}
+          style={{ x: drift3X }}
+        >
+          <img
+            src="clouds.webp"
+            className={`relative inset-0`}
+            width="1920px"
+          />
+          <img
+            src="clouds.webp"
+            className={`relative inset-0`}
+            width="1920px"
+          />
+        </motion.div>
+      </motion.div>
 
-{/* BACKGROUND CITY */}
-<motion.div
-  className={`absolute bottom-[-5%] left-[-12.4%] w-[2880px] h-auto text-[#f7ba85] opacity-70 will-change-transform overflow-hidden object-center`}
->
-  <img
-    src="bgcity.webp"
-    width="1920px"
-  />
-</motion.div>
+      {/* BACKGROUND CITY */}
+      <motion.div
+        className={`absolute bottom-[-5%] left-[-12.4%] w-[2880px] h-auto text-[#f7ba85] opacity-70 will-change-transform overflow-hidden object-center`}
+      >
+        <img
+          src="bgcity.webp"
+          width="1920px"
+        />
+      </motion.div>
 
-{/* MID DUNES */}
-<motion.div
-  className={`absolute flex bottom-0 left-0  w-[2880px] h-auto text-[#f7ba85] opacity-80 will-change-transform overflow-hidden object-center`}
-  style={{ x: drift2X }}
->
-  <img
-    src="bglayer3.webp"
-    width="1920px"
-  />
-  <img
-    src="bglayer3.webp"
-    width="1920px"
-  />
-</motion.div>
+      {/* MID DUNES */}
+      <motion.div
+        className={`absolute flex bottom-0 left-0  w-[2880px] h-auto text-[#f7ba85] opacity-80 will-change-transform overflow-hidden object-center`}
+        style={{ x: drift2X }}
+      >
+        <img
+          src="bglayer3.webp"
+          width="1920px"
+        />
+        <img
+          src="bglayer3.webp"
+          width="1920px"
+        />
+      </motion.div>
 
-{/* CASTLES */}
-<motion.div
-  className={` absolute flex bottom-0 left-[-12.4%]  w-[3840px] h-auto text-[#f7ba85] will-change-transform overflow-hidden object-center`}
-  style={{ x: drift3X }}
->
-  <img
-    src="castle(6).webp"
-    width="1920px"
+      {/* CASTLES */}
+      <motion.div
+        className={` absolute flex bottom-0 left-[-12.4%]  w-[3840px] h-auto text-[#f7ba85] will-change-transform overflow-hidden object-center`}
+        style={{ x: drift3X }}
+      >
+        <img
+          src="castle(6).webp"
+          width="1920px"
 
-  />
-  <img
-    src="castle(6).webp"
-    width="1920px"
-  />
-  <img
-    src="castle(6).webp"
-    width="1920px"
-  />
-</motion.div>
+        />
+        <img
+          src="castle(6).webp"
+          width="1920px"
+        />
+        <img
+          src="castle(6).webp"
+          width="1920px"
+        />
+      </motion.div>
 
-{/* CITY FOREGROUND */}
-<motion.div
-  className={`absolute bottom-0 left-0  w-[2880px] h-auto opacity-100 will-change-transform overflow-hidden object-center`}
-  style={{ x: layer2X }}
->
-  <motion.div className="flex" style={{ x: drift1X }}>
-    <img src="city2.webp"/>
-    <img src="city2.webp"/>
-    <img src="city2.webp"/>
-    <img src="city2.webp"/>
-  </motion.div>
-</motion.div>
-
-{/* TENT LAYER */}
-<motion.div
-  className={` absolute bottom-[%] left-[-12.5%] w-[2880px] h-auto text-[#A06A21] object-center`}
-  style={{ x: layer3X }}
->
-  <img src="tent.webp"/>
-</motion.div>
+      {/* CITY FOREGROUND */}
+      <motion.div
+        className={`absolute bottom-0 left-0  w-[2880px] h-auto opacity-100 will-change-transform overflow-hidden object-center`}
+        style={{ x: layer2X }}
+      >
+        <motion.div className="flex" style={{ x: drift1X }}>
+          <img src="city2.webp" />
+          <img src="city2.webp" />
+          <img src="city2.webp" />
+          <img src="city2.webp" />
+        </motion.div>
+      </motion.div>
 
 
       <div className="absolute bottom-0 w-full h-1/4 bg-gradient-to-t from-[#010101]/60 to-transparent z-10" />
@@ -154,7 +146,7 @@ const TimeUnit = ({ value, label }: { value: number; label: string }) => {
   const paddedValue = String(value).padStart(2, "0");
   return (
     <div className="flex flex-col items-center">
-      <div className="relative w-20 h-24 sm:w-28 sm:h-32 flex items-center justify-center overflow-hidden">
+      <div className="relative w-20 h-24 sm:w-30 sm:h-35 flex items-center justify-center overflow-hidden">
         <AnimatePresence mode="popLayout">
           <motion.div
             key={paddedValue}
@@ -162,14 +154,14 @@ const TimeUnit = ({ value, label }: { value: number; label: string }) => {
             animate={{ y: "0%", opacity: 1 }}
             exit={{ y: "-100%", opacity: 0 }}
             transition={{ duration: 0.5, ease: "easeInOut" }}
-            className="absolute text-5xl sm:text-7xl font-bold text-white"
-            style={{ textShadow: "0 0 5px #f7ba85" }}
+            className="absolute text-5xl sm:text-8xl font-bold text-white"
+            style={{ textShadow: "0 0 5px #000000" }}
           >
             {paddedValue}
           </motion.div>
         </AnimatePresence>
       </div>
-      <span className="text-sm sm:text-base text-[#f7ba85] uppercase tracking-widest font-sans" style={{ textShadow: "0px 0px 4px #f6d0af" }}>
+      <span className="text-sm sm:text-lg text-[#f7ba85] uppercase tracking-widest font-sans" style={{ textShadow: "0px 0px 2px #000000" }}>
         {label}
       </span>
     </div>
@@ -215,9 +207,8 @@ const FloatingLantern = ({
         className="w-full h-4/6 bg-gradient-to-t from-[#b53da1] to-[#ed6ab8] rounded-t-full rounded-b-xl border-t-2 border-[#4321a9]"
         style={{
           opacity: 0.7,
-          boxShadow: `0 0 ${size * 1.5}px ${
-            size / 1.5
-          }px rgba(237, 106, 184, 0.6)`,
+          boxShadow: `0 0 ${size * 1.5}px ${size / 1.5
+            }px rgba(237, 106, 184, 0.6)`,
         }}
       >
         <div className="w-full h-1/4 bg-[#4321a9]/40 rounded-b-xl"></div>
@@ -396,41 +387,44 @@ export default function LandingPage() {
         <FloatingLantern duration={16} size={45} x="20%" y="10%" delay={5} />
         <FloatingLantern duration={11} size={30} x="70%" y="40%" delay={0.5} />
 
-        <Suspense fallback={<div />}>
-          <Navbar />
-        </Suspense>
+        <Navbar />
 
         <div className="relative z-20">
           <section
             id="home"
             className="min-h-screen flex flex-col items-center justify-center text-center p-4"
           >
-            <header className="flex flex-col items-center pt-20">
+            <header className="flex flex-col items-center pt-10 sm:pt-20">
               <motion.h1
                 className="font-display text-8xl md:text-9xl gradient-title drop-shadow-[0_4px_10px_rgba(181,61,161,0.3)] flex flex-col items-center leading-[0.8]"
                 initial={{ opacity: 0, y: -50 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 1, ease: "easeOut" }}
               >
-                <div className="absolute top-[-15%] flex justify-center items-center">
-                  <div className="absolute inset-0 bg-white blur-[40px] w-[250px] h-[50px] rounded-full"></div>
+                <div className="absolute top-[-35%] flex flex-col items-center gap-[2vw] md:flex-row md:justify-center md:top-[-15%]">
+                  {/* The blur div remains the same */}
+                  {/* <div className="absolute inset-0 bg-white blur-[40px] w-[250px] h-[50px] rounded-full"></div> */}
 
                   <img
                     src="TridentLogo.png"
-                    className="relative inset-0 w-[250px] mb-1"
+                    className="relative mb-1 w-[180px] md:w-[250px]"
+                  />
+                  <img
+                    src="Google.png"
+                    className="relative mb-1 w-[180px] md:w-[250px]"
                   />
                 </div>
-                <span className="text-[24px] m-3 max-[480px]:m-10">Presents</span>
+                <span className="text-[24px] m-6 max-[480px]:m-6">Presents</span>
                 <img
                   src="logo.png"
-                  width={"35%"}
-                  height={"35%"}
-                  className="max-[480px]:w-[40%] max-[480px]:h-[40%]"
+                  width={"32%"}
+                  height={"32%"}
+                  className="max-[480px]:w-[65%] max-[480px]:h-[65%]"
                 />
               </motion.h1>
 
               <motion.h2
-                className="font-arabian text-4xl md:text-5xl text-[#f9f5f2] [text-shadow:_4px_4px_10px_#A06A21] tracking-widest"
+                className="font-arabian text-4xl md:text-5xl text-[#f9f5f2] [text-shadow:_4px_4px_10px_#000000] tracking-widest"
                 initial={{ opacity: 0, y: 50 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 1, delay: 0.3, ease: "easeOut" }}
@@ -675,7 +669,7 @@ export default function LandingPage() {
               >
                 <span className="text-2xl font-display bg-gradient-to-r from-amber-400 to-yellow-500 bg-clip-text text-transparent">PECFEST 2025</span>
               </motion.div>
-              
+
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
@@ -692,7 +686,7 @@ export default function LandingPage() {
                   <Instagram size={20} className="group-hover:animate-pulse" />
                   <span className="font-medium">@pec.pecfest</span>
                 </a>
-                
+
                 <a
                   href="https://maps.app.goo.gl/wgYE4wBdCbNSV6gd9"
                   target="_blank"
@@ -703,7 +697,7 @@ export default function LandingPage() {
                   <span className="font-medium">Punjab Engineering College, Chandigarh</span>
                 </a>
               </motion.div>
-              
+
               <motion.div
                 initial={{ opacity: 0 }}
                 whileInView={{ opacity: 1 }}

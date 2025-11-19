@@ -232,10 +232,10 @@ export default function SponsorsPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // MOCK DATA: This is temporary. Remove this block to use your real API.
+    // MOCK DATA: This is temporary. Remove this block to use yadur real API.
     const sponsorsData: Sponsor[] = [
       { id: 1, name: "Trident Group", tier: "Title", logo: "/TridentLogo.png" },
-      { id: 2, name: "Gemini", tier: "Co-Title", logo: "/gemini.webp" },
+      { id: 2, name: "House of Google AI", tier: "Co-Title", logo: "https://drive.google.com/uc?export=view&id=1PFx-6nO6BKVOc1mPTvlLTuHTFO25GqQ_" },
       { id: 3, name: "Mach City", tier: "Associate Sponsor", logo: "https://drive.google.com/uc?export=view&id=1ZG9zHFEn1FZ3yvH-EqCQsIr_QYa1dhiU" },
       { id: 36, name: "Mendallion Auram", tier: "Associate Sponsor", logo: "https://drive.google.com/uc?export=view&id=1oaVxUeoEW2T-GN2CP6v5Cm2dYT9xeGka" },
       { id: 4, name: "Couture Perfumery", tier: "Corporate Partner", logo: "https://drive.google.com/uc?export=view&id=13_MzTsevZP5-bJPXw_gsHizNmC13mfGR" },

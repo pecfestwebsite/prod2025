@@ -85,6 +85,40 @@
       }
     ]
   },
+   {
+    "committeeName": "Event Coordination (Cultural)",
+    "members": [
+      {
+        "id": "22107027",
+        "name": "Avi Sinha",
+        "image": "1x8Qkkj786nDbd3TWoUNSr6sguOeGmuc3",
+        "role": "Head"
+      },
+      {
+        "id": "22102113",
+        "name": "Mihika Arora",
+        "image": "14nrObxQ7f6wz3Bz8n3Tc-YX-l7lcQ3Ed",
+        "role": "Co-Head"
+      }
+    ]
+  },
+  {
+    "committeeName": "Event Coordination (Technical)",
+    "members": [
+      {
+        "id": "22105086",
+        "name": "Kunal Dhawan",
+        "image": "1Y2C0P9FOugo5VfGGuO1b2lugUXXO6Wut",
+        "role": "Head"
+      },
+      {
+        "id": "22105005",
+        "name": "Aryaman Sharma",
+        "image": "1TYdViNq2HaM1ykSLLOlO295jH-_rXoeL",
+        "role": "Co-Head"
+      }
+    ]
+  },
   {
     "committeeName": "Alumni and Industry Relations",
     "members": [
@@ -191,40 +225,6 @@
         "id": "22102097",
         "name": "Rishabh Tripathi",
         "image": "1XwFJ_JHfjaUfywL1WqkbfGHz74nD83HQ",
-        "role": "Co-Head"
-      }
-    ]
-  },
-  {
-    "committeeName": "Event Coordination (Cultural)",
-    "members": [
-      {
-        "id": "22107027",
-        "name": "Avi Sinha",
-        "image": "1x8Qkkj786nDbd3TWoUNSr6sguOeGmuc3",
-        "role": "Head"
-      },
-      {
-        "id": "22102113",
-        "name": "Mihika Arora",
-        "image": "14nrObxQ7f6wz3Bz8n3Tc-YX-l7lcQ3Ed",
-        "role": "Co-Head"
-      }
-    ]
-  },
-  {
-    "committeeName": "Event Coordination (Technical)",
-    "members": [
-      {
-        "id": "22105086",
-        "name": "Kunal Dhawan",
-        "image": "1Y2C0P9FOugo5VfGGuO1b2lugUXXO6Wut",
-        "role": "Head"
-      },
-      {
-        "id": "22105005",
-        "name": "Aryaman Sharma",
-        "image": "1TYdViNq2HaM1ykSLLOlO295jH-_rXoeL",
         "role": "Co-Head"
       }
     ]

@@ -756,6 +756,8 @@ export default function EventsPage() {
     }
   };
 
+  const closedRegistrations = useMemo(() => new Set(['pecathon_acm_eic']), []);
+
   if (loading) {
     return <LoadingSkeleton />;
   }
@@ -1081,25 +1083,38 @@ export default function EventsPage() {
 
                           {/* Action Buttons */}
                           <div className="flex gap-3 mt-6">
-                            <motion.button 
+                              <motion.button 
                               onClick={() => {
                                 setSelectedEvent(event);
                                 setShowRegistrationForm(true);
                               }}
-                              className="flex-1 bg-gradient-to-r from-amber-300 via-yellow-400 to-amber-300 text-[#4321a9]/80 font-bold py-3 px-6 rounded-2xl hover:from-yellow-300 hover:via-amber-400 hover:to-yellow-500 transition-all duration-500 transform hover:scale-105 font-protest text-lg shadow-lg hover:shadow-xl hover:shadow-yellow-500/30 relative overflow-hidden"
-                              whileHover={{ 
+                              className={`flex-1 font-bold py-3 px-6 rounded-2xl transition-all duration-500 transform font-protest text-lg shadow-lg relative overflow-hidden ${
+                                closedRegistrations.has(event.eventId)
+                                  ? 'bg-slate-600/60 text-slate-200 cursor-not-allowed border border-slate-400/40'
+                                  : 'bg-gradient-to-r from-amber-300 via-yellow-400 to-amber-300 text-[#4321a9]/80 hover:from-yellow-300 hover:via-amber-400 hover:to-yellow-500 hover:scale-105 hover:shadow-xl hover:shadow-yellow-500/30'
+                              }`}
+                              whileHover={closedRegistrations.has(event.eventId) ? undefined : { 
                                 scale: 1.05,
                                 boxShadow: "0 20px 40px rgba(251, 191, 36, 0.4)"
                               }}
-                              whileTap={{ scale: 0.98 }}
-                              style={{
-                                background: "linear-gradient(135deg, #fbbf24, #f59e0b, #d97706)",
-                                backgroundSize: "200% 200%",
-                                animation: "gradientShift 3s ease-in-out infinite"
-                              }}
+                              whileTap={closedRegistrations.has(event.eventId) ? undefined : { scale: 0.98 }}
+                              style={
+                                closedRegistrations.has(event.eventId)
+                                  ? undefined
+                                  : {
+                                      background: "linear-gradient(135deg, #fbbf24, #f59e0b, #d97706)",
+                                      backgroundSize: "200% 200%",
+                                      animation: "gradientShift 3s ease-in-out infinite"
+                                    }
+                              }
+                              disabled={closedRegistrations.has(event.eventId)}
                             >
-                              <span className="relative z-10">Register Now</span>
-                              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
+                              <span className="relative z-10">
+                                {closedRegistrations.has(event.eventId) ? 'Registration Closed' : 'Register Now'}
+                              </span>
+                              {!closedRegistrations.has(event.eventId) && (
+                                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
+                              )}
                             </motion.button>
                             
                             <motion.div whileHover={{ y: -2, scale: 1.05 }}>
