@@ -760,7 +760,7 @@ export default function CalendarClient({ events }: { events: IEvent[] }) {
                     )}
                     
                     <div className="text-slate-400 uppercase hidden md:block" style={{ fontSize: '0.75rem' }}>
-                      {day.toLocaleDateString('en-US', { timeZone:'UTC',weekday: 'short' })}
+                      {day.toLocaleDateString('en-US', { weekday: 'short' })}
                     </div>
                     <div className="font-bold" style={{ fontSize: '1.5rem' }}>{day.getDate()}</div>
                     <div className="text-slate-400" style={{ fontSize: '0.75rem' }}>
