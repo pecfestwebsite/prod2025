@@ -222,6 +222,17 @@ export default function Navbar() {
     }
   };
 
+  useEffect(() => {
+    if (showMobileMenu) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [showMobileMenu]);
+
   return (
     <>
       <style jsx global>{`
@@ -290,7 +301,7 @@ export default function Navbar() {
                       key={item.href}
                       href={item.href}
                       onClick={(e) => handleNavClick(e, item.href, item.isSection)}
-                      className={`transition-all duration-300 text-base font-bold whitespace-nowrap px-5 py-3 rounded-full font-protest ${
+                      className={`transition-all duration-300 text-sm font-bold whitespace-nowrap px-4 py-2 rounded-full font-protest ${
                         isActive 
                           ? "bg-white text-purple-900 shadow-lg shadow-amber-500/30" 
                           : "bg-gradient-to-r from-amber-400 via-yellow-400 to-amber-500 animate-gradient text-transparent bg-clip-text hover:bg-white/10"
@@ -334,7 +345,7 @@ export default function Navbar() {
                     <Link
                       key={item.href}
                       href={item.href}
-                      className={`transition-all duration-300 text-base font-bold whitespace-nowrap px-5 py-3 rounded-full font-protest ${
+                      className={`transition-all duration-300 text-sm font-bold whitespace-nowrap px-4 py-2 rounded-full font-protest ${
                         isActive 
                           ? "bg-white text-purple-900 shadow-lg shadow-amber-500/30" 
                           : "bg-gradient-to-r from-amber-400 via-yellow-400 to-amber-500 animate-gradient text-transparent bg-clip-text hover:bg-white/10"
@@ -680,7 +691,7 @@ export default function Navbar() {
                 WebkitBackdropFilter: 'blur(40px) saturate(180%)',
               }}
             >
-              <div className="pt-8 pb-6 px-6 border-b border-white/10 flex items-center justify-center" style={{ minHeight: '140px' }}>
+              <div className="flex items-center justify-center border-b border-white/10 px-6" style={{ height: '15%' }}>
                 <Image
                   src="/logo.png"
                   alt="PECFest Logo"
@@ -698,8 +709,25 @@ export default function Navbar() {
                 <X className="w-6 h-6 text-amber-400" />
               </button>
 
-              <div className="h-full flex flex-col pt-8 px-6">
-                <div className="space-y-4">
+              <div className="flex flex-col overflow-hidden" style={{ height: '85%' }}>
+                <div className="flex-1 overflow-y-auto px-6 space-y-4 pb-4 pt-6">
+                  <motion.div
+                    whileHover={{ scale: 1.05, x: 5 }}
+                    whileTap={{ scale: 0.95 }}
+                    className="w-full"
+                  >
+                    <Link
+                      href="/"
+                      onClick={() => setShowMobileMenu(false)}
+                      className={`block transition-all duration-300 font-semibold text-xl py-3 px-4 text-left rounded-lg border font-protest ${
+                        pathname === '/'
+                          ? 'bg-white text-purple-900 shadow-lg shadow-amber-500/30 border-amber-500/50'
+                          : 'text-amber-300 hover:text-amber-100 hover:bg-amber-600/20 border-transparent hover:border-amber-600/30 hover:shadow-lg hover:shadow-amber-600/20'
+                      }`}
+                    >
+                      Home
+                    </Link>
+                  </motion.div>
                   {navItems.map((item, index) => {
                     const isActive = pathname === item.href;
                     return (
@@ -730,7 +758,7 @@ export default function Navbar() {
                             <Link
                               href="/profile"
                               onClick={() => setShowMobileMenu(false)}
-                              className={`block transition-all duration-300 font-semibold text-xl py-3 px-4 text-left rounded-lg border ${
+                              className={`block transition-all duration-300 font-semibold text-xl py-3 px-4 text-left rounded-lg border font-protest ${
                                 pathname === '/profile'
                                   ? 'bg-white text-purple-900 shadow-lg shadow-amber-500/30 border-amber-500/50'
                                   : 'text-amber-300 hover:text-amber-100 hover:bg-amber-600/20 border-transparent hover:border-amber-600/30 hover:shadow-lg hover:shadow-amber-600/20'
@@ -744,7 +772,7 @@ export default function Navbar() {
                     );
                   })}
                 </div>
-                <div className="absolute bottom-6 left-6 right-6">
+                <div className="p-6 border-t border-white/10 bg-gradient-to-t from-white/5 to-transparent" style={{ height: '15%' }}>
                   {user ? (
                     <motion.div
                       whileHover={{ scale: 1.05 }}
@@ -756,7 +784,7 @@ export default function Navbar() {
                           logout();
                           setShowMobileMenu(false);
                         }}
-                        className="w-full px-6 py-4 bg-gradient-to-r from-red-600 to-red-500 hover:from-red-500 hover:to-red-600 text-white font-bold transition-all duration-300 shadow-lg hover:shadow-xl hover:shadow-red-600/40 text-lg text-left rounded-lg border border-red-500/50"
+                        className="w-full px-6 py-4 bg-gradient-to-r from-red-600 to-red-500 hover:from-red-500 hover:to-red-600 text-white font-bold transition-all duration-300 shadow-lg hover:shadow-xl hover:shadow-red-600/40 text-lg rounded-lg border border-red-500/50 font-protest"
                       >
                         Logout
                       </button>
@@ -768,7 +796,7 @@ export default function Navbar() {
                       className="w-full"
                     >
                       <Link href="/register" onClick={() => setShowMobileMenu(false)}>
-                        <button className="w-full px-6 py-4 bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-600 text-white font-bold transition-all duration-300 shadow-lg hover:shadow-xl hover:shadow-amber-600/40 text-lg text-left rounded-lg border border-amber-500/50 font-protest">
+                        <button className="w-full px-6 py-4 bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-600 text-white font-bold transition-all duration-300 shadow-lg hover:shadow-xl hover:shadow-amber-600/40 text-lg rounded-lg border border-amber-500/50 font-protest">
                           Login
                         </button>
                       </Link>

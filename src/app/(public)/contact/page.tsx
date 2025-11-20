@@ -32,7 +32,7 @@ const ParallaxDesert = () => {
             <div 
                 className="absolute inset-0 bg-cover bg-center"
                 style={{
-                    backgroundImage: 'url(/contactus_background.jpeg)',
+                    backgroundImage: 'url(/14.png)',
                     opacity: 0.9
                 }}
             >
@@ -110,13 +110,13 @@ const ContactItem = ({ icon, title, text, href }: { icon: React.ReactNode, title
         animate={{ opacity: 1, x: 0 }}
         transition={{ duration: 0.5 }}
     >
-        <div className="flex-shrink-0 w-10 h-10 flex items-center justify-center rounded-full bg-gradient-to-r from-[#b53da1]/50 to-[#ed6ab8]/50 text-[#fea6cc] mt-1">
+        <div className="flex-shrink-0 w-10 h-10 flex items-center justify-center rounded-full bg-yellow-600/40 text-yellow-100 mt-1">
             {icon}
         </div>
         <div>
-            <h3 className="font-bold text-lg text-[#fea6cc]">{title}</h3>
+            <h3 className="font-bold text-lg text-yellow-100">{title}</h3>
             {href ? (
-                <a href={href} className="text-base sm:text-lg text-white hover:text-[#ffd4b9] transition-colors duration-300 break-words">{text}</a>
+                <a href={href} className="text-base sm:text-lg text-white hover:text-yellow-100 transition-colors duration-300 break-words">{text}</a>
             ) : (
                 <p className="text-base sm:text-lg text-white break-words">{text}</p>
             )}
@@ -129,7 +129,7 @@ const SocialIcon = ({ href, icon }: { href: string, icon: React.ReactNode }) => 
         href={href}
         target="_blank"
         rel="noopener noreferrer"
-        className="p-3 rounded-full bg-[#010101]/50 text-[#fea6cc] border border-transparent hover:border-[#ed6ab8] hover:text-[#ed6ab8] transition-all duration-300"
+        className="p-3 rounded-full bg-[#010101]/50 text-yellow-100 border border-transparent hover:border-yellow-500 hover:text-yellow-50 transition-all duration-300"
         whileHover={{ scale: 1.1, rotate: 5 }}
         whileTap={{ scale: 0.95 }}
     >
@@ -155,16 +155,12 @@ export default function ContactPage() {
                 
                 @supports (background-clip: text) {
                   .gradient-title {
-                    color: white;
-                    background: linear-gradient(to right, #fea6cc, #ffd4b9, #fea7a0);
-                    background-clip: text;
-                    -webkit-background-clip: text;
-                    -webkit-text-fill-color: transparent;
+                    color: #fef3c7;
                   }
                 }
                 @supports not (background-clip: text) {
                   .gradient-title {
-                    color: #fea6cc;
+                    color: #fef3c7;
                   }
                 }
             `}</style>
@@ -183,13 +179,13 @@ export default function ContactPage() {
                 <div className="relative z-20">
                     <section id="contact" className="min-h-screen flex flex-col items-center justify-center p-4 pt-24">
                         <motion.div
-                            className="w-full max-w-2xl bg-[#010101]/60 backdrop-blur-md rounded-2xl p-8 sm:p-12 border border-[#b53da1]/40 shadow-xl"
+                            className="w-full max-w-2xl bg-[#010101]/60 backdrop-blur-md rounded-2xl p-8 sm:p-12 border border-yellow-600/40 shadow-xl"
                             initial={{ opacity: 0, scale: 0.9 }}
                             animate={{ opacity: 1, scale: 1 }}
                             transition={{ duration: 0.5, ease: 'easeOut' }}
                         >
                             <motion.h1
-                                className="font-aladin text-6xl md:text-7xl text-center gradient-title mb-10"
+                                className="font-display text-6xl md:text-7xl text-center gradient-title mb-10"
                                 initial={{ opacity: 0, y: -30 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ duration: 0.7, ease: 'easeOut' }}
@@ -211,8 +207,8 @@ export default function ContactPage() {
                                 />
                             </div>
 
-                            <div className="pt-6 mt-8 border-t border-[#b53da1]/30">
-                                <h3 className="font-bold text-lg text-center text-[#fea6cc] mb-4">Follow Us on Social</h3>
+                            <div className="pt-6 mt-8 border-t border-yellow-600/30">
+                                <h3 className="font-bold text-lg text-center text-yellow-100 mb-4 font-display">Follow Us on Social</h3>
                                 <motion.div 
                                     className="flex justify-center space-x-6"
                                     initial={{ opacity: 0, y: 20 }}

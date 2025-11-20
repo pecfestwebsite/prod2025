@@ -339,6 +339,7 @@ export default function EventsPage() {
   const [events, setEvents] = useState<IEvent[]>([]);
   const [filteredEvents, setFilteredEvents] = useState<IEvent[]>([]);
   const [loading, setLoading] = useState(true);
+  const [hasLoadedInitialData, setHasLoadedInitialData] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
@@ -399,6 +400,13 @@ export default function EventsPage() {
 
     return () => observer.disconnect();
   }, []);
+
+  // Mark initial load completion once data is fetched
+  useEffect(() => {
+    if (!loading && !hasLoadedInitialData) {
+      setHasLoadedInitialData(true);
+    }
+  }, [loading, hasLoadedInitialData]);
 
   // Debounce search input
   useEffect(() => {
@@ -758,7 +766,7 @@ export default function EventsPage() {
 
   const closedRegistrations = useMemo(() => new Set(['pecathon_acm_eic']), []);
 
-  if (loading) {
+  if (loading && !hasLoadedInitialData) {
     return <LoadingSkeleton />;
   }
 
@@ -771,7 +779,7 @@ export default function EventsPage() {
           src: url('/arabic.otf') format('opentype');
           font-display: swap;
         }
-        .font-display { font-family: 'Protest Guerrilla', sans-serif; }
+        .font-display { font-family: 'Protest Guerrilla', sans-serif;}
         .font-arabic { font-family: 'Arabic', serif; }
         .arabian-border {
           border-image: linear-gradient(45deg, #b53da1, #ed6ab8, #fea6cc, #ffd4b9) 1;
@@ -1069,6 +1077,7 @@ export default function EventsPage() {
                         {/* Event Image */}
                         <div className="rounded-2xl overflow-hidden border-2 border-[#b53da1]/30 aspect-square bg-black/20 flex items-center justify-center">
                           <img
+                            loading="lazy"
                             src={event.image?.includes('PECFEST_2024') ? '/Pecfest X Mood Indigo Letter Head.pdf_20240920_201728_0000.png' : (event.image || '/Pecfest X Mood Indigo Letter Head.pdf_20240920_201728_0000.png')}
                             alt={event.eventName}
                             className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-500"

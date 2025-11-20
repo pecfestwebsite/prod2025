@@ -170,7 +170,7 @@ export default function PosterUploadModal({
                       />
                     </div>
                     <p className="text-amber-300/80 text-xs mt-2 text-center">
-                      Upload your photo with this poster to complete your registration
+                      Upload a screenshot of your conversation with Gemini
                     </p>
                   </div>
 
