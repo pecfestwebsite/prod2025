@@ -652,7 +652,7 @@ export default function EventRegistrationForm({ event, onClose, onSuccess }: Reg
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+        className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm pt-30 pb-10"
         onClick={onClose}
       >
         <motion.div
@@ -660,7 +660,7 @@ export default function EventRegistrationForm({ event, onClose, onSuccess }: Reg
           animate={{ scale: 1, opacity: 1, y: 0 }}
           exit={{ scale: 0.9, opacity: 0, y: 20 }}
           transition={{ type: 'spring', duration: 0.5 }}
-          className="relative w-full max-w-2xl max-h-[90vh] overflow-y-auto bg-gradient-to-br from-[#140655] via-[#2a0a56] to-[#4321a9] rounded-3xl shadow-2xl border-2 border-[#b53da1]/50"
+          className="relative w-full max-w-2xl bg-gradient-to-br from-[#140655] via-[#2a0a56] to-[#4321a9] rounded-3xl shadow-2xl border-2 border-[#b53da1]/50 max-h-[calc(100vh-120px)] overflow-y-auto"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Close Button */}

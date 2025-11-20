@@ -350,84 +350,95 @@ export async function GET(request: NextRequest) {
       query.teamId = teamId;
     }
 
-    if (verified !== null) {
-      query.verified = verified === 'true';
+    // Build filters array for clean $and combination
+    const filters: any[] = [];
+    
+    // Add base filters that were already in query (eventId, userId, teamId)
+    if (query.eventId) {
+      filters.push({ eventId: query.eventId });
+    }
+    if (query.userId) {
+      filters.push({ userId: query.userId });
+    }
+    if (query.teamId) {
+      filters.push({ teamId: query.teamId });
     }
 
-    // Filter to show only team leaders ONLY if includeTeamMembers is false
-    // team leaders have feesPaid value or no teamId (individuals/leaders)
-    // Team members are those with a teamId but no feesPaid
+    // Add verified filter
+    if (verified !== null) {
+      filters.push({ verified: verified === 'true' });
+    }
+
+    // Add team leader filter if not including team members
     if (!includeTeamMembers) {
-      const teamLeaderFilter = {
+      filters.push({
         $or: [
           { teamId: '' }, // Individuals
           { teamId: { $exists: false } }, // Individuals without teamId field
           { feesPaid: { $exists: true, $ne: '' } }, // Team leaders with payment receipt
         ]
-      };
+      });
+    }
 
-      // Add search functionality - search in userId, eventId, and eventName
-      if (search) {
-        const searchRegex = new RegExp(search, 'i'); // Case-insensitive search
-        query.$and = [
-          teamLeaderFilter,
-          {
-            $or: [
-              { userId: searchRegex },
-              { eventId: searchRegex },
-              { eventName: searchRegex }
-            ]
-          }
-        ];
-      } else {
-        // Apply team leader filter without search
-        query.$or = teamLeaderFilter.$or;
-      }
-    } else {
-      // When including team members, just apply search without team leader filter
-      if (search) {
-        const searchRegex = new RegExp(search, 'i'); // Case-insensitive search
-        query.$or = [
+    // Add search filter
+    if (search) {
+      const searchRegex = new RegExp(search, 'i');
+      filters.push({
+        $or: [
           { userId: searchRegex },
           { eventId: searchRegex },
           { eventName: searchRegex }
-        ];
-      }
+        ]
+      });
     }
 
-    // Add event type filter - filter by totalFees (free = 0, paid > 0)
+    // Add event type filter
     if (filterEventType === 'free') {
-      query.totalFees = 0;
+      filters.push({ totalFees: 0 });
     } else if (filterEventType === 'paid') {
-      query.totalFees = { $gt: 0 };
+      filters.push({ totalFees: { $gt: 0 } });
     }
 
-    // Add payment status filter - filter by feesPaid
+    // Add payment status filter - filter by totalFees (events with fees > 0 are paid events)
     if (paymentStatus === 'paid') {
-      query.feesPaid = { $exists: true, $ne: '' };
+      filters.push({ totalFees: { $gt: 0 } });
     } else if (paymentStatus === 'unpaid') {
-      query.feesPaid = { $exists: true, $eq: '' };
+      filters.push({ totalFees: 0 });
     }
 
-    // Add accommodation filter
+    // Add accommodation filter - check accommodationMembers count
     if (accommodation === 'required') {
-      query.accommodationRequired = true;
+      filters.push({ accommodationMembers: { $gt: 0 } });
     } else if (accommodation === 'not-required') {
-      query.accommodationRequired = false;
+      filters.push({ 
+        $or: [
+          { accommodationMembers: 0 },
+          { accommodationMembers: { $exists: false } }
+        ]
+      });
     }
 
     // Add date range filter
     if (dateFrom || dateTo) {
-      query.dateTime = {};
+      const dateFilter: any = {};
       if (dateFrom) {
-        query.dateTime.$gte = new Date(dateFrom);
+        dateFilter.$gte = new Date(dateFrom);
       }
       if (dateTo) {
         const toDate = new Date(dateTo);
         toDate.setHours(23, 59, 59, 999);
-        query.dateTime.$lte = toDate;
+        dateFilter.$lte = toDate;
       }
+      filters.push({ dateTime: dateFilter });
     }
+
+    // Combine all filters with $and
+    if (filters.length > 1) {
+      query = { $and: filters };
+    } else if (filters.length === 1) {
+      query = filters[0];
+    }
+    // If no filters, query remains as set (with eventId, userId, teamId from earlier)
 
     // Get all unique event IDs to check for category filter
     let eventsForCategoryFilter = [];

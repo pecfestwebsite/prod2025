@@ -258,7 +258,6 @@ export default function ProfilePage() {
         }
         
         .font-display { font-family: 'Protest Guerrilla', sans-serif !important; }
-        .font-arabian { font-family: 'Arabic', serif !important; }
         
         .custom-scrollbar::-webkit-scrollbar {
           width: 6px;
@@ -292,7 +291,7 @@ export default function ProfilePage() {
               animate={{ opacity: 1, y: 0 }}
               className="text-center mb-8"
             >
-              <h1 className="font-arabian text-6xl md:text-8xl animate-gradient bg-gradient-to-r from-white via-yellow-400 via-amber-500 via-yellow-600 via-amber-700 to-white bg-clip-text text-transparent bg-[length:200%_auto] drop-shadow-[0_0_30px_rgba(251,191,36,0.8)] tracking-wider">
+              <h1 className="font-display text-6xl md:text-8xl animate-gradient bg-gradient-to-r from-white via-yellow-400 via-amber-500 via-yellow-600 via-amber-700 to-white bg-clip-text text-transparent bg-[length:200%_auto] drop-shadow-[0_0_30px_rgba(251,191,36,0.8)] tracking-wider">
                 My Profile
               </h1>
             </motion.div>

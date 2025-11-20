@@ -134,7 +134,6 @@ export default function EventRegistrationsClient() {
         const filteredRegs = filterRegistrationsByAccessLevel(regsList, adminUser);
         
         setEventRegistrations(filteredRegs);
-        console.log('📋 Fetched filtered registrations:', regsList);
       } catch (error) {
         console.error('Error fetching registrations:', error);
       } finally {
@@ -146,7 +145,7 @@ export default function EventRegistrationsClient() {
     if (availableEvents.length > 0) {
       fetchFilteredRegistrations();
     }
-  }, [selectedEventId, filterVerified, filterPaymentStatus, filterAccommodation, dateFrom, dateTo, availableEvents]);
+  }, [selectedEventId, filterVerified, filterPaymentStatus, filterAccommodation, dateFrom, dateTo, availableEvents, adminUser]);
 
   // Fetch available events on mount
   useEffect(() => {
@@ -641,8 +640,8 @@ export default function EventRegistrationsClient() {
         </div>
       ) : (
         <div className="space-y-6">
-          {/* Export Button - Webmaster Only */}
-          {adminUser?.accesslevel === 3 && (
+          {/* Export Button - Super Admins and Webmaster */}
+          {(adminUser?.accesslevel === 2 || adminUser?.accesslevel === 3) && (
             <div className="flex justify-end">
               <button
                 onClick={exportToCSV}
