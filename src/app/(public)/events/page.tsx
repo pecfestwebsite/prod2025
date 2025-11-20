@@ -3,7 +3,6 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Home, Calendar, MapPin, Users, IndianRupee, ExternalLink, Filter, Search, ChevronDown, Share2, Clock } from 'lucide-react';
-
 import { CardSpotlight } from '@/components/ui/card-spotlight';
 import { IEvent } from '../../../models/Event';
 import Link from 'next/link';
@@ -175,12 +174,12 @@ const CustomSelect = ({ options, value, onChange, placeholder }: {
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex justify-between items-center pl-2 sm:pl-3 pr-1 sm:pr-2 py-2 bg-gradient-to-r from-purple-900/80 to-violet-900/80 border border-purple-400/60 rounded-lg text-xs sm:text-sm text-white focus:outline-none focus:border-purple-300 font-medium transition-all hover:border-purple-300/80 hover:from-purple-800/80 hover:to-violet-800/80 truncate"
+        className="w-full flex justify-between items-center pl-3 pr-2 py-2 bg-gradient-to-r from-purple-900/80 to-violet-900/80 border border-purple-400/60 rounded-lg text-sm text-white focus:outline-none focus:border-purple-300 font-medium transition-all hover:border-purple-300/80 hover:from-purple-800/80 hover:to-violet-800/80"
       >
-        <span className={`${selectedOption ? 'text-purple-100 font-medium' : 'text-purple-200/80'} truncate`}>
-          {selectedOption ? selectedOption.label : placeholder}
+        <span className={selectedOption ? 'text-purple-100 font-medium' : 'text-purple-200/80'}>
+          {selectedOption ? selectedOption.label.replace(/[🌟📅🏛️👥⚙️🎭👤]/g, '') : placeholder}
         </span>
-        <ChevronDown size={12} className={`text-purple-300 transform transition-transform flex-shrink-0 ml-1 ${isOpen ? 'rotate-180' : 'rotate-0'}`} />
+        <ChevronDown size={14} className={`text-purple-300 transform transition-transform ${isOpen ? 'rotate-180' : 'rotate-0'}`} />
       </button>
 
       {/* 2. Dropdown Panel */}
@@ -189,8 +188,7 @@ const CustomSelect = ({ options, value, onChange, placeholder }: {
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 5 }}
           exit={{ opacity: 0, y: -10 }}
-          className="absolute top-full left-0 right-0 mt-1 z-[200] bg-gradient-to-b from-purple-800/95 to-violet-900/95 backdrop-blur-xl rounded-xl shadow-2xl p-2 origin-top border border-purple-400/60 overflow-y-auto custom-scrollbar"
-          style={{ maxHeight: 'min(300px, calc(100vh - 200px))' }}
+          className="absolute top-full left-0 right-0 mt-1 z-[200] bg-gradient-to-b from-purple-800/95 to-violet-900/95 backdrop-blur-xl rounded-xl shadow-2xl p-2 origin-top border border-purple-400/60 max-h-60 overflow-y-auto custom-scrollbar"
         >
           {/* Custom Scrollbar Styles */}
           <style>{`
@@ -348,8 +346,6 @@ export default function EventsPage() {
   const [selectedSociety, setSelectedSociety] = useState<string>('all');
   const [selectedDate, setSelectedDate] = useState<string>('all');
   const [selectedEventType, setSelectedEventType] = useState<string>('all');
-  const [selectedPriceType, setSelectedPriceType] = useState<string>('all');
-  const [societies, setSocieties] = useState<string[]>([]);
   const [selectedEvent, setSelectedEvent] = useState<IEvent | null>(null);
   const [showRegistrationForm, setShowRegistrationForm] = useState(false);
   const [showAlphabetIndex, setShowAlphabetIndex] = useState(false);
@@ -413,40 +409,63 @@ export default function EventsPage() {
     return () => clearTimeout(timer);
   }, [searchTerm]);
 
+  const societiesAndClubs = [
+    // CLUBS
+    "Rotaract Club", "Projection & Design Club", "Music Club", "English Editorial Board",
+    "Hindi Editorial Board", "Punjabi Editorial Board", "SAASC", "Dramatics",
+    "Art & Photography Club", "Electoral Literacy Club",
+    // TECHNICAL SOCIETIES
+    "Indian Institute of Metals(IIM)", "Indian Geotechnical Society(IGS)",
+    "Solar Energy Society of India(SESI)", "Robotics", "Society of Automotive Engineers(SAE)",
+    "Institute of Electronics & Electrical Engineers(IEEE)", "Society of Manufacturing Engineers(SME)",
+    "Autonomy & Space Physics Society (ASPS)", "American Society of Civil Engineers(ASCE)",
+    "Association for Computer Machinery(ACM-CSS)", "American Society of Mechanical Engineers (ASME)",
+    "Aerospace Technical Society(ATS)",
+    // Cells
+    "Student Counselling Cell (SCC)", "Communication, Information & Media Cell(CIM)",
+    "Entrepreneurship & Innovation Cell(EIC)", "Women Empowerment Cell(WEC)"
+  ,
+    // Others
+    "National Cadet Corps(NCC) (Army Wing)",
+    "National Cadet Corps (NCC)(Naval Wing)",
+    "National NSS",
+    "Sports",
+    "Dhyan Kendra"].sort();
 
-
-  const [categoryOptions, setCategoryOptions] = useState<{ value: string, label: string }[]>([{ value: 'all', label: 'Categories' }]);
-
-  const [dateOptions, setDateOptions] = useState<{ value: string, label: string }[]>([{ value: 'all', label: 'Dates' }]);
-
-  const [eventTypeOptions, setEventTypeOptions] = useState<{ value: string, label: string }[]>([{ value: 'all', label: 'Types' }]);
-
-  const [priceTypeOptions] = useState<{ value: string, label: string }[]>([{ value: 'all', label: 'Price' }, { value: 'free', label: 'Free' }, { value: 'paid', label: 'Paid' }]);
-
-  const [allSocieties, setAllSocieties] = useState<string[]>([]);
+  const uniqueCategories = ['all', ...Array.from(new Set(events.map(e => e.category)))];
   
-  useEffect(() => {
-    if (selectedSociety === 'all' && events.length > 0) {
-      const uniqueSocieties = Array.from(new Set(events.map(e => e.societyName))).sort();
-      setAllSocieties(uniqueSocieties);
-      setSocieties(uniqueSocieties);
-    }
-  }, [selectedSociety, events]);
+  // Use the static list
+  const societyOptionsForSelect = [
+    { value: 'all', label: '🏛️ All Societies' },
+    ...societiesAndClubs.map(society => ({
+      value: society,
+      label: society
+    }))
+  ];
 
-  const societyOptionsForSelect = useMemo(() => {
-    const options = [{ value: 'all', label: 'Societies' }];
-    const societesList = allSocieties.length > 0 ? allSocieties : societies;
-    societesList.forEach(s => {
-      options.push({ value: s, label: s });
-    });
-    return options;
-  }, [allSocieties, societies]);
+  const categoryOptions = [
+    { value: 'all', label: '🌟 All Categories' },
+    { value: 'technical', label: '⚙️ Technical' },
+    { value: 'cultural', label: '🎭 Cultural' },
+  ];
+
+  const dateOptions = [
+    { value: 'all', label: '📅 All Dates' },
+    { value: '21', label: '21 November' },
+    { value: '22', label: '22 November' },
+    { value: '23', label: '23 November' },
+  ];
+
+  const eventTypeOptions = [
+    // { value: 'all', label: '👥 Team/Individual' },
+    { value: 'individual', label: '👤 Individual' },
+    { value: 'team', label: '👥 Team' },
+  ];
 
   const selectedCategoryLabel = categoryOptions.find(c => c.value === selectedCategory)?.label;
   const selectedDateLabel = dateOptions.find(d => d.value === selectedDate)?.label;
 
   const [isFilterMenuOpen, setIsFilterMenuOpen] = useState(false);
-  const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
   const filterMenuRef = useRef<HTMLDivElement>(null);
 
   const closeFilterMenu = useCallback(() => {
@@ -458,35 +477,6 @@ export default function EventsPage() {
     return Array.from(letters).sort();
   }, [filteredEvents]);
 
-
-  useEffect(() => {
-    if (allSocieties.length === 0) {
-      const fetchFilterOptions = async () => {
-        try {
-          const response = await fetch('/api/events?limit=1000');
-          const data = await response.json();
-          if (data.events && data.events.length > 0) {
-
-            const categories = Array.from(new Set(data.events.map((e: IEvent) => e.category))).sort();
-            setCategoryOptions([{ value: 'all', label: 'Categories' }, ...categories.map(c => ({ value: c as string, label: c as string }))]);
-            const dates = Array.from(new Set(data.events.map((e: IEvent) => new Date(e.dateTime).getDate().toString()))).sort((a, b) => parseInt(a) - parseInt(b));
-            const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-            const sampleDate = new Date(data.events[0].dateTime);
-            setDateOptions([{ value: 'all', label: 'Dates' }, ...dates.map(d => ({ value: d, label: `${monthNames[sampleDate.getMonth()]} ${d}` }))]);
-            const types = Array.from(new Set(data.events.map((e: IEvent) => 
-              e.isTeamEvent ? 'Team' : 'Individual'
-            ))).sort();
-            setEventTypeOptions([{ value: 'all', label: 'Types' }, ...types.map(t => ({ value: t.toLowerCase(), label: t }))]);
-            const uniqueSocieties = Array.from(new Set(data.events.map((e: IEvent) => e.societyName))).sort();
-            setAllSocieties(uniqueSocieties as string[]);
-          }
-        } catch (error) {
-          console.error('Error fetching filter options:', error);
-        }
-      };
-      fetchFilterOptions();
-    }
-  }, [allSocieties]);
 
   // Fetch events with pagination - 12 at a time
   const fetchEvents = useCallback(async (page: number, resetEvents: boolean = false) => {
@@ -617,21 +607,12 @@ export default function EventsPage() {
     };
   }, [events.length, hasMore, loadingMore, currentPage, fetchEvents]);
 
-  // Filter events by price type and sort
+  // Simplified filtering - just sort the fetched events
+  // Backend handles the actual filtering now
   useEffect(() => {
-    let result = [...events];
-    
-    // Apply price filter
-    if (selectedPriceType === 'free') {
-      result = result.filter(e => e.regFees === 0);
-    } else if (selectedPriceType === 'paid') {
-      result = result.filter(e => e.regFees > 0);
-    }
-    
-    // Sort by event name
-    result.sort((a, b) => a.eventName.localeCompare(b.eventName));
+    const result = [...events].sort((a, b) => a.eventName.localeCompare(b.eventName));
     setFilteredEvents(result);
-  }, [events, selectedPriceType]);
+  }, [events]);
 
   // Detect if the filter bar is sticky
   useEffect(() => {
@@ -775,7 +756,7 @@ export default function EventsPage() {
     }
   };
 
-  const closedRegistrations = useMemo(() => new Set([]), []);
+  const closedRegistrations = useMemo(() => new Set(['pecathon_acm_eic']), []);
 
   if (loading) {
     return <LoadingSkeleton />;
@@ -899,7 +880,7 @@ export default function EventsPage() {
                     placeholder="Search events..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full pl-11 pr-4 py-2 bg-transparent border-none text-amber-300 placeholder:text-amber-400/50 focus:outline-none font-medium text-sm md:placeholder-shown:text-sm"
+                    className="w-full pl-11 pr-4 py-2 bg-transparent border-none text-amber-300 placeholder:text-amber-400/50 focus:outline-none font-medium text-sm"
                   />
                 </div>
                 <div className="h-5 w-0.5 bg-gradient-to-b from-purple-500/30 to-amber-500/30"></div>
@@ -928,14 +909,13 @@ export default function EventsPage() {
                   transition={{ duration: 0.3, ease: "easeOut" }}
                   className="mt-3 bg-gradient-to-r from-purple-900/85 to-purple-950/90 backdrop-blur-xl rounded-2xl shadow-2xl p-4 border border-purple-500/60"
                 >
-                  <div className="flex flex-col gap-3">
-                    <div className="flex gap-4">
+                  <div className="flex gap-4">
                     <div className="flex-1">
                       <CustomSelect
                         options={categoryOptions}
                         value={selectedCategory}
                         onChange={(value) => setSelectedCategory(value as string)}
-                        placeholder="All Categories"
+                        placeholder="🌟 All Categories"
                       />
                     </div>
                     <div className="flex-1">
@@ -943,7 +923,7 @@ export default function EventsPage() {
                         options={dateOptions}
                         value={selectedDate}
                         onChange={(value) => setSelectedDate(value as string)}
-                        placeholder="All Dates"
+                        placeholder="📅 All Dates"
                       />
                     </div>
                     <div className="flex-1">
@@ -951,27 +931,16 @@ export default function EventsPage() {
                         options={societyOptionsForSelect}
                         value={selectedSociety}
                         onChange={(value) => setSelectedSociety(value as string)}
-                        placeholder="All Societies"
+                        placeholder="🏛️ All Societies"
                       />
                     </div>
-                    </div>
-                    <div className="flex gap-4">
-                      <div className="flex-1">
-                        <CustomSelect
-                          options={eventTypeOptions}
-                          value={selectedEventType}
-                          onChange={(value) => setSelectedEventType(value as string)}
-                          placeholder="All Types"
-                        />
-                      </div>
-                      <div className="flex-1">
-                        <CustomSelect
-                          options={priceTypeOptions}
-                          value={selectedPriceType}
-                          onChange={(value) => setSelectedPriceType(value as string)}
-                          placeholder="All Events"
-                        />
-                      </div>
+                    <div className="flex-1">
+                      <CustomSelect
+                        options={eventTypeOptions}
+                        value={selectedEventType}
+                        onChange={(value) => setSelectedEventType(value as string)}
+                        placeholder="👥 All Types"
+                      />
                     </div>
                   </div>
                 </motion.div>
@@ -980,57 +949,67 @@ export default function EventsPage() {
           </div>
         </div>
 
-        {/* Mobile Filters Toggle */}
-        <div className="md:hidden px-2 sm:px-4 pb-4 relative z-50" ref={searchBarRef}>
-          <button
-            onClick={() => setIsMobileFilterOpen(!isMobileFilterOpen)}
-            className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-900/85 to-purple-950/90 backdrop-blur-xl rounded-full border border-purple-500/60 text-amber-400 hover:text-amber-200 transition-colors font-medium text-sm"
-          >
-            <Filter size={16} />
-            <span>Filters</span>
-            <ChevronDown size={14} className={`transform transition-transform ${isMobileFilterOpen ? 'rotate-180' : 'rotate-0'}`} />
-          </button>
-        </div>
-
-        {/* Mobile Filters Expandable */}
-        <AnimatePresence>
-          {isMobileFilterOpen && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-              transition={{ duration: 0.3 }}
-              className="md:hidden px-2 sm:px-4 pb-6 relative z-50 overflow-visible"
-            >
-              <div className="bg-gradient-to-r from-purple-900/85 to-purple-950/90 backdrop-blur-xl rounded-2xl p-3 sm:p-4 border border-purple-500/60 shadow-xl">
-                <div className="flex flex-col gap-2">
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <CustomSelect options={societyOptionsForSelect.slice(0, 15)} value={selectedSociety} onChange={(value) => setSelectedSociety(value as string)} placeholder="Society" />
-                    </div>
-                    <div>
-                      <CustomSelect options={dateOptions} value={selectedDate} onChange={(value) => setSelectedDate(value as string)} placeholder="Date" />
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-3 gap-2">
-                    <div>
-                      <CustomSelect options={categoryOptions} value={selectedCategory} onChange={(value) => setSelectedCategory(value as string)} placeholder="Category" />
-                    </div>
-                    <div>
-                      <CustomSelect options={eventTypeOptions} value={selectedEventType} onChange={(value) => setSelectedEventType(value as string)} placeholder="Type" />
-                    </div>
-                    <div>
-                      <CustomSelect options={priceTypeOptions} value={selectedPriceType} onChange={(value) => setSelectedPriceType(value as string)} placeholder="Price" />
-                    </div>
-                  </div>
-                  {(selectedCategory !== 'all' || selectedDate !== 'all' || selectedSociety !== 'all' || selectedEventType !== 'all' || selectedPriceType !== 'all') && (
-                    <button onClick={() => {setSelectedCategory('all');setSelectedDate('all');setSelectedSociety('all');setSelectedEventType('all');setSelectedPriceType('all');}} className="px-2 sm:px-3 py-2 bg-red-600/80 hover:bg-red-500/80 text-white text-xs font-medium rounded-lg transition-all border border-red-500/50 whitespace-nowrap">Clear Filters</button>
-                  )}
+        {/* Mobile Filters Only */}
+        <div className="md:hidden px-4 pb-6 relative z-50" ref={searchBarRef}>
+          <div className="bg-gradient-to-r from-purple-900/85 to-purple-950/90 backdrop-blur-xl rounded-2xl p-4 border border-purple-500/60 shadow-xl will-change-auto">
+            {/* Horizontal Filter Layout */}
+            <div className="flex items-center gap-2 overflow-x-auto pb-2" style={{msOverflowStyle: 'none', scrollbarWidth: 'none'}}>
+              
+              <div className="flex gap-2 min-w-max">
+                <div className="min-w-[120px]">
+                  <CustomSelect
+                    options={categoryOptions}
+                    value={selectedCategory}
+                    onChange={(value) => setSelectedCategory(value as string)}
+                    placeholder="Category"
+                  />
                 </div>
+                
+                <div className="min-w-[100px]">
+                  <CustomSelect
+                    options={dateOptions}
+                    value={selectedDate}
+                    onChange={(value) => setSelectedDate(value as string)}
+                    placeholder="Date"
+                  />
+                </div>
+                
+                <div className="min-w-[140px]">
+                  <CustomSelect
+                    options={societyOptionsForSelect.slice(0, 15)}
+                    value={selectedSociety}
+                    onChange={(value) => setSelectedSociety(value as string)}
+                    placeholder="Society"
+                  />
+                </div>
+                
+                <div className="min-w-[100px]">
+                  <CustomSelect
+                    options={eventTypeOptions}
+                    value={selectedEventType}
+                    onChange={(value) => setSelectedEventType(value as string)}
+                    placeholder="Type"
+                  />
+                </div>
+                
+                {/* Clear Button */}
+                {(selectedCategory !== 'all' || selectedDate !== 'all' || selectedSociety !== 'all' || selectedEventType !== 'all') && (
+                  <button
+                    onClick={() => {
+                      setSelectedCategory('all');
+                      setSelectedDate('all');
+                      setSelectedSociety('all');
+                      setSelectedEventType('all');
+                    }}
+                    className="px-3 py-2 bg-red-600/80 hover:bg-red-500/80 text-white text-xs font-medium rounded-lg transition-all flex-shrink-0 border border-red-500/50"
+                  >
+                    Clear
+                  </button>
+                )}
               </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+            </div>
+          </div>
+        </div>
 
         {/* Events Grid */}
         <div className="max-w-7xl mx-auto px-4 pt-8 pb-24 relative z-10">
@@ -1195,14 +1174,14 @@ export default function EventsPage() {
                     </button>
                   </div>
                 )}
-                {!hasMore && filteredEvents.length > 0 && (
+                {!hasMore && events.length > 0 && (
                   <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     className="text-center py-8"
                   >
                     <div className="text-[#ffd4b9] text-lg font-medium">✨ You've reached the end ✨</div>
-                    <p className="text-[#fea6cc] text-sm mt-2">All {filteredEvents.length} events loaded</p>
+                    <p className="text-[#fea6cc] text-sm mt-2">All {events.length} events loaded</p>
                   </motion.div>
                 )}
               </div>

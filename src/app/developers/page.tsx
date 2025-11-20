@@ -179,10 +179,6 @@ export default function DevelopersPage() {
 
   return (
     <div className="relative min-h-screen bg-gradient-to-b from-[#0f0a1a] via-[#1a0f2e] to-[#0f0a1a] overflow-hidden">
-      <div 
-        className="absolute inset-0 z-0 bg-cover bg-center bg-no-repeat bg-fixed opacity-20"
-        style={{ backgroundImage: 'url(/contactus_background.jpeg)' }}
-      />
       <style>{`
       @import url('https://fonts.googleapis.com/css2?family=Protest+Guerrilla&display=swap');
         @font-face {
@@ -191,6 +187,7 @@ export default function DevelopersPage() {
           font-display: swap;
         }
         .font-display { font-family: 'Protest Guerrilla', sans-serif; }
+        .font-arabic { font-family: 'Arabic', serif; }
         .arabian-border {
           border-image: linear-gradient(45deg, #b53da1, #ed6ab8, #fea6cc, #ffd4b9) 1;
         }
@@ -206,19 +203,19 @@ export default function DevelopersPage() {
       <FloatingLantern duration={6} size={35} x="15%" y="60%" delay={2} />
       <FloatingLantern duration={4.5} size={28} x="85%" y="70%" delay={1.5} />
 
-      <div className="relative z-10 pt-32 pb-6 px-4 sm:px-6 lg:px-8 w-full">
+      <div className="relative z-10 pt-32 pb-20 px-4 sm:px-8 lg:px-12 w-full">
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8 }}
-          className="text-center mb-8 sm:mb-12"
+          className="text-center mb-24 sm:mb-32"
         >
-          <h1 className="font-display text-4xl sm:text-5xl md:text-6xl lg:text-7xl animate-gradient bg-gradient-to-r from-white via-pink-200 via-pink-300 via-pink-400 via-pink-500 to-white bg-clip-text text-transparent bg-[length:200%_auto] tracking-wider">
+          <h1 className="font-arabic text-6xl sm:text-7xl md:text-9xl animate-gradient bg-gradient-to-r from-white via-pink-200 via-pink-300 via-pink-400 via-pink-500 to-white bg-clip-text text-transparent bg-[length:200%_auto] tracking-wider">
             Meet Our Developers
           </h1>
-          <div className="h-1 w-24 sm:w-32 mx-auto bg-gradient-to-r from-transparent via-[#ed6ab8] to-transparent mb-3"></div>
-          <p className="text-sm sm:text-base md:text-lg text-[#fea6cc] font-display max-w-3xl mx-auto">
+          <div className="h-1 w-32 mx-auto bg-gradient-to-r from-transparent via-[#ed6ab8] to-transparent mb-6"></div>
+          <p className="text-lg sm:text-xl text-[#fea6cc] font-arabian max-w-3xl mx-auto">
             The talented minds behind the Pecfest 2025 experience
           </p>
         </motion.div>
@@ -229,17 +226,17 @@ export default function DevelopersPage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.8, delay: 0.2 }}
-            className="mb-10"
+            className="mb-32"
           >
             <motion.h2 
               initial={{ opacity: 0, x: -50 }}
               whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: true }}
-              className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-display text-center pb-8 sm:pb-10 animate-gradient bg-gradient-to-r from-white via-pink-200 via-pink-300 via-pink-400 via-pink-500 to-white bg-clip-text text-transparent bg-[length:200%_auto] tracking-wider"
+              className="text-4xl sm:text-5xl md:text-6xl font-arabic text-center pb-8 animate-gradient bg-gradient-to-r from-white via-pink-200 via-pink-300 via-pink-400 via-pink-500 to-white bg-clip-text text-transparent bg-[length:200%_auto] tracking-wider"
             >
               Leadership Team 
             </motion.h2>
-            <div className="flex flex-wrap justify-center gap-4 sm:gap-6 md:gap-8 max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
+            <div className="flex flex-wrap justify-center gap-8 sm:gap-10 md:gap-12 max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
               {developersData.heads.map((head, index) => (
                 <div key={head.id} className="w-full sm:w-[calc(50%-1.25rem)] lg:w-[calc(33.333%-2rem)] xl:w-[calc(25%-2.25rem)]">
                   <DeveloperCard developer={head} index={index} />
@@ -255,17 +252,17 @@ export default function DevelopersPage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.8, delay: 0.4 }}
-            className="mb-6"
+            className="mb-20"
           >
             <motion.h2 
               initial={{ opacity: 0, x: -50 }}
               whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: true }}
-              className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-display text-center pb-8 sm:pb-10 animate-gradient bg-gradient-to-r from-white via-pink-200 via-pink-300 via-pink-400 via-pink-500 to-white bg-clip-text text-transparent bg-[length:200%_auto] tracking-wider"
+              className="text-4xl sm:text-5xl md:text-6xl font-arabic text-center pb-8 animate-gradient bg-gradient-to-r from-white via-pink-200 via-pink-300 via-pink-400 via-pink-500 to-white bg-clip-text text-transparent bg-[length:200%_auto] tracking-wider"
             >
               Development Team 
             </motion.h2>
-            <div className="flex flex-wrap justify-center gap-4 sm:gap-6 md:gap-8 max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
+            <div className="flex flex-wrap justify-center gap-8 sm:gap-10 md:gap-12 max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
               {developersData.developers.map((dev, index) => (
                 <div key={dev.id} className="w-full sm:w-[calc(50%-1.25rem)] lg:w-[calc(33.333%-2rem)] xl:w-[calc(25%-2.25rem)]">
                   <DeveloperCard developer={dev} index={index} />

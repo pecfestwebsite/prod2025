@@ -722,18 +722,17 @@ export default function CommitteePage() {
               initial={{ opacity: 0, x: -50 }}
               whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: true }}
-              className="text-3xl sm:text-4xl md:text-5xl font-bold mb-20 sm:mb-24 text-center text-transparent bg-clip-text bg-gradient-to-r from-[#ffd4b9] via-[#fea6cc] to-[#ed6ab8] font-display"
+              className="text-3xl sm:text-4xl md:text-5xl font-bold mb-12 sm:mb-16 text-center text-transparent bg-clip-text bg-gradient-to-r from-[#ffd4b9] via-[#fea6cc] to-[#ed6ab8] font-display"
             >
               {committee.committeeName}
             </motion.h2>
-            <div className="flex flex-wrap justify-center gap-8 sm:gap-12 md:gap-16 lg:gap-20 mt-32 sm:mt-40">
+            <div className="flex flex-wrap justify-center gap-8 sm:gap-12 md:gap-16 lg:gap-20">
               {committee.members.map((member, memberIndex) => (
-                <div key={member.id}>
-                  <MemberLantern
-                    member={member}
-                    index={committeeIndex * 10 + memberIndex}
-                  />
-                </div>
+                <MemberLantern
+                  key={member.id}
+                  member={member}
+                  index={committeeIndex * 10 + memberIndex}
+                />
               ))}
             </div>
           </motion.div>

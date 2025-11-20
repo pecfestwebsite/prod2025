@@ -203,7 +203,7 @@ export default function TeamPage() {
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8 }}
-          className="text-center mt-16 sm:mt-24 mb-16 sm:mb-24"
+          className="text-center mb-16 sm:mb-24"
         >
           <h1 className="font-display text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-bold mb-4 text-transparent bg-clip-text bg-gradient-to-r from-[#ffd4b9] via-[#fea6cc] to-[#ed6ab8] drop-shadow-[0_8px_20px_rgba(237,106,184,0.4)] tracking-wider px-4">
             Meet Our Team
@@ -222,13 +222,13 @@ export default function TeamPage() {
             whileInView={{ opacity: 1 }}
             transition={{ duration: 0.8, delay: committeeIndex * 0.1 }}
             viewport={{ once: true, margin: "-100px" }}
-            className="mb-20 sm:mb-20 pt-12 sm:pt-4"
+            className="mb-20 sm:mb-32"
           >
             <motion.h2
               initial={{ opacity: 0, x: -50 }}
               whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: true }}
-              className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold mb-16 text-center text-transparent bg-clip-text bg-gradient-to-r from-[#ffd4b9] via-[#fea6cc] to-[#ed6ab8] font-display px-4"
+              className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold mb-8 sm:mb-12 md:mb-16 text-center text-transparent bg-clip-text bg-gradient-to-r from-[#ffd4b9] via-[#fea6cc] to-[#ed6ab8] font-display px-4"
             >
               {committee.committeeName}
             </motion.h2>
