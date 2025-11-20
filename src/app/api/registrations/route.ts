@@ -157,7 +157,7 @@ export async function POST(request: NextRequest) {
           day: 'numeric',
           hour: '2-digit',
           minute: '2-digit',
-          timeZone: 'Asia/Kolkata',
+          timeZone: 'UTC',
         }),
         eventDateTime: new Date(event.dateTime).toLocaleString('en-US', {
           year: 'numeric',
@@ -165,7 +165,7 @@ export async function POST(request: NextRequest) {
           day: 'numeric',
           hour: '2-digit',
           minute: '2-digit',
-          timeZone: 'Asia/Kolkata',
+          timeZone: 'UTC',
         }),
         eventdateTime: event.dateTime,
         eventEndDateTime: event.endDateTime,

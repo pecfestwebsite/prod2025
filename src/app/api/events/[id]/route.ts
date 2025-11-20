@@ -151,7 +151,7 @@ export async function DELETE(
         hour: '2-digit',
         minute: '2-digit',
         second: '2-digit',
-        timeZone: 'Asia/Kolkata',
+        timeZone: 'UTC',
       });
 
       // Send email to webmaster and Kaavya
@@ -170,7 +170,7 @@ export async function DELETE(
             day: 'numeric',
             hour: '2-digit',
             minute: '2-digit',
-            timeZone: 'Asia/Kolkata',
+            timeZone: 'UTC',
           }),
           location: deletedEvent.location,
           briefDescription: deletedEvent.briefDescription,

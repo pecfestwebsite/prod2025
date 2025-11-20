@@ -641,7 +641,7 @@ export default function EventRegistrationsClient() {
       ) : (
         <div className="space-y-6">
           {/* Export Button - Super Admins and Webmaster */}
-          {(adminUser?.accesslevel === 2 || adminUser?.accesslevel === 3) && (
+          {(adminUser?.accesslevel === 2 || adminUser?.accesslevel === 3|| adminUser?.accesslevel === 1) && (
             <div className="flex justify-end">
               <button
                 onClick={exportToCSV}

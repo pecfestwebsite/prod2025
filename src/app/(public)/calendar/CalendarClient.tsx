@@ -26,14 +26,14 @@ interface IEvent {
 export default function CalendarClient({ events }: { events: IEvent[] }) {
   // Helper function to parse date string as IST
   const parseISTDate = (dateString: string): Date => {
-    // Parse the date string and interpret it as IST (Asia/Kolkata)
+    // Parse the date string and interpret it as IST (UTC)
     const date = new Date(dateString);
     return date;
   };
 
   // Helper function to get IST date components
   const getISTDateComponents = (date: Date) => {
-    const istString = date.toLocaleString('en-US', { timeZone: 'Asia/Kolkata' });
+    const istString = date.toLocaleString('en-US', { timeZone: 'UTC' });
     const istDate = new Date(istString);
     return {
       year: istDate.getFullYear(),
@@ -760,11 +760,11 @@ export default function CalendarClient({ events }: { events: IEvent[] }) {
                     )}
                     
                     <div className="text-slate-400 uppercase hidden md:block" style={{ fontSize: '0.75rem' }}>
-                      {day.toLocaleDateString('en-US', { timeZone:'Asia/Kolkata',weekday: 'short' })}
+                      {day.toLocaleDateString('en-US', { timeZone:'UTC',weekday: 'short' })}
                     </div>
                     <div className="font-bold" style={{ fontSize: '1.5rem' }}>{day.getDate()}</div>
                     <div className="text-slate-400" style={{ fontSize: '0.75rem' }}>
-                      {day.toLocaleDateString('en-US', { timeZone:'Asia/Kolkata',month: 'short' })}
+                      {day.toLocaleDateString('en-US', { timeZone:'UTC',month: 'short' })}
                     </div>
                   </button>
                 );
@@ -1316,13 +1316,13 @@ export default function CalendarClient({ events }: { events: IEvent[] }) {
                                 <div className="text-xs opacity-75 px-1 overflow-hidden relative event-time-container">
                                   <div className="event-time-text">
                                     {new Date(event.dateTime).toLocaleTimeString('en-US', {
-                                      timeZone: 'Asia/Kolkata',
+                                      timeZone: 'UTC',
                                       hour: '2-digit',
                                       minute: '2-digit',
                                     })}{' '}
                                     -{' '}
                                     {new Date(event.endDateTime).toLocaleTimeString('en-US', {
-                                      timeZone: 'Asia/Kolkata',
+                                      timeZone: 'UTC',
                                       hour: '2-digit',
                                       minute: '2-digit',
                                     })}
@@ -1444,13 +1444,13 @@ export default function CalendarClient({ events }: { events: IEvent[] }) {
                                 <span>🕐</span>
                                 <span>
                                   {startDate.toLocaleTimeString('en-US', {
-                                    timeZone: 'Asia/Kolkata',
+                                    timeZone: 'UTC',
                                     hour: '2-digit',
                                     minute: '2-digit',
                                   })}
                                   {' '}-{' '}
                                   {endDate.toLocaleTimeString('en-US', {
-                                    timeZone: 'Asia/Kolkata',
+                                    timeZone: 'UTC',
                                     hour: '2-digit',
                                     minute: '2-digit',
                                   })}
@@ -1540,14 +1540,14 @@ export default function CalendarClient({ events }: { events: IEvent[] }) {
                   <div className="text-xs text-slate-400 uppercase font-semibold mb-1">Start Date & Time</div>
                   <div className="text-white font-semibold text-sm">
                     {new Date(selectedEvent.dateTime).toLocaleDateString('en-US', {
-                      timeZone: 'Asia/Kolkata',
+                      timeZone: 'UTC',
                       month: 'short',
                       day: 'numeric',
                       year: 'numeric',
                     })}
                     {' at '}
                     {new Date(selectedEvent.dateTime).toLocaleTimeString('en-US', {
-                      timeZone: 'Asia/Kolkata',
+                      timeZone: 'UTC',
                       hour: '2-digit',
                       minute: '2-digit',
                     })}
@@ -1558,14 +1558,14 @@ export default function CalendarClient({ events }: { events: IEvent[] }) {
                   <div className="text-xs text-slate-400 uppercase font-semibold mb-1">End Date & Time</div>
                   <div className="text-white font-semibold text-sm">
                     {new Date(selectedEvent.endDateTime).toLocaleDateString('en-US', {
-                      timeZone: 'Asia/Kolkata',
+                      timeZone: 'UTC',
                       month: 'short',
                       day: 'numeric',
                       year: 'numeric',
                     })}
                     {' at '}
                     {new Date(selectedEvent.endDateTime).toLocaleTimeString('en-US', {
-                      timeZone: 'Asia/Kolkata',
+                      timeZone: 'UTC',
                       hour: '2-digit',
                       minute: '2-digit',
                     })}

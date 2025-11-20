@@ -229,7 +229,7 @@ export async function POST(request: NextRequest) {
                     <p><strong>User ID:</strong> ${payload.registrationDetails.userId}</p>
                     ${payload.registrationDetails.teamId ? `<p><strong>Team ID:</strong> ${payload.registrationDetails.teamId}</p>` : ''}
                     ${payload.registrationDetails.feesPaid ? `<p><strong>Fees Paid:</strong> ${payload.registrationDetails.feesPaid}</p>` : ''}
-                    <p><strong>Timestamp:</strong> ${new Date().toLocaleString('en-US', { timeZone: 'Asia/Kolkata' })}</p>
+                    <p><strong>Timestamp:</strong> ${new Date().toLocaleString('en-US', { timeZone: 'UTC' })}</p>
                   </div>
                 </div>
                 <div class="footer">

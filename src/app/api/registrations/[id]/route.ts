@@ -153,7 +153,7 @@ export async function PUT(
             hour: '2-digit',
             minute: '2-digit',
             second: '2-digit',
-            timeZone: 'Asia/Kolkata',
+            timeZone: 'UTC',
           });
 
           // Format registration date
@@ -163,7 +163,7 @@ export async function PUT(
             day: 'numeric',
             hour: '2-digit',
             minute: '2-digit',
-            timeZone: 'Asia/Kolkata',
+            timeZone: 'UTC',
           });
 
           // Send email to user ONLY if verification is approved
