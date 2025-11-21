@@ -357,9 +357,17 @@ export default function LandingPage() {
                 @import url('https://fonts.googleapis.com/css2?family=Scheherazade+New:wght@400;700&display=swap');
                 
                 body { font-family: 'Inter', sans-serif; background-color: #010101; background-image: linear-gradient(to bottom, #24153e, #64446e, #714c63); }
-                .font-display { font-family: 'Protest Guerrilla', sans-serif; }
-                .font-aladin { font-family: 'Aladin', cursive; }
-                .font-arabian { font-family: 'Scheherazade New', serif; }
+                @font-face {
+                  font-family: 'Arabic';
+                  src: url('/arabic.otf') format('opentype');
+                  font-display: swap;
+                }
+                .font-display { font-family: 'Protest Guerrilla', sans-serif;}
+                .font-arabic { font-family: 'Arabic', serif; }
+                .arabian-border {
+                  border-image: linear-gradient(45deg, #b53da1, #ed6ab8, #fea6cc, #ffd4b9) 1;
+                }
+                  
                 
                 @supports (background-clip: text) {
                   .gradient-title {
@@ -426,15 +434,16 @@ export default function LandingPage() {
               </motion.h1>
 
               <motion.h2
-                className="font-arabian text-4xl md:text-5xl text-[#f9f5f2] [text-shadow:_4px_4px_10px_#000000] tracking-widest"
+                className="font-arabic text-4xl sm:text-4xl md:text-6xl py-8 animate-gradient bg-gradient-to-r from-white via-fuchsia-500 via-pink-300 to-pink-300 bg-clip-text text-transparent bg-[length:200%_auto] tracking-wider text-outline-dark"
                 initial={{ opacity: 0, y: 50 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 1, delay: 0.3, ease: "easeOut" }}
               >
-                Coming Soon
+                Your Wish is Granted!! <br />
+                Explore the Mirage
               </motion.h2>
             </header>
-            <Countdown />
+            {/* <Countdown /> */}
             <motion.div
               className="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-6"
               initial={{ opacity: 0, scale: 0.8 }}
