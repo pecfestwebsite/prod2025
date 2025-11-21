@@ -120,52 +120,6 @@
     ]
   },
   {
-    "committeeName": "Alumni and Industry Relations",
-    "members": [
-      {
-        "id": "22105068",
-        "name": "Vaibhav Makkar",
-        "image": "1aTWAtWeGW-nbTxIzfMwnOoQiY0KZ-1SU",
-        "role": "Head"
-      },
-      {
-        "id": "22107018",
-        "name": "Ekom P Saidha",
-        "image": "1N0sVEzocaHkloSkzP1TIFt6dKz4CQ8cE",
-        "role": "Co-Head"
-      },
-      {
-        "id": "22105133",
-        "name": "Archie Garg",
-        "image": "1Hyx-7EV41KgprclHls-VyUDPsIUrNrdI",
-        "role": "Operational Head"
-      }
-    ]
-  },
-  {
-    "committeeName": "Printing & Stationery",
-    "members": [
-      {
-        "id": "22109036",
-        "name": "Vikas Attri",
-        "image": "1MW2zeLR1NxTtRG6K0YgVyZdoxkYVxdiC",
-        "role": "Head"
-      },
-      {
-        "id": "22105076",
-        "name": "Rishabh Saggar",
-        "image": "1SJhEvV_TTVwEyx_SFHcB5KeCisoX7ryG",
-        "role": "Co-Head"
-      },
-      {
-        "id": "22102101",
-        "name": "Aashish dodwal",
-        "image": "logo.png",
-        "role": "Operational Head"
-      }
-    ]
-  },
-  {
     "committeeName": "Infrastructure",
     "members": [
       {
@@ -370,6 +324,52 @@
         "id": "22105009",
         "name": "Ishnoor Singh",
         "image": "17ws5ukHihTURqw9ULl5XhlDNVD9-E0RP",
+        "role": "Operational Head"
+      }
+    ]
+  },
+  {
+    "committeeName": "Alumni and Industry Relations",
+    "members": [
+      {
+        "id": "22105068",
+        "name": "Vaibhav Makkar",
+        "image": "1aTWAtWeGW-nbTxIzfMwnOoQiY0KZ-1SU",
+        "role": "Head"
+      },
+      {
+        "id": "22107018",
+        "name": "Ekom P Saidha",
+        "image": "1N0sVEzocaHkloSkzP1TIFt6dKz4CQ8cE",
+        "role": "Co-Head"
+      },
+      {
+        "id": "22105133",
+        "name": "Archie Garg",
+        "image": "1Hyx-7EV41KgprclHls-VyUDPsIUrNrdI",
+        "role": "Operational Head"
+      }
+    ]
+  },
+  {
+    "committeeName": "Printing & Stationery",
+    "members": [
+      {
+        "id": "22109036",
+        "name": "Vikas Attri",
+        "image": "1MW2zeLR1NxTtRG6K0YgVyZdoxkYVxdiC",
+        "role": "Head"
+      },
+      {
+        "id": "22105076",
+        "name": "Rishabh Saggar",
+        "image": "1SJhEvV_TTVwEyx_SFHcB5KeCisoX7ryG",
+        "role": "Co-Head"
+      },
+      {
+        "id": "22102101",
+        "name": "Aashish dodwal",
+        "image": "logo.png",
         "role": "Operational Head"
       }
     ]
