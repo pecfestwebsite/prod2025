@@ -3,13 +3,14 @@
 import type React from "react"
 import { useState, useRef, useCallback, useMemo, useEffect } from "react"
 import { motion, useSpring } from "framer-motion"
-import { Instagram, Linkedin, Mail, Phone } from "lucide-react"
+import { Instagram, Linkedin, Mail, Phone, Github } from "lucide-react"
 
 interface SocialLinks {
   instagram?: string
   linkedin?: string
   email?: string
   phone?: string
+  github?: string
 }
 
 interface DirectionAwareHoverProps {
@@ -391,6 +392,23 @@ export function DirectionAwareHover({ imageUrl, name, role, socialLinks, classNa
                   }}
                 >
                   <Phone size={18} />
+                </motion.a>
+              )}
+
+              {socialLinks.github && (
+                <motion.a
+                  href={socialLinks.github}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  whileHover={{ scale: 1.15, y: -3 }}
+                  whileTap={{ scale: 0.9 }}
+                  className="flex items-center justify-center w-10 h-10 rounded-lg bg-[#ed6ab8]/70 hover:bg-[#ed6ab8] text-white transition-colors backdrop-blur-sm"
+                  style={{
+                    rotateX: isHovered ? rotateX : 0,
+                    rotateY: isHovered ? rotateY : 0,
+                  }}
+                >
+                  <Github size={18} />
                 </motion.a>
               )}
             </motion.div>

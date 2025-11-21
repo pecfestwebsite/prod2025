@@ -15,6 +15,8 @@ interface Developer {
   linkedin?: string
   email?: string
   phone?: string
+  github?: string
+  portfolio?: string
 }
 
 interface DevelopersData {
@@ -105,6 +107,12 @@ const FloatingLantern = ({
 }
 
 const DeveloperCard = ({ developer, index }: { developer: Developer; index: number }) => {
+  const handleCardClick = () => {
+    if (developer.portfolio) {
+      window.open(developer.portfolio, '_blank');
+    }
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 50, rotateX: -25 }}
@@ -116,6 +124,8 @@ const DeveloperCard = ({ developer, index }: { developer: Developer; index: numb
         y: -12,
         transition: { duration: 0.3 },
       }}
+      onClick={handleCardClick}
+      style={{ cursor: developer.portfolio ? 'pointer' : 'default' }}
     >
       {/* Outer Glow - No clip, extends beyond card */}
       <motion.div
@@ -152,6 +162,7 @@ const DeveloperCard = ({ developer, index }: { developer: Developer; index: numb
           linkedin: developer.linkedin,
           email: developer.email,
           phone: developer.phone,
+          github: developer.github,
         }}
       />
     </motion.div>
@@ -266,12 +277,32 @@ export default function DevelopersPage() {
               Development Team 
             </motion.h2>
             <div className="flex flex-wrap justify-center gap-4 sm:gap-6 md:gap-8 max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
-              {developersData.developers.map((dev, index) => (
+              {developersData.developers.slice(0, 4).map((dev, index) => (
                 <div key={dev.id} className="w-full sm:w-[calc(50%-1.25rem)] lg:w-[calc(33.333%-2rem)] xl:w-[calc(25%-2.25rem)]">
                   <DeveloperCard developer={dev} index={index} />
                 </div>
               ))}
             </div>
+
+            {developersData.developers.length > 4 && (
+              <div className="mt-16">
+                <motion.h2 
+                  initial={{ opacity: 0, x: -50 }}
+                  whileInView={{ opacity: 1, x: 0 }}
+                  viewport={{ once: true }}
+                  className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-display text-center pb-8 sm:pb-10 animate-gradient bg-gradient-to-r from-white via-pink-200 via-pink-300 via-pink-400 via-pink-500 to-white bg-clip-text text-transparent bg-[length:200%_auto] tracking-wider"
+                >
+                  Sub-Heads
+                </motion.h2>
+                <div className="flex flex-wrap justify-center gap-4 sm:gap-6 md:gap-8 max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
+                  {developersData.developers.slice(4).map((dev, index) => (
+                    <div key={dev.id} className="w-full sm:w-[calc(50%-1.25rem)] lg:w-[calc(33.333%-2rem)] xl:w-[calc(25%-2.25rem)]">
+                      <DeveloperCard developer={dev} index={index + 4} />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </motion.div>
         )}
 

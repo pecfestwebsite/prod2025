@@ -64,6 +64,44 @@
       "linkedin": "https://www.linkedin.com/in/arushi866/",
       "email": "arushijain866@gmail.com",
       "phone": "+91-9872553799"
+    },
+    {
+      "id": "dev-5",
+      "name": "Ananay Dubey",
+      "image": "/ananay.jpg",
+      "instagram": "https://www.instagram.com/ananay_dubey",
+      "linkedin": "https://www.linkedin.com/in/ananaydubey/",
+      "email": "dubeyananay@gmail.com",
+      "phone": "+91-7719767324",
+      "github": "https://github.com/fts18",
+      "portfolio": "https://ananay.netlify.app"
+    },
+    {
+      "id": "dev-6",
+      "name": "Rudra Pratap Singh",
+      "image": "/rudra.jpg",
+      "instagram": "https://www.instagram.com/rrudraa.13?igsh=MXJmcGM0cW53NzczMw==",
+      "linkedin": "https://www.linkedin.com/in/rudra-partap-singh-806857313?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=android_app",
+      "email": "anshurudra1311@gmail.com",
+      "phone": "+91-9341644232"
+    },
+    {
+      "id": "dev-7",
+      "name": "Matisha Kansal",
+      "image": "/matisha.jpg",
+      "instagram": "https://www.instagram.com/matisha_kansal?igsh=Y25uc2FnZm9qc2h5&utm_source=qr",
+      "linkedin": "https://www.linkedin.com/in/matisha-kansal-0b22bb380?utm_source=share_via&utm_content=profile&utm_medium=member_ios",
+      "email": "matishakansal@gmail.com",
+      "phone": "+91-9876692866"
+    },
+    {
+      "id": "dev-8",
+      "name": "Yesha Gupta",
+      "image": "/yesha.jpg",
+      "instagram": "https://www.instagram.com",
+      "linkedin": "https://www.linkedin.com",
+      "email": "",
+      "phone": "+91-6283774406"
     }
   ]
 }

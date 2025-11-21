@@ -854,6 +854,37 @@ export default function EventRegistrationForm({ event, onClose, onSuccess }: Reg
                     </span>
                   </div>
                 </div>
+
+                {/* Warning for events that have started */}
+                {(() => {
+                  try {
+                    const now = new Date();
+                    const eventStartTime = new Date(event.dateTime);
+                    if (!isNaN(eventStartTime.getTime()) && now.getTime() > eventStartTime.getTime()) {
+                      return (
+                        <motion.div
+                          initial={{ opacity: 0, y: -10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          className="mt-4 p-4 bg-red-500/15 border-2 border-red-400/40 rounded-xl backdrop-blur-sm"
+                        >
+                          <div className="flex items-start gap-3">
+                            <AlertCircle className="w-5 h-5 text-red-300 flex-shrink-0 mt-0.5" />
+                            <div>
+                              <p className="text-red-200 font-semibold text-sm mb-1">⚠️ Event Has Started</p>
+                              <p className="text-red-100 text-xs leading-relaxed">
+                                This event has already begun. Please contact the organizers before registering. 
+                                We are not responsible if you register without contacting them first.
+                              </p>
+                            </div>
+                          </div>
+                        </motion.div>
+                      );
+                    }
+                  } catch (error) {
+                    console.error('Error checking event start time:', error);
+                  }
+                  return null;
+                })()}
               </div>
 
               {/* Success Message */}

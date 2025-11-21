@@ -766,6 +766,23 @@ export default function EventsPage() {
 
   const closedRegistrations = useMemo(() => new Set(['pecathon_acm_eic']), []);
 
+  const hasEventStarted = (event: IEvent) => {
+    try {
+      const now = new Date();
+      const eventStartTime = new Date(event.dateTime);
+      
+      // Check if date is valid
+      if (isNaN(eventStartTime.getTime())) {
+        return false;
+      }
+      
+      return now.getTime() > eventStartTime.getTime();
+    } catch (error) {
+      console.error('Error checking event start time:', error);
+      return false;
+    }
+  };
+
   if (loading && !hasLoadedInitialData) {
     return <LoadingSkeleton />;
   }
@@ -1052,7 +1069,6 @@ export default function EventsPage() {
                   // Check if this is the first event for its letter
                   const firstLetter = event.eventName[0].toUpperCase();
                   const isFirstOfLetter = index === 0 || event.eventName[0].toUpperCase() !== filteredEvents[index - 1].eventName[0].toUpperCase();
-                  const eventStarted = new Date(event.dateTime) <= new Date();
 
                   return (
                     <motion.div
@@ -1093,21 +1109,16 @@ export default function EventsPage() {
 
                           {/* Action Buttons */}
                           <div className="flex gap-3 mt-6">
-                            {eventStarted ? (
-                              <div className="flex-1 py-3 px-6 rounded-2xl border border-slate-400/40 bg-slate-700/40 text-slate-200 font-semibold text-center">
-                                Registration closed
-                              </div>
-                            ) : (
-                              <motion.button 
-                                onClick={() => {
-                                  setSelectedEvent(event);
-                                  setShowRegistrationForm(true);
-                                }}
-                                className={`flex-1 font-bold py-3 px-6 rounded-2xl transition-all duration-500 transform font-protest text-lg shadow-lg relative overflow-hidden ${
-                                  closedRegistrations.has(event.eventId)
-                                    ? 'bg-slate-600/60 text-slate-200 cursor-not-allowed border border-slate-400/40'
-                                    : 'bg-gradient-to-r from-amber-300 via-yellow-400 to-amber-300 text-[#4321a9]/80 hover:from-yellow-300 hover:via-amber-400 hover:to-yellow-500 hover:scale-105 hover:shadow-xl hover:shadow-yellow-500/30'
-                                }`}
+                            <motion.button 
+                              onClick={() => {
+                                setSelectedEvent(event);
+                                setShowRegistrationForm(true);
+                              }}
+                              className={`flex-1 font-bold py-3 px-6 rounded-2xl transition-all duration-500 transform font-protest text-lg shadow-lg relative overflow-hidden ${
+                                closedRegistrations.has(event.eventId)
+                                  ? 'bg-slate-600/60 text-slate-200 cursor-not-allowed border border-slate-400/40'
+                                  : 'bg-gradient-to-r from-amber-300 via-yellow-400 to-amber-300 text-[#4321a9]/80 hover:from-yellow-300 hover:via-amber-400 hover:to-yellow-500 hover:scale-105 hover:shadow-xl hover:shadow-yellow-500/30'
+                              }`}
                                 whileHover={closedRegistrations.has(event.eventId) ? undefined : { 
                                   scale: 1.05,
                                   boxShadow: "0 20px 40px rgba(251, 191, 36, 0.4)"
@@ -1131,7 +1142,6 @@ export default function EventsPage() {
                                   <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
                                 )}
                               </motion.button>
-                            )}
                             
                             <motion.div whileHover={{ y: -2, scale: 1.05 }}>
                               <Link href={`/events/${event.eventId}`} className="flex items-center justify-center bg-gradient-to-r from-[#2a0a56]/80 to-[#4321a9]/80 border-2 border-[#b53da1]/50 text-[#ffd4b9] p-3 rounded-2xl hover:bg-gradient-to-r hover:from-[#b53da1]/40 hover:to-[#ed6ab8]/40 hover:border-[#fea6cc] transition-all duration-300 shadow-lg hover:shadow-xl">
