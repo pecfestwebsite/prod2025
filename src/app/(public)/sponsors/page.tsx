@@ -15,6 +15,7 @@ interface Sponsor {
 const TIERS_CONFIG = {
   Title: { title: "Title Sponsor", color: "text-yellow-300" },
   "Co-Title": { title: "Co-Title", color: "text-yellow-400" },
+  "Co Sponsor": { title: "Co Sponsor", color: "text-yellow-200" },
   "Associate Sponsor": { title: "Associate Sponsor", color: "text-slate-200" },
   "Corporate Partner": {
     title: "Corporate Partners",
@@ -32,6 +33,7 @@ const TIERS_CONFIG = {
 const TIERS: (keyof typeof TIERS_CONFIG)[] = [
   "Title",
   "Co-Title",
+  "Co Sponsor",
   "Associate Sponsor",
   "Partners",
   "Corporate Partner",
@@ -235,7 +237,10 @@ export default function SponsorsPage() {
     // MOCK DATA: This is temporary. Remove this block to use yadur real API.
     const sponsorsData: Sponsor[] = [
       { id: 1, name: "Trident Group", tier: "Title", logo: "/TridentLogo.png" },
+      
       { id: 2, name: "House of Google AI", tier: "Co-Title", logo: "https://drive.google.com/uc?export=view&id=1PFx-6nO6BKVOc1mPTvlLTuHTFO25GqQ_" },
+      { id: 0, name: "Powergrid", tier: "Co Sponsor", logo: "/powergrid.jpg" },
+      
       { id: 3, name: "Mach City", tier: "Associate Sponsor", logo: "https://drive.google.com/uc?export=view&id=1ZG9zHFEn1FZ3yvH-EqCQsIr_QYa1dhiU" },
       { id: 36, name: "Mendallion Auram", tier: "Associate Sponsor", logo: "https://drive.google.com/uc?export=view&id=1oaVxUeoEW2T-GN2CP6v5Cm2dYT9xeGka" },
       { id: 4, name: "Couture Perfumery", tier: "Corporate Partner", logo: "https://drive.google.com/uc?export=view&id=13_MzTsevZP5-bJPXw_gsHizNmC13mfGR" },
