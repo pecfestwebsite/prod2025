@@ -3,6 +3,7 @@
     {
       "id": "head-1",
       "name": "Alfie",
+      "role":"Emotional Support Developer",
       "image": "/alfu.jpg",
       "instagram": "https://instagram.com",
       "linkedin": "https://linkedin.com",
@@ -10,9 +11,16 @@
       "phone": "+91-9876543210"
     },
     {
+        "id": "22106063",
+        "name": "Ribhav Aggarwal",
+        "image": "/Ribhav.jpg",
+        "role": "Head"
+      },
+    {
       "id": "head-2",
       "name": "Prasuk Jain",
       "image": "/prasukja.jpg",
+      "role": "Head",
       "instagram": "https://www.instagram.com/prasukjain_07?igsh=N3hkcTR3Z3hqNTRh&utm_source=qr",
       "linkedin": "https://www.linkedin.com/in/prasuk-jain-1053b5244/",
       "email": "prasukjain0703@gmail.com",
@@ -21,6 +29,7 @@
     {
       "id": "head-3",
       "name": "Krittika Jari", 
+      "role": "", 
       "image": "/WhatsApp Image 2025-10-26 at 12.49.08_4291d7dd.jpg",
       "instagram": "ms_krittika",
       "linkedin":"https://www.linkedin.com/in/krittika-jari-676897268?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=android_app",
